@@ -1432,13 +1432,21 @@ export class Game {
     this.flashTile(nx, ny, "#ffd36b", 120, { alpha: 0.12, decorative: true });
     onPlayerMove(this);
     this.audio.play("move");
-    this.handleTileEntry(getTile(this.currentLevel, nx, ny));
+    const current = getTile(this.currentLevel, nx, ny);
+    this.handleTileEntry(current);
+    if (current.kind === "stairDown") {
+      this.useStairs("down");
+      return;
+    }
+    if (current.kind === "stairUp") {
+      this.useStairs("up");
+      return;
+    }
     this.pickupHere(true, true);
     if (this.pendingPickupPrompt) {
       this.render();
       return;
     }
-    const current = getTile(this.currentLevel, nx, ny);
     if (current.kind === "buildingDoor" && current.service) {
       this.openTownService(current.service);
     }
