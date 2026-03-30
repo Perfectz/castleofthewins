@@ -10,5 +10,5 @@ Friction
 
 Run Notes
 - Objective on depth 1: Seal The Shrine
-- Final state: Vermin Halls - depth 1, turn 63, HP 56/56
+- Final state: Vermin Halls - depth 1, turn 62, HP 56/56
 - Assisted visibility was enabled after the first descent so the harness could cover objective/combat surfaces in one repeatable pass.

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-30T06:22:32.028Z",
+  "generatedAt": "2026-03-30T07:08:25.903Z",
   "url": "http://127.0.0.1:4187/index.html",
   "snapshots": [
     {
@@ -9,7 +9,7 @@
       "depth": 0,
       "location": "The valley town below the keep",
       "modalTitle": "",
-      "advisor": "TACTICAL READ\nNo active floor objective.",
+      "advisor": "FIELD READ\nNo active floor objective.\nNo active floor objective.",
       "player": {
         "name": "Harness",
         "race": "Dwarf",
@@ -103,7 +103,7 @@
       "depth": 1,
       "location": "Vermin Halls - depth 1",
       "modalTitle": "",
-      "advisor": "TACTICAL READ\nSeal Shrine: Seal the shrine and weather the answer from the floor.\nBlood Altar: Trade life for immediate power and a spike in floor danger.",
+      "advisor": "FIELD READ\nThe stairs up are ready if you want to bank progress.\nSeal Shrine: Seal the shrine and weather the answer from the floor.\nVault Room: A high-value chamber guarded by a formed squad.",
       "player": {
         "name": "Harness",
         "race": "Dwarf",
@@ -116,7 +116,7 @@
         "level": 1,
         "xp": 0,
         "position": {
-          "x": 10,
+          "x": 21,
           "y": 48
         },
         "inventory": [
@@ -129,24 +129,24 @@
         "id": "seal_shrine",
         "label": "Seal The Shrine",
         "status": "active",
-        "roomIndex": 4,
+        "roomIndex": 2,
         "marker": {
-          "x": 28,
-          "y": 34
+          "x": 8,
+          "y": 37
         }
       },
       "optional": {
-        "id": "blood_altar",
-        "label": "Blood Altar",
+        "id": "vault_room",
+        "label": "Vault Room",
         "opened": false,
         "marker": {
           "x": 40,
-          "y": 19
+          "y": 11
         }
       },
       "floorResolved": false,
       "visibleEnemies": [],
-      "totalMonsters": 17,
+      "totalMonsters": 14,
       "lastMessages": [
         {
           "turn": 1,
@@ -157,6 +157,11 @@
           "turn": 1,
           "tone": "warning",
           "message": "Recover the Runestone of the Winds from the lower halls and return to town."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "Room opens. Feature: Stairs up."
         },
         {
           "turn": 45,
@@ -187,7 +192,7 @@
       "depth": 1,
       "location": "Vermin Halls - depth 1",
       "modalTitle": "",
-      "advisor": "TACTICAL READ\nSeal Shrine: Seal the shrine and weather the answer from the floor.\nBlood Altar: Trade life for immediate power and a spike in floor danger.",
+      "advisor": "FIELD READ\nThe stairs up are ready if you want to bank progress.\nSeal Shrine: Seal the shrine and weather the answer from the floor.\nVault Room: A high-value chamber guarded by a formed squad.",
       "player": {
         "name": "Harness",
         "race": "Dwarf",
@@ -200,7 +205,7 @@
         "level": 1,
         "xp": 0,
         "position": {
-          "x": 10,
+          "x": 21,
           "y": 48
         },
         "inventory": [
@@ -213,24 +218,24 @@
         "id": "seal_shrine",
         "label": "Seal The Shrine",
         "status": "active",
-        "roomIndex": 4,
+        "roomIndex": 2,
         "marker": {
-          "x": 28,
-          "y": 34
+          "x": 8,
+          "y": 37
         }
       },
       "optional": {
-        "id": "blood_altar",
-        "label": "Blood Altar",
+        "id": "vault_room",
+        "label": "Vault Room",
         "opened": false,
         "marker": {
           "x": 40,
-          "y": 19
+          "y": 11
         }
       },
       "floorResolved": false,
       "visibleEnemies": [],
-      "totalMonsters": 17,
+      "totalMonsters": 14,
       "lastMessages": [
         {
           "turn": 1,
@@ -241,6 +246,11 @@
           "turn": 1,
           "tone": "warning",
           "message": "Recover the Runestone of the Winds from the lower halls and return to town."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "Room opens. Feature: Stairs up."
         },
         {
           "turn": 45,
@@ -267,11 +277,11 @@
     {
       "label": "objective-result",
       "mode": "game",
-      "turn": 63,
+      "turn": 62,
       "depth": 1,
       "location": "Vermin Halls - depth 1",
       "modalTitle": "",
-      "advisor": "TACTICAL READ\nSeal Shrine: Seal the shrine and weather the answer from the floor.\nBlood Altar: Trade life for immediate power and a spike in floor danger.",
+      "advisor": "FIELD READ\nOrc: unhurt, closing in.\nSeal Shrine: Seal the shrine and weather the answer from the floor.\nVault Room: A high-value chamber guarded by a formed squad.",
       "player": {
         "name": "Harness",
         "race": "Dwarf",
@@ -284,8 +294,8 @@
         "level": 1,
         "xp": 0,
         "position": {
-          "x": 10,
-          "y": 30
+          "x": 38,
+          "y": 48
         },
         "inventory": [
           "Potion of Healing",
@@ -297,24 +307,35 @@
         "id": "seal_shrine",
         "label": "Seal The Shrine",
         "status": "active",
-        "roomIndex": 4,
+        "roomIndex": 2,
         "marker": {
-          "x": 28,
-          "y": 34
+          "x": 8,
+          "y": 37
         }
       },
       "optional": {
-        "id": "blood_altar",
-        "label": "Blood Altar",
+        "id": "vault_room",
+        "label": "Vault Room",
         "opened": false,
         "marker": {
           "x": 40,
-          "y": 19
+          "y": 11
         }
       },
       "floorResolved": false,
-      "visibleEnemies": [],
-      "totalMonsters": 17,
+      "visibleEnemies": [
+        {
+          "id": "orc",
+          "name": "Orc",
+          "hp": 28,
+          "position": {
+            "x": 41,
+            "y": 48
+          },
+          "roomIndex": null
+        }
+      ],
+      "totalMonsters": 14,
       "lastMessages": [
         {
           "turn": 1,
@@ -325,6 +346,11 @@
           "turn": 1,
           "tone": "warning",
           "message": "Recover the Runestone of the Winds from the lower halls and return to town."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "Room opens. Feature: Stairs up."
         },
         {
           "turn": 45,
@@ -345,9 +371,14 @@
           "turn": 45,
           "tone": "warning",
           "message": "You descend to Vermin Halls - depth 1."
+        },
+        {
+          "turn": 59,
+          "tone": "warning",
+          "message": "You see Orc."
         }
       ]
     }
   ],
-  "feedback": "Strengths\n- The board-first HUD reads quickly in motion. Health, threat, and objective framing stay visible without burying the board.\n- Town service screens are easy to parse once opened. The bank/meta layer is especially clear about what gold can do beyond shopping.\n- The floor objective gate gives the first dungeon level a stronger purpose than a simple stair rush.\n\nFriction\n- The first-time flow still benefits from out-of-band knowledge. The harness needed explicit routing to town stairs and service doors because those paths are not strongly signposted from the title or first board state.\n- The log is only visible inside modal surfaces, so real-time combat/context feedback is easy to miss during movement-heavy play.\n- In this run the first objective (Seal The Shrine) did not fully resolve under pressure, which suggests objective affordances or room-read clarity can still be tightened.\n\nRun Notes\n- Objective on depth 1: Seal The Shrine\n- Final state: Vermin Halls - depth 1, turn 63, HP 56/56\n- Assisted visibility was enabled after the first descent so the harness could cover objective/combat surfaces in one repeatable pass."
+  "feedback": "Strengths\n- The board-first HUD reads quickly in motion. Health, threat, and objective framing stay visible without burying the board.\n- Town service screens are easy to parse once opened. The bank/meta layer is especially clear about what gold can do beyond shopping.\n- The floor objective gate gives the first dungeon level a stronger purpose than a simple stair rush.\n\nFriction\n- The first-time flow still benefits from out-of-band knowledge. The harness needed explicit routing to town stairs and service doors because those paths are not strongly signposted from the title or first board state.\n- The log is only visible inside modal surfaces, so real-time combat/context feedback is easy to miss during movement-heavy play.\n- In this run the first objective (Seal The Shrine) did not fully resolve under pressure, which suggests objective affordances or room-read clarity can still be tightened.\n\nRun Notes\n- Objective on depth 1: Seal The Shrine\n- Final state: Vermin Halls - depth 1, turn 62, HP 56/56\n- Assisted visibility was enabled after the first descent so the harness could cover objective/combat surfaces in one repeatable pass."
 }

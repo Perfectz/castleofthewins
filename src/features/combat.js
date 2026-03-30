@@ -174,6 +174,7 @@ export function damageActor(game, attacker, defender, amount, damageType = "phys
   defender.hp -= amount;
   game.audio.play(defender.id === "player" ? "bad" : "hit");
   game.emitImpact(attacker, defender, game.getDamageEffectColor(damageType, defender), damageType);
+  game.emitReadout(`-${amount}`, defender.x, defender.y, defender.id === "player" ? "#ffb0a0" : "#f4edd7");
   if (defender.id === "player") {
     game.log(`${attacker.name} hits ${defender.name} for ${amount}.`, "bad");
     if (attacker.abilities && attacker.abilities.includes("drain") && Math.random() < 0.3) {

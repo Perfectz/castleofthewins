@@ -1,4 +1,4 @@
-import { getCarryCapacity, getCarryWeight, getEncumbranceTier, getHealthRatio, getMonsterHealthState } from "../core/entities.js";
+import { getHealthRatio, getMonsterHealthState } from "../core/entities.js";
 import { getTile, itemsAt } from "../core/world.js";
 import { clamp, distance, escapeHtml } from "../core/utils.js";
 import { getDangerSummary } from "./director.js";
@@ -74,6 +74,117 @@ function buildObjectiveAdvice(game, tile, hpRatio, visible, focus, lootHere) {
   };
 }
 
+function chooseSecondaryAction(game, actions, primaryAction) {
+  const remaining = actions.filter((entry) => entry.action !== primaryAction);
+  const preferred = remaining.find((entry) => entry.action !== "wait");
+  if (preferred) {
+    return preferred;
+  }
+  if (game.player.spellsKnown.length > 0 && primaryAction !== "open-hub") {
+    return {
+      action: "open-hub",
+      label: "Magic",
+      note: "Cast, burst, or control",
+      tab: "magic"
+    };
+  }
+  if (game.currentDepth > 0) {
+    return {
+      action: "search",
+      label: "Search",
+      note: "Probe for secrets or routes"
+    };
+  }
+  return {
+    action: "open-hub",
+    label: "Journal",
+    note: "Review directives and run notes",
+    tab: "journal"
+  };
+}
+
+function buildDockSlots(game, actions) {
+  if (game.targetMode) {
+    return [
+      {
+        key: "primary",
+        prompt: "A",
+        label: "Confirm",
+        note: `Fire ${game.targetMode.name}`,
+        action: "target-confirm",
+        tone: "primary",
+        active: true
+      },
+      {
+        key: "secondary",
+        prompt: "X",
+        label: game.player.spellsKnown.length > 0 ? "Magic" : "Survey",
+        note: game.player.spellsKnown.length > 0 ? "Review spell options" : "Check the minimap",
+        action: game.player.spellsKnown.length > 0 ? "open-hub" : "map-focus",
+        tab: game.player.spellsKnown.length > 0 ? "magic" : ""
+      },
+      {
+        key: "pack",
+        prompt: "Y",
+        label: "Pack",
+        note: "Review loadout",
+        action: "open-hub",
+        tab: "pack"
+      },
+      {
+        key: "back",
+        prompt: "B",
+        label: "Cancel",
+        note: "Leave targeting",
+        action: "target-cancel"
+      }
+    ];
+  }
+
+  const primary = actions[0] || {
+    action: game.currentDepth > 0 ? "search" : "map-focus",
+    label: game.currentDepth > 0 ? "Search" : "Survey",
+    note: game.currentDepth > 0 ? "Probe for routes" : "Check the minimap"
+  };
+  const secondary = chooseSecondaryAction(game, actions, primary.action);
+
+  return [
+    {
+      key: "primary",
+      prompt: "A",
+      label: primary.label,
+      note: primary.note,
+      action: primary.action,
+      tab: primary.tab || "",
+      tone: "primary",
+      active: true
+    },
+    {
+      key: "secondary",
+      prompt: "X",
+      label: secondary.label,
+      note: secondary.note,
+      action: secondary.action,
+      tab: secondary.tab || ""
+    },
+    {
+      key: "pack",
+      prompt: "Y",
+      label: "Pack",
+      note: "Review loadout",
+      action: "open-hub",
+      tab: "pack"
+    },
+    {
+      key: "back",
+      prompt: "B",
+      label: "Wait",
+      note: "Spend a careful turn",
+      action: "wait"
+    }
+  ];
+}
+
 function renderThreatRows(game, visible, focus) {
   if (visible.length === 0) {
     return "<div class='muted'>No visible enemies.</div>";
@@ -104,7 +215,7 @@ export function getAdvisorModel(game) {
       playerHtml: "<div class='muted'>No active run.</div>",
       threatHtml: "<div class='muted'>No threats yet.</div>",
       advisorHtml: "<div class='advisor-label'>Field Read</div><div class='advisor-text'>Create a character to begin.</div>",
-      actionsHtml: ""
+      dockSlots: []
     };
   }
 
@@ -114,14 +225,13 @@ export function getAdvisorModel(game) {
   const hpRatio = game.player.maxHp > 0 ? game.player.hp / game.player.maxHp : 1;
   const manaRatio = game.player.maxMana > 0 ? game.player.mana / game.player.maxMana : 1;
   const lootHere = itemsAt(game.currentLevel, game.player.x, game.player.y);
-  const burden = getEncumbranceTier(game.player);
-  const burdenWeight = getCarryWeight(game.player);
-  const burdenCapacity = getCarryCapacity(game.player);
-  const condition = game.player.slowed ? "Slowed" : burden >= 2 ? "Overburdened" : burden === 1 ? "Burdened" : "Steady";
+  const burdenUi = game.getBurdenUiState();
+  const condition = game.player.slowed ? "Slowed" : burdenUi.state === "overloaded" ? "Overburdened" : burdenUi.state === "warning" || burdenUi.state === "danger" ? "Burdened" : "Steady";
   const locationLabel = game.currentDepth > 0 ? `Depth ${game.currentDepth}` : "Town";
   const objectiveView = buildObjectiveAdvice(game, tile, hpRatio, visible, focus, lootHere);
   const visibleLoot = game.getVisibleLootItems ? game.getVisibleLootItems() : [];
   const focusHealth = focus ? getMonsterHealthState(focus) : null;
+  const dockSlots = buildDockSlots(game, objectiveView.actions);
 
   const playerHtml = `
     <div class="capsule-topline">
@@ -136,9 +246,11 @@ export function getAdvisorModel(game) {
       <div class="meter hp"><span style="width:${clamp(Math.round(hpRatio * 100), 0, 100)}%"></span></div>
       <div class="meter-row"><span>Aether</span><strong class="${manaRatio < 0.3 ? "value-warning" : ""}">${Math.floor(game.player.mana)}/${game.player.maxMana}</strong></div>
       <div class="meter mana"><span style="width:${clamp(Math.round(manaRatio * 100), 0, 100)}%"></span></div>
+      <div class="meter-row"><span>Burden</span><strong class="burden-value burden-${burdenUi.state}">${burdenUi.weight} / ${burdenUi.capacity}</strong></div>
+      <div class="meter burden burden-${burdenUi.state}"><span style="width:${burdenUi.percent}%"></span></div>
     </div>
-    <div class="capsule-line compact-line"><span>Burden</span><strong class="${burden >= 2 ? "value-bad" : burden >= 1 ? "value-warning" : "value-good"}">${burdenWeight} / ${burdenCapacity}</strong></div>
-    <div class="capsule-line compact-line"><span>Condition</span><strong class="${game.player.slowed || burden ? "value-warning" : ""}">${condition}</strong></div>
+    <div class="capsule-line compact-line"><span>Condition</span><strong class="${game.player.slowed || burdenUi.state !== "safe" ? "value-warning" : ""}">${condition}</strong></div>
+    <div class="capsule-line compact-line"><span>Load Read</span><strong class="burden-${burdenUi.state}">${escapeHtml(burdenUi.label)}</strong></div>
   `;
 
   const threatSummary = focus
@@ -181,17 +293,7 @@ export function getAdvisorModel(game) {
     </div>
   `;
 
-  const actionsHtml = objectiveView.actions.slice(0, 3).map((entry, index) => `
-    <button class="action-button dock-action${entry.recommended && index === 0 ? " recommended" : ""}" data-action="${entry.action}"${entry.tab ? ` data-tab="${entry.tab}"` : ""} type="button">
-      <span class="context-slot">${index + 1}</span>
-      <span class="context-copy">
-        <span class="context-main">${escapeHtml(entry.label)}</span>
-        <span class="context-note">${escapeHtml(entry.note)}</span>
-      </span>
-    </button>
-  `).join("");
-
-  return { playerHtml, threatHtml: threatSummary, advisorHtml, actionsHtml };
+  return { playerHtml, threatHtml: threatSummary, advisorHtml, dockSlots };
 }
 
 export function renderPanels(game) {
@@ -211,6 +313,7 @@ export function renderPanels(game) {
   const advisor = getAdvisorModel(game);
   if (game.playerCapsule) {
     game.playerCapsule.innerHTML = advisor.playerHtml;
+    game.playerCapsule.dataset.burdenState = game.getBurdenUiState().state;
   }
   if (game.threatCapsule) {
     game.threatCapsule.innerHTML = advisor.threatHtml;
@@ -229,11 +332,14 @@ export function renderActionBar(game) {
     return;
   }
   const advisor = getAdvisorModel(game);
-  game.actionBar.innerHTML = `
-    ${advisor.actionsHtml}
-    <button class="action-button dock-action hub-button" data-action="open-hub" data-tab="pack" type="button">
-      <span class="context-main">Hub</span>
-      <span class="context-note">Pack, magic, journal</span>
+  game.actionBar.dataset.mode = game.targetMode ? "target" : "field";
+  game.actionBar.innerHTML = advisor.dockSlots.map((slot) => `
+    <button class="action-button dock-action dock-slot dock-slot-${slot.key}${slot.tone === "primary" ? " recommended" : ""}${slot.active ? " is-active" : ""}" data-action="${slot.action}"${slot.tab ? ` data-tab="${slot.tab}"` : ""} type="button">
+      <span class="context-slot">${escapeHtml(slot.prompt)}</span>
+      <span class="context-copy">
+        <span class="context-main">${escapeHtml(slot.label)}</span>
+        <span class="context-note">${escapeHtml(slot.note)}</span>
+      </span>
     </button>
-  `;
+  `).join("");
 }

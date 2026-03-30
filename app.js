@@ -1764,12 +1764,25 @@ function formatSaveStamp(isoString) {
 
 function syncSaveChrome(game) {
   const meta = getSavedRunMeta();
+  const width = typeof window !== "undefined" ? window.innerWidth : 999;
   if (game.saveStamp) {
     if (!meta) {
-      game.saveStamp.textContent = "No save loaded";
+      game.saveStamp.textContent = width <= 640 ? "No save" : "No save loaded";
     } else {
       const timeLabel = meta.savedAt ? formatSaveStamp(meta.savedAt) : null;
-      game.saveStamp.textContent = timeLabel ? `${meta.name} Lv.${meta.level} Depth ${meta.depth} - ${timeLabel}` : `${meta.name} Lv.${meta.level} Depth ${meta.depth}`;
+      const compact = width <= 640;
+      const veryCompact = width <= 520;
+      game.saveStamp.textContent = veryCompact
+        ? timeLabel
+          ? `Lv.${meta.level} D${meta.depth} - ${timeLabel.replace("Saved ", "")}`
+          : `Lv.${meta.level} D${meta.depth}`
+        : compact
+          ? timeLabel
+            ? `${meta.name} Lv.${meta.level} D${meta.depth} - ${timeLabel.replace("Saved ", "")}`
+            : `${meta.name} Lv.${meta.level} D${meta.depth}`
+        : timeLabel
+          ? `${meta.name} Lv.${meta.level} Depth ${meta.depth} - ${timeLabel}`
+          : `${meta.name} Lv.${meta.level} Depth ${meta.depth}`;
     }
   }
   if (game.quickSaveButton) {
@@ -3758,6 +3771,7 @@ function damageActor(game, attacker, defender, amount, damageType = "physical") 
   defender.hp -= amount;
   game.audio.play(defender.id === "player" ? "bad" : "hit");
   game.emitImpact(attacker, defender, game.getDamageEffectColor(damageType, defender), damageType);
+  game.emitReadout(`-${amount}`, defender.x, defender.y, defender.id === "player" ? "#ffb0a0" : "#f4edd7");
   if (defender.id === "player") {
     game.log(`${attacker.name} hits ${defender.name} for ${amount}.`, "bad");
     if (attacker.abilities && attacker.abilities.includes("drain") && Math.random() < 0.3) {
@@ -4122,6 +4136,117 @@ function buildObjectiveAdvice(game, tile, hpRatio, visible, focus, lootHere) {
   };
 }
 
+function chooseSecondaryAction(game, actions, primaryAction) {
+  const remaining = actions.filter((entry) => entry.action !== primaryAction);
+  const preferred = remaining.find((entry) => entry.action !== "wait");
+  if (preferred) {
+    return preferred;
+  }
+  if (game.player.spellsKnown.length > 0 && primaryAction !== "open-hub") {
+    return {
+      action: "open-hub",
+      label: "Magic",
+      note: "Cast, burst, or control",
+      tab: "magic"
+    };
+  }
+  if (game.currentDepth > 0) {
+    return {
+      action: "search",
+      label: "Search",
+      note: "Probe for secrets or routes"
+    };
+  }
+  return {
+    action: "open-hub",
+    label: "Journal",
+    note: "Review directives and run notes",
+    tab: "journal"
+  };
+}
+
+function buildDockSlots(game, actions) {
+  if (game.targetMode) {
+    return [
+      {
+        key: "primary",
+        prompt: "A",
+        label: "Confirm",
+        note: `Fire ${game.targetMode.name}`,
+        action: "target-confirm",
+        tone: "primary",
+        active: true
+      },
+      {
+        key: "secondary",
+        prompt: "X",
+        label: game.player.spellsKnown.length > 0 ? "Magic" : "Survey",
+        note: game.player.spellsKnown.length > 0 ? "Review spell options" : "Check the minimap",
+        action: game.player.spellsKnown.length > 0 ? "open-hub" : "map-focus",
+        tab: game.player.spellsKnown.length > 0 ? "magic" : ""
+      },
+      {
+        key: "pack",
+        prompt: "Y",
+        label: "Pack",
+        note: "Review loadout",
+        action: "open-hub",
+        tab: "pack"
+      },
+      {
+        key: "back",
+        prompt: "B",
+        label: "Cancel",
+        note: "Leave targeting",
+        action: "target-cancel"
+      }
+    ];
+  }
+
+  const primary = actions[0] || {
+    action: game.currentDepth > 0 ? "search" : "map-focus",
+    label: game.currentDepth > 0 ? "Search" : "Survey",
+    note: game.currentDepth > 0 ? "Probe for routes" : "Check the minimap"
+  };
+  const secondary = chooseSecondaryAction(game, actions, primary.action);
+
+  return [
+    {
+      key: "primary",
+      prompt: "A",
+      label: primary.label,
+      note: primary.note,
+      action: primary.action,
+      tab: primary.tab || "",
+      tone: "primary",
+      active: true
+    },
+    {
+      key: "secondary",
+      prompt: "X",
+      label: secondary.label,
+      note: secondary.note,
+      action: secondary.action,
+      tab: secondary.tab || ""
+    },
+    {
+      key: "pack",
+      prompt: "Y",
+      label: "Pack",
+      note: "Review loadout",
+      action: "open-hub",
+      tab: "pack"
+    },
+    {
+      key: "back",
+      prompt: "B",
+      label: "Wait",
+      note: "Spend a careful turn",
+      action: "wait"
+    }
+  ];
+}
+
 function renderThreatRows(game, visible, focus) {
   if (visible.length === 0) {
     return "<div class='muted'>No visible enemies.</div>";
@@ -4152,7 +4277,7 @@ function getAdvisorModel(game) {
       playerHtml: "<div class='muted'>No active run.</div>",
       threatHtml: "<div class='muted'>No threats yet.</div>",
       advisorHtml: "<div class='advisor-label'>Field Read</div><div class='advisor-text'>Create a character to begin.</div>",
-      actionsHtml: ""
+      dockSlots: []
     };
   }
 
@@ -4162,14 +4287,13 @@ function getAdvisorModel(game) {
   const hpRatio = game.player.maxHp > 0 ? game.player.hp / game.player.maxHp : 1;
   const manaRatio = game.player.maxMana > 0 ? game.player.mana / game.player.maxMana : 1;
   const lootHere = itemsAt(game.currentLevel, game.player.x, game.player.y);
-  const burden = getEncumbranceTier(game.player);
-  const burdenWeight = getCarryWeight(game.player);
-  const burdenCapacity = getCarryCapacity(game.player);
-  const condition = game.player.slowed ? "Slowed" : burden >= 2 ? "Overburdened" : burden === 1 ? "Burdened" : "Steady";
+  const burdenUi = game.getBurdenUiState();
+  const condition = game.player.slowed ? "Slowed" : burdenUi.state === "overloaded" ? "Overburdened" : burdenUi.state === "warning" || burdenUi.state === "danger" ? "Burdened" : "Steady";
   const locationLabel = game.currentDepth > 0 ? `Depth ${game.currentDepth}` : "Town";
   const objectiveView = buildObjectiveAdvice(game, tile, hpRatio, visible, focus, lootHere);
   const visibleLoot = game.getVisibleLootItems ? game.getVisibleLootItems() : [];
   const focusHealth = focus ? getMonsterHealthState(focus) : null;
+  const dockSlots = buildDockSlots(game, objectiveView.actions);
 
   const playerHtml = `
     <div class="capsule-topline">
@@ -4184,9 +4308,11 @@ function getAdvisorModel(game) {
       <div class="meter hp"><span style="width:${clamp(Math.round(hpRatio * 100), 0, 100)}%"></span></div>
       <div class="meter-row"><span>Aether</span><strong class="${manaRatio < 0.3 ? "value-warning" : ""}">${Math.floor(game.player.mana)}/${game.player.maxMana}</strong></div>
       <div class="meter mana"><span style="width:${clamp(Math.round(manaRatio * 100), 0, 100)}%"></span></div>
+      <div class="meter-row"><span>Burden</span><strong class="burden-value burden-${burdenUi.state}">${burdenUi.weight} / ${burdenUi.capacity}</strong></div>
+      <div class="meter burden burden-${burdenUi.state}"><span style="width:${burdenUi.percent}%"></span></div>
     </div>
-    <div class="capsule-line compact-line"><span>Burden</span><strong class="${burden >= 2 ? "value-bad" : burden >= 1 ? "value-warning" : "value-good"}">${burdenWeight} / ${burdenCapacity}</strong></div>
-    <div class="capsule-line compact-line"><span>Condition</span><strong class="${game.player.slowed || burden ? "value-warning" : ""}">${condition}</strong></div>
+    <div class="capsule-line compact-line"><span>Condition</span><strong class="${game.player.slowed || burdenUi.state !== "safe" ? "value-warning" : ""}">${condition}</strong></div>
+    <div class="capsule-line compact-line"><span>Load Read</span><strong class="burden-${burdenUi.state}">${escapeHtml(burdenUi.label)}</strong></div>
   `;
 
   const threatSummary = focus
@@ -4229,17 +4355,7 @@ function getAdvisorModel(game) {
     </div>
   `;
 
-  const actionsHtml = objectiveView.actions.slice(0, 3).map((entry, index) => `
-    <button class="action-button dock-action${entry.recommended && index === 0 ? " recommended" : ""}" data-action="${entry.action}"${entry.tab ? ` data-tab="${entry.tab}"` : ""} type="button">
-      <span class="context-slot">${index + 1}</span>
-      <span class="context-copy">
-        <span class="context-main">${escapeHtml(entry.label)}</span>
-        <span class="context-note">${escapeHtml(entry.note)}</span>
-      </span>
-    </button>
-  `).join("");
-
-  return { playerHtml, threatHtml: threatSummary, advisorHtml, actionsHtml };
+  return { playerHtml, threatHtml: threatSummary, advisorHtml, dockSlots };
 }
 
 function renderPanels(game) {
@@ -4259,6 +4375,7 @@ function renderPanels(game) {
   const advisor = getAdvisorModel(game);
   if (game.playerCapsule) {
     game.playerCapsule.innerHTML = advisor.playerHtml;
+    game.playerCapsule.dataset.burdenState = game.getBurdenUiState().state;
   }
   if (game.threatCapsule) {
     game.threatCapsule.innerHTML = advisor.threatHtml;
@@ -4277,13 +4394,16 @@ function renderActionBar(game) {
     return;
   }
   const advisor = getAdvisorModel(game);
-  game.actionBar.innerHTML = `
-    ${advisor.actionsHtml}
-    <button class="action-button dock-action hub-button" data-action="open-hub" data-tab="pack" type="button">
-      <span class="context-main">Hub</span>
-      <span class="context-note">Pack, magic, journal</span>
+  game.actionBar.dataset.mode = game.targetMode ? "target" : "field";
+  game.actionBar.innerHTML = advisor.dockSlots.map((slot) => `
+    <button class="action-button dock-action dock-slot dock-slot-${slot.key}${slot.tone === "primary" ? " recommended" : ""}${slot.active ? " is-active" : ""}" data-action="${slot.action}"${slot.tab ? ` data-tab="${slot.tab}"` : ""} type="button">
+      <span class="context-slot">${escapeHtml(slot.prompt)}</span>
+      <span class="context-copy">
+        <span class="context-main">${escapeHtml(slot.label)}</span>
+        <span class="context-note">${escapeHtml(slot.note)}</span>
+      </span>
     </button>
-  `;
+  `).join("");
 }
 
 // src/ui/render.js
@@ -4704,6 +4824,8 @@ function drawTile(ctx, level, tile, worldX, worldY, sx, sy, visible) {
     case "buildingFloor":
     case "plaza":
     case "stone":
+      ctx.fillStyle = visible ? "rgba(5, 9, 10, 0.12)" : "rgba(5, 9, 10, 0.24)";
+      ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
       ctx.fillStyle = palette[2];
       ctx.fillRect(x + 6, y + 6, 3, 3);
       ctx.fillRect(x + 14, y + 11, 3, 3);
@@ -4826,9 +4948,21 @@ function drawTownBuildings(ctx, level, view) {
   }
 }
 
-function drawPlayer(ctx, player, sx, sy) {
+function drawPlayer(ctx, player, sx, sy, time = 0, options = {}) {
   const x = sx * TILE_SIZE;
   const y = sy * TILE_SIZE;
+  const reducedMotion = Boolean(options.reducedMotion);
+  const pulse = reducedMotion ? 0.2 : 0.17 + (Math.sin(time / 220) + 1) * 0.06;
+  const glow = ctx.createRadialGradient(x + 12, y + 12, 0, x + 12, y + 12, 12);
+  glow.addColorStop(0, `rgba(255, 219, 126, ${pulse})`);
+  glow.addColorStop(1, "rgba(255, 219, 126, 0)");
+  ctx.save();
+  ctx.fillStyle = glow;
+  ctx.fillRect(x - 3, y - 3, TILE_SIZE + 6, TILE_SIZE + 6);
+  ctx.strokeStyle = `rgba(255, 228, 162, ${reducedMotion ? 0.42 : 0.34 + pulse * 0.3})`;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x + 2.5, y + 2.5, TILE_SIZE - 5, TILE_SIZE - 5);
+  ctx.restore();
   ctx.fillStyle = "#f0d271";
   ctx.beginPath();
   ctx.arc(x + 12, y + 7, 4, 0, Math.PI * 2);
@@ -4844,12 +4978,22 @@ function drawPlayer(ctx, player, sx, sy) {
   }
 }
 
-function drawMonster(ctx, monster, sx, sy) {
+function drawMonster(ctx, monster, sx, sy, time = 0, options = {}) {
+  const x = sx * TILE_SIZE;
+  const y = sy * TILE_SIZE;
+  const reducedMotion = Boolean(options.reducedMotion);
+  const intentColor = monster.intent?.color || monster.color || "#c94a4a";
+  const auraAlpha = reducedMotion ? 0.12 : 0.1 + (Math.sin((time + sx * 40 + sy * 30) / 180) + 1) * 0.05;
+  const aura = ctx.createRadialGradient(x + 12, y + 12, 0, x + 12, y + 12, 11);
+  aura.addColorStop(0, rgbaWithAlpha(intentColor, auraAlpha));
+  aura.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.save();
+  ctx.fillStyle = aura;
+  ctx.fillRect(x - 2, y - 2, TILE_SIZE + 4, TILE_SIZE + 4);
+  ctx.restore();
   if (drawMonsterIcon(ctx, monster, sx, sy)) {
     return;
   }
-  const x = sx * TILE_SIZE;
-  const y = sy * TILE_SIZE;
   ctx.fillStyle = monster.color;
   switch (monster.sprite) {
     case "rat":
@@ -4948,9 +5092,19 @@ function drawMonsterHealthBar(ctx, monster, sx, sy, options = {}) {
   ctx.restore();
 }
 
-function drawItem(ctx, item, sx, sy) {
+function drawItem(ctx, item, sx, sy, time = 0, options = {}) {
   const x = sx * TILE_SIZE;
   const y = sy * TILE_SIZE;
+  const reducedMotion = Boolean(options.reducedMotion);
+  const glowColor = item.kind === "gold" ? "rgba(235, 207, 96, 0.22)" : item.kind === "quest" ? "rgba(183, 240, 255, 0.24)" : "rgba(139, 205, 233, 0.18)";
+  const pulse = reducedMotion ? 0.18 : 0.16 + (Math.sin((time + sx * 35 + sy * 27) / 150) + 1) * 0.08;
+  const glow = ctx.createRadialGradient(x + 12, y + 12, 0, x + 12, y + 12, 10);
+  glow.addColorStop(0, rgbaWithAlpha(glowColor, pulse));
+  glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.save();
+  ctx.fillStyle = glow;
+  ctx.fillRect(x - 2, y - 2, TILE_SIZE + 4, TILE_SIZE + 4);
+  ctx.restore();
   if (item.kind === "gold") {
     ctx.fillStyle = "#e4c850";
     ctx.beginPath();
@@ -5088,6 +5242,26 @@ function drawBoardVignette(ctx, hpRatio, time, options = {}) {
   gradient.addColorStop(0, "rgba(0, 0, 0, 0)");
   gradient.addColorStop(0.72, `rgba(64, 0, 0, ${alpha * 0.45})`);
   gradient.addColorStop(1, `rgba(84, 0, 0, ${alpha})`);
+  ctx.save();
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, boardSize, boardSize);
+  ctx.restore();
+}
+
+function drawBoardBurdenVignette(ctx, burdenRatio, time, options = {}) {
+  if (burdenRatio < 0.95) {
+    return;
+  }
+  const boardSize = VIEW_SIZE * TILE_SIZE;
+  const center = boardSize / 2;
+  const reducedMotion = Boolean(options.reducedMotion);
+  const base = burdenRatio > 1 ? 0.2 : 0.12;
+  const pulse = reducedMotion ? base : base + Math.sin(time / 190) * 0.03;
+  const alpha = clamp(pulse + Math.max(0, burdenRatio - 0.95) * 0.5, 0.1, 0.32);
+  const gradient = ctx.createRadialGradient(center, center, boardSize * 0.24, center, center, boardSize * 0.72);
+  gradient.addColorStop(0, "rgba(0, 0, 0, 0)");
+  gradient.addColorStop(0.7, `rgba(117, 67, 0, ${alpha * 0.45})`);
+  gradient.addColorStop(1, `rgba(168, 72, 0, ${alpha})`);
   ctx.save();
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, boardSize, boardSize);
@@ -5297,6 +5471,29 @@ function drawEffect(ctx, effect, view, time = 0, options = {}) {
     return;
   }
 
+  if (effect.type === "floatingText") {
+    if (!tileOnScreen(effect, view)) {
+      return;
+    }
+    const sx = effect.x - view.x;
+    const sy = effect.y - view.y;
+    const cx = screenTilePosition(sx, 12);
+    const baseY = screenTilePosition(sy, 6);
+    const drift = reducedMotion ? 8 : 18;
+    ctx.save();
+    ctx.globalAlpha = 0.96 - life * 0.7;
+    ctx.font = "bold 12px Trebuchet MS";
+    ctx.textAlign = "center";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(6, 8, 10, 0.82)";
+    ctx.fillStyle = effect.color || "#f4edd7";
+    ctx.strokeText(effect.text, cx, baseY - life * drift);
+    ctx.fillText(effect.text, cx, baseY - life * drift);
+    ctx.textAlign = "left";
+    ctx.restore();
+    return;
+  }
+
   if (effect.type === "screenPulse") {
     ctx.save();
     ctx.fillStyle = effect.color;
@@ -5397,12 +5594,16 @@ class GamepadInput {
       this.lastButtons.set(index, current);
       return current && !last;
     };
+    if (mode === "game" || mode === "target") {
+      if (pressed(0)) { return { type: "dock", slot: "primary" }; }
+      if (pressed(1)) { return { type: "dock", slot: "back" }; }
+      if (pressed(2)) { return { type: "dock", slot: "secondary" }; }
+      if (pressed(3)) { return { type: "dock", slot: "pack" }; }
+    }
     if (pressed(0)) { return { type: "confirm" }; }
     if (pressed(1)) { return { type: "cancel" }; }
-    if (pressed(2)) { return { type: "action", action: "interact" }; }
-    if (pressed(3)) { return { type: "action", action: "wait" }; }
-    if (pressed(4)) { return { type: "action", action: "inventory" }; }
-    if (pressed(5)) { return { type: "action", action: "spells" }; }
+    if (pressed(4)) { return { type: "action", action: "open-hub", tab: "magic" }; }
+    if (pressed(5)) { return { type: "action", action: "settings" }; }
     if (pressed(8)) { return { type: "action", action: "map-focus" }; }
     if (pressed(9)) { return { type: "action", action: "settings" }; }
     return null;
@@ -5535,6 +5736,7 @@ class Game {
     this.canvas.addEventListener("click", (event) => this.handleCanvasClick(event));
     window.addEventListener("gamepadconnected", () => this.refreshChrome());
     window.addEventListener("gamepaddisconnected", () => this.refreshChrome());
+    window.addEventListener("resize", () => this.refreshChrome());
   }
 
   startRuntimeLoop() {
@@ -5652,6 +5854,67 @@ class Game {
     const race = this.getPlayerRaceTemplate(player);
     const role = this.getPlayerClassTemplate(player);
     return (race ? race.mana : 0) + (role ? role.bonuses.mana : 0);
+  }
+
+  getBurdenUiState(weight = getCarryWeight(this.player), capacity = getCarryCapacity(this.player)) {
+    const safeCapacity = Math.max(1, capacity || 1);
+    const ratio = weight / safeCapacity;
+    let state = "safe";
+    let label = "Light load";
+    if (ratio > 1) {
+      state = "overloaded";
+      label = "Overloaded";
+    } else if (ratio >= 0.95) {
+      state = "danger";
+      label = "Near limit";
+    } else if (ratio >= 0.8) {
+      state = "warning";
+      label = "Heavy load";
+    }
+    return {
+      weight,
+      capacity: safeCapacity,
+      ratio,
+      percent: clamp(Math.round(ratio * 100), 0, 130),
+      state,
+      label
+    };
+  }
+
+  getBurdenPreview(weightDelta = 0) {
+    return this.getBurdenUiState(getCarryWeight(this.player) + weightDelta);
+  }
+
+  describeBurdenPreview(weightDelta = 0) {
+    if (weightDelta === 0) {
+      return {
+        text: "Burden unchanged while carried.",
+        tone: "value-good"
+      };
+    }
+    const preview = this.getBurdenPreview(weightDelta);
+    if (preview.state === "overloaded") {
+      return {
+        text: `Will overload you at ${preview.weight} / ${preview.capacity}.`,
+        tone: "value-bad"
+      };
+    }
+    if (preview.state === "danger") {
+      return {
+        text: `Will enter danger burden at ${preview.weight} / ${preview.capacity}.`,
+        tone: "value-bad"
+      };
+    }
+    if (preview.state === "warning") {
+      return {
+        text: `Will enter warning burden at ${preview.weight} / ${preview.capacity}.`,
+        tone: "value-warning"
+      };
+    }
+    return {
+      text: `Burden after change: ${preview.weight} / ${preview.capacity}.`,
+      tone: "value-good"
+    };
   }
 
   resetReadState() {
@@ -5821,6 +6084,21 @@ class Game {
     return `${visibleItems.join(", ")}${extra}`;
   }
 
+  getActionDockModel() {
+    return this.getAdvisorModel().dockSlots || [];
+  }
+
+  triggerDockSlot(key) {
+    if (!this.player) {
+      return;
+    }
+    const slot = this.getActionDockModel().find((entry) => entry.key === key);
+    if (!slot || !slot.action) {
+      return;
+    }
+    this.handleAction(slot.action, { dataset: { action: slot.action, tab: slot.tab || "" } });
+  }
+
   buildMonsterDiscoveryMessage(monsters) {
     if (!monsters || monsters.length === 0) {
       return "";
@@ -5958,12 +6236,16 @@ class Game {
     this.addEffect({ type: "telegraphPulse", x, y, color, duration });
   }
 
+  emitReadout(text, x, y, color = "#f4edd7", duration = 420) {
+    this.addEffect({ type: "floatingText", text, x, y, color, duration });
+  }
+
   emitImpact(attacker, defender, color, damageType = "physical") {
     if (!defender || typeof defender.x !== "number" || typeof defender.y !== "number") {
       return;
     }
     this.addEffect({ type: "impactSpark", x: defender.x, y: defender.y, color, duration: 170, rays: damageType === "magic" ? 7 : 6 });
-    this.flashTile(defender.x, defender.y, color, 140, { alpha: 0.18 });
+    this.flashTile(defender.x, defender.y, color, 160, { alpha: 0.24 });
     if (attacker && typeof attacker.x === "number" && typeof attacker.y === "number") {
       this.setBoardImpulse(defender.x - attacker.x, defender.y - attacker.y, 1.2, 75);
     }
@@ -6025,7 +6307,11 @@ class Game {
     }
     const profile = this.getEffectProfile();
     const hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 1;
+    const burdenRatio = getCarryWeight(this.player) / Math.max(1, getCarryCapacity(this.player));
     if (hpRatio < 0.42) {
+      return true;
+    }
+    if (burdenRatio >= 0.95) {
       return true;
     }
     if (!profile.reducedMotion && this.hasAnimatedFeatureTileInView()) {
@@ -6757,6 +7043,7 @@ class Game {
 
     this.player.x = nx;
     this.player.y = ny;
+    this.flashTile(nx, ny, "#ffd36b", 120, { alpha: 0.12, decorative: true });
     onPlayerMove(this);
     this.audio.play("move");
     this.handleTileEntry(getTile(this.currentLevel, nx, ny));
@@ -6925,6 +7212,10 @@ class Game {
       this.moveTargetCursor(intent.dx, intent.dy);
       return;
     }
+    if (intent.type === "dock") {
+      this.triggerDockSlot(intent.slot);
+      return;
+    }
     if (intent.type === "confirm") {
       if (this.mode === "target") {
         this.confirmTargetSelection();
@@ -6942,7 +7233,7 @@ class Game {
       return;
     }
     if (intent.type === "action") {
-      this.handleAction(intent.action, null);
+      this.handleAction(intent.action, intent.tab ? { dataset: { tab: intent.tab } } : null);
     }
   }
 
@@ -7753,10 +8044,14 @@ class Game {
     const beforeWeight = getCarryWeight(this.player);
     const capacity = getCarryCapacity(this.player);
     const afterWeight = beforeWeight + (item.weight || 0);
+    const beforeUi = this.getBurdenUiState(beforeWeight, capacity);
+    const afterUi = this.getBurdenUiState(afterWeight, capacity);
     return {
       beforeWeight,
       afterWeight,
       capacity,
+      beforeUi,
+      afterUi,
       beforeTier: getEncumbranceTier(this.player),
       afterTier: afterWeight > capacity ? 2 : afterWeight > capacity * 0.75 ? 1 : 0
     };
@@ -7771,8 +8066,14 @@ class Game {
       : item.slot
         ? `Open ${this.getPackSlotDefinition(item.slot).label} slot.`
         : "This item will sit in your pack.";
-    const burdenLabel = burden.afterTier > burden.beforeTier
-      ? burden.afterTier >= 2 ? "This will overburden you." : "This pushes you into burden."
+    const burdenLabel = burden.afterUi.state !== burden.beforeUi.state
+      ? burden.afterUi.state === "overloaded"
+        ? "This will overload your carry limit."
+        : burden.afterUi.state === "danger"
+          ? "This pushes you into danger burden."
+          : burden.afterUi.state === "warning"
+            ? "This pushes you into warning burden."
+            : "This is still a safe load."
       : "This is heavy enough to deserve a quick check.";
     this.pendingPickupPrompt = {
       item,
@@ -7790,7 +8091,7 @@ class Game {
           <div class="mini-panel"><strong>Type</strong><br>${escapeHtml(item.slot ? this.getPackSlotDefinition(item.slot).label : classifyItem(item))}</div>
           <div class="mini-panel"><strong>Weight</strong><br>${item.weight || 0}</div>
           <div class="mini-panel"><strong>Burden</strong><br>${burden.beforeWeight} / ${burden.capacity}</div>
-          <div class="mini-panel"><strong>After Take</strong><br><span class="${burden.afterTier >= 2 ? "value-bad" : burden.afterTier >= 1 ? "value-warning" : "value-good"}">${burden.afterWeight} / ${burden.capacity}</span></div>
+          <div class="mini-panel"><strong>After Take</strong><br><span class="burden-${burden.afterUi.state}">${burden.afterWeight} / ${burden.capacity}</span></div>
         </div>
         <div class="text-block pickup-triage-copy">
           ${escapeHtml(burdenLabel)}<br><br>
@@ -7817,10 +8118,12 @@ class Game {
     removeFromArray(this.currentLevel.items, item);
     if (handleObjectivePickup(this, item)) {
       this.flashTile(item.x, item.y, "#9fd0ff", 170, { alpha: 0.2, rise: true });
+      this.emitReadout("Objective", item.x, item.y, "#b7f0ff", 480);
       this.audio.play("good");
       return;
     }
     this.flashTile(item.x, item.y, item.kind === "quest" ? "#b7f0ff" : "#8bcde9", 170, { alpha: 0.16, rise: true });
+    this.emitReadout(item.kind === "quest" ? "Runestone" : "Loot", item.x, item.y, item.kind === "quest" ? "#b7f0ff" : "#8bcde9", 420);
     this.addItemToInventory(item);
     if (item.kind === "quest") {
       this.player.quest.hasRunestone = true;
@@ -7885,6 +8188,7 @@ class Game {
         const total = Math.round(item.amount * (1 + bonus));
         this.player.gold += total;
         this.flashTile(this.player.x, this.player.y, "#ebcf60", 160, { alpha: 0.18, rise: true });
+        this.emitReadout(`+${total}g`, this.player.x, this.player.y, "#ebcf60", 420);
         this.log(`You collect ${total} gold.`, "good");
         this.audio.play("good");
         if (this.currentDepth > 0 && this.floorResolved) {
@@ -8973,21 +9277,103 @@ class Game {
         selection,
         slotDef,
         item,
-        compatibleIndexes: this.getCompatibleInventoryIndexes(selection.value)
+        compatibleIndexes: this.getCompatibleInventoryIndexes(selection.value),
+        comparison: null,
+        weightDelta: 0,
+        encumbrancePreview: this.describeBurdenPreview(0)
       };
     }
     const item = this.player.inventory[selection.value] || null;
     const slotDef = item && item.slot ? this.getPackSlotDefinition(item.slot) : null;
+    const comparison = this.getPackComparisonModel(item);
     return {
       selection,
       slotDef,
       item,
-      compatibleIndexes: []
+      compatibleIndexes: [],
+      comparison,
+      weightDelta: comparison.weightDelta,
+      encumbrancePreview: comparison.encumbrancePreview
     };
   }
 
   getPackItemActionLabel(item) {
     return item.kind === "weapon" || item.kind === "armor" ? "Equip" : "Use";
+  }
+
+  getPackItemMeta(item) {
+    const bits = [item.slot ? this.getPackSlotDefinition(item.slot).label : item.kindLabel || classifyItem(item)];
+    if (item.kind === "weapon") {
+      bits.push(`Atk ${getItemPower(item)}`);
+    } else if (item.kind === "armor") {
+      bits.push(`Arm ${getItemArmor(item)}`);
+    } else if (item.kind === "charged" && item.identified) {
+      bits.push(`${item.charges}/${item.maxCharges || item.charges} ch`);
+    } else if (item.kind === "spellbook") {
+      bits.push("Learn spell");
+    }
+    return bits.join(" • ");
+  }
+
+  getPackItemNote(item) {
+    const bits = [`Wt ${item.weight || 0}`, `${Math.floor(getItemValue(item))} gp`];
+    if (canIdentify(item) && !item.identified) {
+      bits.push("Unknown");
+    }
+    if (item.cursed && item.identified) {
+      bits.push("Cursed");
+    }
+    return bits.join(" • ");
+  }
+
+  buildComparisonDelta(label, delta, invert = false) {
+    if (!delta) {
+      return null;
+    }
+    const good = invert ? delta < 0 : delta > 0;
+    return {
+      label,
+      delta,
+      tone: good ? "good" : "bad",
+      text: `${label} ${delta > 0 ? `+${delta}` : delta}`
+    };
+  }
+
+  getPackComparisonModel(item) {
+    if (!item || !item.slot) {
+      return {
+        equipped: null,
+        deltas: [],
+        weightDelta: 0,
+        encumbrancePreview: this.describeBurdenPreview(0)
+      };
+    }
+
+    const equipped = this.player.equipment[item.slot] || null;
+    if (!equipped) {
+      return {
+        equipped: null,
+        deltas: [],
+        weightDelta: item.weight || 0,
+        encumbrancePreview: this.describeBurdenPreview(0)
+      };
+    }
+
+    const deltas = [
+      this.buildComparisonDelta("Attack", getItemPower(item) - getItemPower(equipped)),
+      this.buildComparisonDelta("Armor", getItemArmor(item) - getItemArmor(equipped)),
+      this.buildComparisonDelta("Mana", getItemManaBonus(item) - getItemManaBonus(equipped)),
+      this.buildComparisonDelta("Dex", getItemDexBonus(item) - getItemDexBonus(equipped)),
+      this.buildComparisonDelta("Sight", getItemLightBonus(item) - getItemLightBonus(equipped)),
+      this.buildComparisonDelta("Weight", (item.weight || 0) - (equipped.weight || 0), true)
+    ].filter(Boolean);
+
+    return {
+      equipped,
+      deltas,
+      weightDelta: (item.weight || 0) - (equipped.weight || 0),
+      encumbrancePreview: this.describeBurdenPreview(0)
+    };
   }
 
   getItemBadgeMarkup(item) {
@@ -9064,8 +9450,8 @@ class Game {
           ${group.items.map(({ item, index }) => `
             <button class="pack-item-row${selectedIndex === index ? " active" : ""}" data-action="inspect-pack-item" data-index="${index}" type="button">
               <span class="pack-item-name">${escapeHtml(getItemName(item))}</span>
-              <span class="pack-item-meta">${escapeHtml(item.slot ? this.getPackSlotDefinition(item.slot).label : item.kindLabel || classifyItem(item))}</span>
-              <span class="pack-item-note">${escapeHtml(describeItem(item))}</span>
+              <span class="pack-item-meta">${escapeHtml(this.getPackItemMeta(item))}</span>
+              <span class="pack-item-note">${escapeHtml(this.getPackItemNote(item))}</span>
             </button>
           `).join("")}
         </div>
@@ -9080,17 +9466,18 @@ class Game {
         : `
           <div class="pack-compatible-list">
             ${model.compatibleIndexes.map((index) => `
-              <button class="tiny-button" data-action="inspect-pack-item" data-index="${index}" type="button">${escapeHtml(getItemName(this.player.inventory[index]))}</button>
+              <button class="tiny-button pack-ready-chip" data-action="inspect-pack-item" data-index="${index}" type="button">${escapeHtml(getItemName(this.player.inventory[index]))}</button>
             `).join("")}
           </div>
         `;
       return `
         <section class="hub-section pack-inspector-panel">
-          <div class="panel-title">Slot Detail</div>
+          <div class="panel-title">Decision Card</div>
           <div class="pack-inspector-card">
             <div class="pack-inspector-kicker">${escapeHtml(model.slotDef.label)}</div>
             <div class="pack-inspector-title">Empty Slot</div>
-            <div class="text-block pack-inspector-copy">${escapeHtml(model.slotDef.emptyText)}</div>
+            <div class="pack-inspector-copy">${escapeHtml(model.slotDef.emptyText)}</div>
+            <div class="pack-inspector-note ${model.encumbrancePreview.tone}">${escapeHtml(model.encumbrancePreview.text)}</div>
             <div class="pack-inspector-section">
               <strong>Ready To Equip</strong>
               ${compatibleRows}
@@ -9105,32 +9492,61 @@ class Game {
     }
 
     const item = model.item;
+    const statLines = [
+      item.kind === "weapon" ? `Attack ${getItemPower(item)}` : "",
+      item.kind === "armor" ? `Armor ${getItemArmor(item)}` : "",
+      getItemManaBonus(item) ? `Mana +${getItemManaBonus(item)}` : "",
+      getItemDexBonus(item) ? `Dex +${getItemDexBonus(item)}` : "",
+      getItemLightBonus(item) ? `Sight +${getItemLightBonus(item)}` : "",
+      item.weight || item.weight === 0 ? `Weight ${item.weight || 0}` : "",
+      `Value ${Math.floor(getItemValue(item))} gp`
+    ].filter(Boolean);
     const actions = model.selection.type === "inventory"
       ? `
-        <button class="menu-button" data-action="item-use" data-index="${model.selection.value}" type="button">${this.getPackItemActionLabel(item)}</button>
+        <button class="menu-button pack-action-primary is-active" data-action="item-use" data-index="${model.selection.value}" type="button">${this.getPackItemActionLabel(item)}</button>
         <button class="menu-button" data-action="item-drop" data-index="${model.selection.value}" type="button">Drop</button>
       `
       : `
-        <button class="menu-button" data-action="unequip-slot" data-slot="${model.selection.value}" type="button"${item.cursed ? " disabled" : ""}>Unequip</button>
+        <button class="menu-button pack-action-primary is-active" data-action="unequip-slot" data-slot="${model.selection.value}" type="button"${item.cursed ? " disabled" : ""}>Unequip</button>
       `;
 
     const equippedSwap = model.selection.type === "inventory" && item.slot && this.player.equipment[item.slot]
-      ? `<div class="pack-inspector-note">Equipping this will swap out ${escapeHtml(getItemName(this.player.equipment[item.slot], true))}.</div>`
+      ? `<div class="pack-inspector-note">Equips over ${escapeHtml(getItemName(this.player.equipment[item.slot], true))}.</div>`
       : "";
 
     const cursedNote = model.selection.type === "slot" && item.cursed
       ? `<div class="pack-inspector-note bad-note">${escapeHtml(getItemName(item, true))} is cursed and cannot be removed yet.</div>`
       : "";
 
+    const comparisonBlock = model.selection.type === "inventory" && model.comparison?.equipped
+      ? `
+        <div class="pack-comparison-card">
+          <div class="pack-comparison-title">Compare vs ${escapeHtml(getItemName(model.comparison.equipped, true))}</div>
+          <div class="pack-comparison-list">
+            ${model.comparison.deltas.length > 0
+              ? model.comparison.deltas.map((entry) => `<div class="pack-comparison-row value-${entry.tone}">${escapeHtml(entry.text)}</div>`).join("")
+              : `<div class="pack-comparison-row muted">No practical change.</div>`}
+          </div>
+          <div class="pack-inspector-note ${model.encumbrancePreview.tone}">${escapeHtml(model.encumbrancePreview.text)}</div>
+        </div>
+      `
+      : item.slot
+        ? `<div class="pack-inspector-note ${model.encumbrancePreview.tone}">${escapeHtml(model.encumbrancePreview.text)}</div>`
+        : "";
+
     return `
       <section class="hub-section pack-inspector-panel">
-        <div class="panel-title">${model.selection.type === "slot" ? "Equipped Detail" : "Item Detail"}</div>
+        <div class="panel-title">${model.selection.type === "slot" ? "Equipped Detail" : "Decision Card"}</div>
         <div class="pack-inspector-card">
           <div class="pack-inspector-kicker">${escapeHtml(model.slotDef ? model.slotDef.label : item.kindLabel || classifyItem(item))}</div>
           <div class="pack-inspector-title">${escapeHtml(getItemName(item))}</div>
           <div class="pack-item-badges">${this.getItemBadgeMarkup(item)}</div>
-          <div class="text-block pack-inspector-copy">${escapeHtml(describeItem(item))}</div>
+          <div class="pack-inspector-copy">${escapeHtml(describeItem(item))}</div>
+          <div class="pack-stat-grid">
+            ${statLines.map((line) => `<div class="pack-stat-pill">${escapeHtml(line)}</div>`).join("")}
+          </div>
           ${equippedSwap}
+          ${comparisonBlock}
           ${cursedNote}
           <div class="modal-actions pack-inspector-actions">
             ${actions}
@@ -9157,7 +9573,7 @@ class Game {
 
   getPackHubMarkup() {
     const model = this.getPackSelectionModel();
-    const capacity = getCarryCapacity(this.player);
+    const burdenUi = this.getBurdenUiState();
     const equipmentValue = Object.values(this.player.equipment).reduce((sum, item) => sum + (item ? getItemValue(item) : 0), 0);
     const packValue = this.player.inventory.reduce((sum, item) => sum + getItemValue(item), 0);
     const paperdoll = this.getPackSlotDefinitions().map((slotDef) => {
@@ -9178,7 +9594,7 @@ class Game {
       <div class="hub-body">
         <div class="hub-summary">
           <div class="mini-panel"><strong>Gold</strong><br>${Math.floor(this.player.gold)} gp</div>
-          <div class="mini-panel"><strong>Burden</strong><br><span class="${encumbranceTone(this.player)}">${getCarryWeight(this.player)} / ${capacity}</span></div>
+          <div class="mini-panel burden-panel burden-${burdenUi.state}"><strong>Burden</strong><br><span class="burden-value burden-${burdenUi.state}">${burdenUi.weight} / ${burdenUi.capacity}</span><div class="mini-meter burden burden-${burdenUi.state}"><span style="width:${burdenUi.percent}%"></span></div><span class="mini-panel-note">${escapeHtml(burdenUi.label)}</span></div>
           <div class="mini-panel"><strong>Attack</strong><br>${this.getAttackValue()}</div>
           <div class="mini-panel"><strong>Armor</strong><br>${this.getArmorValue()}</div>
           <div class="mini-panel"><strong>Pack Value</strong><br>${Math.floor(packValue)} gp</div>
@@ -9496,8 +9912,8 @@ class Game {
         <div class="field-label">Controls</div>
         <div class="text-block">
           Keyboard: arrows or numpad move, F searches, U uses, I opens pack, S opens spells<br>
-          Controller: stick or D-pad moves, south confirms, east cancels, shoulders open pack or spells<br>
-          Touch: use the on-screen pad and bottom action buttons
+          Controller: stick or D-pad moves, A takes the primary action, X triggers the secondary action, Y opens pack, B waits or cancels targeting<br>
+          Touch: use the on-screen pad as fallback movement and the dock for your main actions
       </div>
       </div>
       <div class="section-block">
@@ -9683,10 +10099,11 @@ class Game {
       if (sx < 0 || sy < 0 || sx >= VIEW_SIZE || sy >= VIEW_SIZE) {
         return;
       }
-      drawItem(ctx, item, sx, sy);
+      drawItem(ctx, item, sx, sy, time, effectProfile);
     });
 
-    const focusedThreat = this.getFocusedThreat();
+    const targetActor = this.targetMode ? actorAt(this.currentLevel, this.targetMode.cursor.x, this.targetMode.cursor.y) : null;
+    const focusedThreat = targetActor || this.getFocusedThreat();
     this.currentLevel.actors.forEach((actor) => {
       if (!isVisible(this.currentLevel, actor.x, actor.y)) {
         return;
@@ -9696,7 +10113,7 @@ class Game {
       if (sx < 0 || sy < 0 || sx >= VIEW_SIZE || sy >= VIEW_SIZE) {
         return;
       }
-      drawMonster(ctx, actor, sx, sy);
+      drawMonster(ctx, actor, sx, sy, time, effectProfile);
       drawMonsterHealthBar(ctx, actor, sx, sy, {
         focused: actor === focusedThreat
       });
@@ -9706,7 +10123,7 @@ class Game {
     this.visualEffects
       .filter((effect) => effect.type !== "screenPulse")
       .forEach((effect) => drawEffect(ctx, effect, view, time, effectProfile));
-    drawPlayer(ctx, this.player, this.player.x - view.x, this.player.y - view.y);
+    drawPlayer(ctx, this.player, this.player.x - view.x, this.player.y - view.y, time, effectProfile);
     if (this.targetMode) {
       drawTargetCursor(ctx, this.targetMode.cursor, view, this.player, time, effectProfile);
     }
@@ -9716,7 +10133,9 @@ class Game {
       .filter((effect) => effect.type === "screenPulse")
       .forEach((effect) => drawEffect(ctx, effect, view, time, effectProfile));
     const hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 1;
+    const burdenRatio = getCarryWeight(this.player) / Math.max(1, getCarryCapacity(this.player));
     drawBoardVignette(ctx, hpRatio, time, effectProfile);
+    drawBoardBurdenVignette(ctx, burdenRatio, time, effectProfile);
   }
 
   playProjectile(from, to, color) {
@@ -9915,7 +10334,10 @@ class Game {
   refreshChrome() {
     if (this.controllerStatus) {
       const connected = this.gamepadInput.isConnected();
-      this.controllerStatus.textContent = connected ? `Controller: ${this.gamepadInput.getControllerName()}` : "Touch controls active";
+      const compact = typeof window !== "undefined" && window.innerWidth <= 640;
+      this.controllerStatus.textContent = connected
+        ? compact ? "Controller ready" : `Controller: ${this.gamepadInput.getControllerName()}`
+        : compact ? "Touch active" : "Touch controls active";
     }
     if (this.touchControls) {
       const hiddenBySetting = !this.settings.touchControlsEnabled;

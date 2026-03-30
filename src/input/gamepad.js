@@ -49,12 +49,16 @@ export class GamepadInput {
       this.lastButtons.set(index, current);
       return current && !last;
     };
+    if (mode === "game" || mode === "target") {
+      if (pressed(0)) { return { type: "dock", slot: "primary" }; }
+      if (pressed(1)) { return { type: "dock", slot: "back" }; }
+      if (pressed(2)) { return { type: "dock", slot: "secondary" }; }
+      if (pressed(3)) { return { type: "dock", slot: "pack" }; }
+    }
     if (pressed(0)) { return { type: "confirm" }; }
     if (pressed(1)) { return { type: "cancel" }; }
-    if (pressed(2)) { return { type: "action", action: "interact" }; }
-    if (pressed(3)) { return { type: "action", action: "wait" }; }
-    if (pressed(4)) { return { type: "action", action: "inventory" }; }
-    if (pressed(5)) { return { type: "action", action: "spells" }; }
+    if (pressed(4)) { return { type: "action", action: "open-hub", tab: "magic" }; }
+    if (pressed(5)) { return { type: "action", action: "settings" }; }
     if (pressed(8)) { return { type: "action", action: "map-focus" }; }
     if (pressed(9)) { return { type: "action", action: "settings" }; }
     return null;

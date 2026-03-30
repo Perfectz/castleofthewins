@@ -418,6 +418,8 @@ export function drawTile(ctx, level, tile, worldX, worldY, sx, sy, visible) {
     case "buildingFloor":
     case "plaza":
     case "stone":
+      ctx.fillStyle = visible ? "rgba(5, 9, 10, 0.12)" : "rgba(5, 9, 10, 0.24)";
+      ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
       ctx.fillStyle = palette[2];
       ctx.fillRect(x + 6, y + 6, 3, 3);
       ctx.fillRect(x + 14, y + 11, 3, 3);
@@ -540,9 +542,21 @@ export function drawTownBuildings(ctx, level, view) {
   }
 }
 
-export function drawPlayer(ctx, player, sx, sy) {
+export function drawPlayer(ctx, player, sx, sy, time = 0, options = {}) {
   const x = sx * TILE_SIZE;
   const y = sy * TILE_SIZE;
+  const reducedMotion = Boolean(options.reducedMotion);
+  const pulse = reducedMotion ? 0.2 : 0.17 + (Math.sin(time / 220) + 1) * 0.06;
+  const glow = ctx.createRadialGradient(x + 12, y + 12, 0, x + 12, y + 12, 12);
+  glow.addColorStop(0, `rgba(255, 219, 126, ${pulse})`);
+  glow.addColorStop(1, "rgba(255, 219, 126, 0)");
+  ctx.save();
+  ctx.fillStyle = glow;
+  ctx.fillRect(x - 3, y - 3, TILE_SIZE + 6, TILE_SIZE + 6);
+  ctx.strokeStyle = `rgba(255, 228, 162, ${reducedMotion ? 0.42 : 0.34 + pulse * 0.3})`;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x + 2.5, y + 2.5, TILE_SIZE - 5, TILE_SIZE - 5);
+  ctx.restore();
   ctx.fillStyle = "#f0d271";
   ctx.beginPath();
   ctx.arc(x + 12, y + 7, 4, 0, Math.PI * 2);
@@ -558,12 +572,22 @@ export function drawPlayer(ctx, player, sx, sy) {
   }
 }
 
-export function drawMonster(ctx, monster, sx, sy) {
+export function drawMonster(ctx, monster, sx, sy, time = 0, options = {}) {
+  const x = sx * TILE_SIZE;
+  const y = sy * TILE_SIZE;
+  const reducedMotion = Boolean(options.reducedMotion);
+  const intentColor = monster.intent?.color || monster.color || "#c94a4a";
+  const auraAlpha = reducedMotion ? 0.12 : 0.1 + (Math.sin((time + sx * 40 + sy * 30) / 180) + 1) * 0.05;
+  const aura = ctx.createRadialGradient(x + 12, y + 12, 0, x + 12, y + 12, 11);
+  aura.addColorStop(0, rgbaWithAlpha(intentColor, auraAlpha));
+  aura.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.save();
+  ctx.fillStyle = aura;
+  ctx.fillRect(x - 2, y - 2, TILE_SIZE + 4, TILE_SIZE + 4);
+  ctx.restore();
   if (drawMonsterIcon(ctx, monster, sx, sy)) {
     return;
   }
-  const x = sx * TILE_SIZE;
-  const y = sy * TILE_SIZE;
   ctx.fillStyle = monster.color;
   switch (monster.sprite) {
     case "rat":
@@ -662,9 +686,19 @@ export function drawMonsterHealthBar(ctx, monster, sx, sy, options = {}) {
   ctx.restore();
 }
 
-export function drawItem(ctx, item, sx, sy) {
+export function drawItem(ctx, item, sx, sy, time = 0, options = {}) {
   const x = sx * TILE_SIZE;
   const y = sy * TILE_SIZE;
+  const reducedMotion = Boolean(options.reducedMotion);
+  const glowColor = item.kind === "gold" ? "rgba(235, 207, 96, 0.22)" : item.kind === "quest" ? "rgba(183, 240, 255, 0.24)" : "rgba(139, 205, 233, 0.18)";
+  const pulse = reducedMotion ? 0.18 : 0.16 + (Math.sin((time + sx * 35 + sy * 27) / 150) + 1) * 0.08;
+  const glow = ctx.createRadialGradient(x + 12, y + 12, 0, x + 12, y + 12, 10);
+  glow.addColorStop(0, rgbaWithAlpha(glowColor, pulse));
+  glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.save();
+  ctx.fillStyle = glow;
+  ctx.fillRect(x - 2, y - 2, TILE_SIZE + 4, TILE_SIZE + 4);
+  ctx.restore();
   if (item.kind === "gold") {
     ctx.fillStyle = "#e4c850";
     ctx.beginPath();
@@ -802,6 +836,26 @@ export function drawBoardVignette(ctx, hpRatio, time, options = {}) {
   gradient.addColorStop(0, "rgba(0, 0, 0, 0)");
   gradient.addColorStop(0.72, `rgba(64, 0, 0, ${alpha * 0.45})`);
   gradient.addColorStop(1, `rgba(84, 0, 0, ${alpha})`);
+  ctx.save();
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, boardSize, boardSize);
+  ctx.restore();
+}
+
+export function drawBoardBurdenVignette(ctx, burdenRatio, time, options = {}) {
+  if (burdenRatio < 0.95) {
+    return;
+  }
+  const boardSize = VIEW_SIZE * TILE_SIZE;
+  const center = boardSize / 2;
+  const reducedMotion = Boolean(options.reducedMotion);
+  const base = burdenRatio > 1 ? 0.2 : 0.12;
+  const pulse = reducedMotion ? base : base + Math.sin(time / 190) * 0.03;
+  const alpha = clamp(pulse + Math.max(0, burdenRatio - 0.95) * 0.5, 0.1, 0.32);
+  const gradient = ctx.createRadialGradient(center, center, boardSize * 0.24, center, center, boardSize * 0.72);
+  gradient.addColorStop(0, "rgba(0, 0, 0, 0)");
+  gradient.addColorStop(0.7, `rgba(117, 67, 0, ${alpha * 0.45})`);
+  gradient.addColorStop(1, `rgba(168, 72, 0, ${alpha})`);
   ctx.save();
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, boardSize, boardSize);
@@ -1008,6 +1062,29 @@ export function drawEffect(ctx, effect, view, time = 0, options = {}) {
       ctx.stroke();
       ctx.restore();
     }
+    return;
+  }
+
+  if (effect.type === "floatingText") {
+    if (!tileOnScreen(effect, view)) {
+      return;
+    }
+    const sx = effect.x - view.x;
+    const sy = effect.y - view.y;
+    const cx = screenTilePosition(sx, 12);
+    const baseY = screenTilePosition(sy, 6);
+    const drift = reducedMotion ? 8 : 18;
+    ctx.save();
+    ctx.globalAlpha = 0.96 - life * 0.7;
+    ctx.font = "bold 12px Trebuchet MS";
+    ctx.textAlign = "center";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(6, 8, 10, 0.82)";
+    ctx.fillStyle = effect.color || "#f4edd7";
+    ctx.strokeText(effect.text, cx, baseY - life * drift);
+    ctx.fillText(effect.text, cx, baseY - life * drift);
+    ctx.textAlign = "left";
+    ctx.restore();
     return;
   }
 

@@ -32,12 +32,25 @@ export function formatSaveStamp(isoString) {
 
 export function syncSaveChrome(game) {
   const meta = getSavedRunMeta();
+  const width = typeof window !== "undefined" ? window.innerWidth : 999;
   if (game.saveStamp) {
     if (!meta) {
-      game.saveStamp.textContent = "No save loaded";
+      game.saveStamp.textContent = width <= 640 ? "No save" : "No save loaded";
     } else {
       const timeLabel = meta.savedAt ? formatSaveStamp(meta.savedAt) : null;
-      game.saveStamp.textContent = timeLabel ? `${meta.name} Lv.${meta.level} Depth ${meta.depth} - ${timeLabel}` : `${meta.name} Lv.${meta.level} Depth ${meta.depth}`;
+      const compact = width <= 640;
+      const veryCompact = width <= 520;
+      game.saveStamp.textContent = veryCompact
+        ? timeLabel
+          ? `Lv.${meta.level} D${meta.depth} - ${timeLabel.replace("Saved ", "")}`
+          : `Lv.${meta.level} D${meta.depth}`
+        : compact
+          ? timeLabel
+            ? `${meta.name} Lv.${meta.level} D${meta.depth} - ${timeLabel.replace("Saved ", "")}`
+            : `${meta.name} Lv.${meta.level} D${meta.depth}`
+        : timeLabel
+          ? `${meta.name} Lv.${meta.level} Depth ${meta.depth} - ${timeLabel}`
+          : `${meta.name} Lv.${meta.level} Depth ${meta.depth}`;
     }
   }
   if (game.quickSaveButton) {
