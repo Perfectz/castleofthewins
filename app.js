@@ -6400,6 +6400,19 @@ class Game {
       case "wait":
         this.performWait();
         break;
+      case "stairs-or-wait": {
+        const tile = this.currentLevel && this.player ? getTile(this.currentLevel, this.player.x, this.player.y) : null;
+        if (tile?.kind === "stairDown") {
+          this.useStairs("down");
+          break;
+        }
+        if (tile?.kind === "stairUp") {
+          this.useStairs("up");
+          break;
+        }
+        this.performWait();
+        break;
+      }
       case "rest":
         this.restUntilSafe();
         break;
