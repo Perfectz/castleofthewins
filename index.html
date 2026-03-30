@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1a15">
+  <title>Castle of the Winds Mobile</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mobile-app">
+    <header class="top-shell">
+      <div class="brand-block">
+        <div class="eyebrow">Dungeon Field HUD</div>
+        <h1 class="app-title">Castle of the Winds</h1>
+        <div class="shell-tagline">A tighter dungeon interface built for quick reads, faster decisions, and cleaner loot pressure.</div>
+      </div>
+      <div class="top-shell-meta">
+        <div class="meta-chip">
+          <div class="meta-chip-label">Input</div>
+          <div id="controller-status" class="meta-chip-value">No controller detected</div>
+        </div>
+        <div class="meta-chip">
+          <div class="meta-chip-label">Save</div>
+          <div id="save-stamp" class="meta-chip-value save-stamp">No save loaded</div>
+          <div class="meta-chip-actions">
+            <button id="quick-save-button" class="tiny-button meta-chip-button" data-action="save-game" type="button">Save</button>
+            <button id="quick-load-button" class="tiny-button meta-chip-button" data-action="load-game" type="button">Load</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="play-layout">
+      <section class="board-cluster">
+        <section class="board-stage panel">
+          <div class="board-frame">
+            <canvas id="game-canvas" width="600" height="600" aria-label="Game board"></canvas>
+            <section class="floating-stack top-left">
+              <div id="player-capsule" class="floating-capsule"></div>
+            </section>
+            <section class="floating-stack top-right">
+              <div class="floating-map panel-map">
+                <canvas id="map-canvas" width="280" height="280" aria-label="Dungeon map"></canvas>
+                <div id="map-caption" class="mini-caption"></div>
+              </div>
+            </section>
+            <section class="floating-stack bottom-left">
+              <div id="threat-capsule" class="floating-capsule threat-capsule"></div>
+            </section>
+          </div>
+          <div id="advisor-strip" class="advisor-strip"></div>
+        </section>
+
+        <section class="panel hud-dock">
+          <section id="action-bar" class="action-bar"></section>
+        </section>
+      </section>
+    </main>
+
+    <section id="touch-controls" class="touch-controls">
+      <div class="touch-pad">
+        <button class="pad-button" data-move="-1,-1" type="button">&#8598;</button>
+        <button class="pad-button" data-move="0,-1" type="button">&#8593;</button>
+        <button class="pad-button" data-move="1,-1" type="button">&#8599;</button>
+        <button class="pad-button" data-move="-1,0" type="button">&#8592;</button>
+        <button class="pad-button pad-center" data-action="wait" type="button">&#8226;</button>
+        <button class="pad-button" data-move="1,0" type="button">&#8594;</button>
+        <button class="pad-button" data-move="-1,1" type="button">&#8601;</button>
+        <button class="pad-button" data-move="0,1" type="button">&#8595;</button>
+        <button class="pad-button" data-move="1,1" type="button">&#8600;</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="modal-root" class="modal-root hidden" aria-live="polite"></div>
+
+  <template id="title-template">
+    <div class="modal mobile-sheet title-screen">
+      <div class="title-hero">
+        <div class="eyebrow">Castle of the Winds</div>
+        <h2 class="title-screen-heading">Enter the Keep</h2>
+        <div class="title-screen-copy">
+          A mobile-first roguelike descent with clearer threats, named loot, and tighter dungeon reads.
+        </div>
+      </div>
+      <div class="title-screen-grid">
+        <section class="title-screen-panel title-save-panel">
+          <div class="field-label">Last Journey</div>
+          <div id="title-save-summary" class="title-save-summary"></div>
+        </section>
+        <section class="title-screen-panel">
+          <div class="field-label">Play Style</div>
+          <div class="title-feature-list">
+            <div class="title-feature">Fast tactical board view</div>
+            <div class="title-feature">Nested pack, magic, and journal hub</div>
+            <div class="title-feature">Touch controls with controller support</div>
+          </div>
+        </section>
+      </div>
+      <div class="modal-actions title-actions">
+        <button class="action-button primary" data-action="new-game" type="button">New Adventurer</button>
+        <button id="title-load-button" class="action-button" data-action="load-game" type="button">Continue</button>
+        <button class="action-button" data-action="help" type="button">How To Play</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="creation-template">
+    <div class="modal mobile-sheet modal-large">
+      <div class="modal-title">Create Adventurer</div>
+      <div class="modal-grid">
+        <section>
+          <label class="field-label" for="hero-name">Name</label>
+          <input class="field-input" id="hero-name" name="heroName" maxlength="20" value="Morgan">
+
+          <div class="field-group">
+            <div class="field-label">Race</div>
+            <div class="choice-grid" id="race-choice"></div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">Class</div>
+            <div class="choice-grid" id="class-choice"></div>
+          </div>
+
+          <div class="field-group">
+            <div class="creation-stat-header">
+              <div class="field-label">Attributes</div>
+              <button class="tiny-button" data-action="creation-reset-stats" type="button">Reset Points</button>
+            </div>
+            <div id="creation-stat-points" class="creation-points-note"></div>
+            <div id="creation-stat-allocation" class="creation-stat-allocation"></div>
+          </div>
+        </section>
+
+        <section>
+          <div class="field-label">Preview</div>
+          <div id="creation-preview" class="creation-preview"></div>
+
+          <div class="field-label">Travel Build</div>
+          <div class="text-block">
+            Phone-first layout, controller support, touch fallback, offline installation, and tighter tactical pressure.
+          </div>
+        </section>
+      </div>
+      <div class="modal-actions">
+        <button class="action-button" data-action="close-modal" type="button">Back</button>
+        <button class="action-button primary" data-action="begin-adventure" type="button">Begin Adventure</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="list-modal-template">
+    <div class="modal mobile-sheet modal-large">
+      <div class="modal-title" id="generic-modal-title"></div>
+      <div class="modal-body" id="generic-modal-body"></div>
+      <div class="modal-actions">
+        <button class="action-button" data-action="close-modal" type="button">Close</button>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    (function () {
+      var script = document.createElement("script");
+      if (window.location.protocol === "file:") {
+        script.src = "app.js";
+      } else {
+        script.type = "module";
+        script.src = "src/main.js";
+      }
+      document.body.appendChild(script);
+    })();
+  </script>
+</body>
+</html>

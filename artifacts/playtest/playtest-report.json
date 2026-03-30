@@ -1,0 +1,353 @@
+{
+  "generatedAt": "2026-03-30T06:22:32.028Z",
+  "url": "http://127.0.0.1:4187/index.html",
+  "snapshots": [
+    {
+      "label": "town-start",
+      "mode": "game",
+      "turn": 1,
+      "depth": 0,
+      "location": "The valley town below the keep",
+      "modalTitle": "",
+      "advisor": "TACTICAL READ\nNo active floor objective.",
+      "player": {
+        "name": "Harness",
+        "race": "Dwarf",
+        "className": "Fighter",
+        "hp": 56,
+        "maxHp": 56,
+        "mana": 9,
+        "maxMana": 9,
+        "gold": 55,
+        "level": 1,
+        "xp": 0,
+        "position": {
+          "x": 24,
+          "y": 16
+        },
+        "inventory": [
+          "Potion of Healing",
+          "Potion of Healing"
+        ],
+        "spells": []
+      },
+      "objective": null,
+      "optional": null,
+      "floorResolved": false,
+      "visibleEnemies": [],
+      "totalMonsters": 0,
+      "lastMessages": [
+        {
+          "turn": 1,
+          "tone": "good",
+          "message": "Harness enters the valley beneath the ruined keep."
+        },
+        {
+          "turn": 1,
+          "tone": "warning",
+          "message": "Recover the Runestone of the Winds from the lower halls and return to town."
+        }
+      ]
+    },
+    {
+      "label": "town-bank",
+      "mode": "modal",
+      "turn": 19,
+      "depth": 0,
+      "location": "The valley town below the keep",
+      "modalTitle": "Bank",
+      "advisor": "",
+      "player": {
+        "name": "Harness",
+        "race": "Dwarf",
+        "className": "Fighter",
+        "hp": 56,
+        "maxHp": 56,
+        "mana": 9,
+        "maxMana": 9,
+        "gold": 55,
+        "level": 1,
+        "xp": 0,
+        "position": {
+          "x": 24,
+          "y": 29
+        },
+        "inventory": [
+          "Potion of Healing",
+          "Potion of Healing"
+        ],
+        "spells": []
+      },
+      "objective": null,
+      "optional": null,
+      "floorResolved": false,
+      "visibleEnemies": [],
+      "totalMonsters": 0,
+      "lastMessages": [
+        {
+          "turn": 1,
+          "tone": "good",
+          "message": "Harness enters the valley beneath the ruined keep."
+        },
+        {
+          "turn": 1,
+          "tone": "warning",
+          "message": "Recover the Runestone of the Winds from the lower halls and return to town."
+        }
+      ]
+    },
+    {
+      "label": "depth-1-entry",
+      "mode": "game",
+      "turn": 45,
+      "depth": 1,
+      "location": "Vermin Halls - depth 1",
+      "modalTitle": "",
+      "advisor": "TACTICAL READ\nSeal Shrine: Seal the shrine and weather the answer from the floor.\nBlood Altar: Trade life for immediate power and a spike in floor danger.",
+      "player": {
+        "name": "Harness",
+        "race": "Dwarf",
+        "className": "Fighter",
+        "hp": 56,
+        "maxHp": 56,
+        "mana": 9,
+        "maxMana": 9,
+        "gold": 55,
+        "level": 1,
+        "xp": 0,
+        "position": {
+          "x": 10,
+          "y": 48
+        },
+        "inventory": [
+          "Potion of Healing",
+          "Potion of Healing"
+        ],
+        "spells": []
+      },
+      "objective": {
+        "id": "seal_shrine",
+        "label": "Seal The Shrine",
+        "status": "active",
+        "roomIndex": 4,
+        "marker": {
+          "x": 28,
+          "y": 34
+        }
+      },
+      "optional": {
+        "id": "blood_altar",
+        "label": "Blood Altar",
+        "opened": false,
+        "marker": {
+          "x": 40,
+          "y": 19
+        }
+      },
+      "floorResolved": false,
+      "visibleEnemies": [],
+      "totalMonsters": 17,
+      "lastMessages": [
+        {
+          "turn": 1,
+          "tone": "good",
+          "message": "Harness enters the valley beneath the ruined keep."
+        },
+        {
+          "turn": 1,
+          "tone": "warning",
+          "message": "Recover the Runestone of the Winds from the lower halls and return to town."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "A cold draft whispers through the keep. Someone once fled these halls and did not make it out."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "Vermin Halls: Vermin Halls - depth 1."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "An unstable shrine is feeding the floor's hostility. Seal it before pushing deeper."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "You descend to Vermin Halls - depth 1."
+        }
+      ]
+    },
+    {
+      "label": "depth-1-revealed",
+      "mode": "game",
+      "turn": 45,
+      "depth": 1,
+      "location": "Vermin Halls - depth 1",
+      "modalTitle": "",
+      "advisor": "TACTICAL READ\nSeal Shrine: Seal the shrine and weather the answer from the floor.\nBlood Altar: Trade life for immediate power and a spike in floor danger.",
+      "player": {
+        "name": "Harness",
+        "race": "Dwarf",
+        "className": "Fighter",
+        "hp": 56,
+        "maxHp": 56,
+        "mana": 9,
+        "maxMana": 9,
+        "gold": 55,
+        "level": 1,
+        "xp": 0,
+        "position": {
+          "x": 10,
+          "y": 48
+        },
+        "inventory": [
+          "Potion of Healing",
+          "Potion of Healing"
+        ],
+        "spells": []
+      },
+      "objective": {
+        "id": "seal_shrine",
+        "label": "Seal The Shrine",
+        "status": "active",
+        "roomIndex": 4,
+        "marker": {
+          "x": 28,
+          "y": 34
+        }
+      },
+      "optional": {
+        "id": "blood_altar",
+        "label": "Blood Altar",
+        "opened": false,
+        "marker": {
+          "x": 40,
+          "y": 19
+        }
+      },
+      "floorResolved": false,
+      "visibleEnemies": [],
+      "totalMonsters": 17,
+      "lastMessages": [
+        {
+          "turn": 1,
+          "tone": "good",
+          "message": "Harness enters the valley beneath the ruined keep."
+        },
+        {
+          "turn": 1,
+          "tone": "warning",
+          "message": "Recover the Runestone of the Winds from the lower halls and return to town."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "A cold draft whispers through the keep. Someone once fled these halls and did not make it out."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "Vermin Halls: Vermin Halls - depth 1."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "An unstable shrine is feeding the floor's hostility. Seal it before pushing deeper."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "You descend to Vermin Halls - depth 1."
+        }
+      ]
+    },
+    {
+      "label": "objective-result",
+      "mode": "game",
+      "turn": 63,
+      "depth": 1,
+      "location": "Vermin Halls - depth 1",
+      "modalTitle": "",
+      "advisor": "TACTICAL READ\nSeal Shrine: Seal the shrine and weather the answer from the floor.\nBlood Altar: Trade life for immediate power and a spike in floor danger.",
+      "player": {
+        "name": "Harness",
+        "race": "Dwarf",
+        "className": "Fighter",
+        "hp": 56,
+        "maxHp": 56,
+        "mana": 9,
+        "maxMana": 9,
+        "gold": 55,
+        "level": 1,
+        "xp": 0,
+        "position": {
+          "x": 10,
+          "y": 30
+        },
+        "inventory": [
+          "Potion of Healing",
+          "Potion of Healing"
+        ],
+        "spells": []
+      },
+      "objective": {
+        "id": "seal_shrine",
+        "label": "Seal The Shrine",
+        "status": "active",
+        "roomIndex": 4,
+        "marker": {
+          "x": 28,
+          "y": 34
+        }
+      },
+      "optional": {
+        "id": "blood_altar",
+        "label": "Blood Altar",
+        "opened": false,
+        "marker": {
+          "x": 40,
+          "y": 19
+        }
+      },
+      "floorResolved": false,
+      "visibleEnemies": [],
+      "totalMonsters": 17,
+      "lastMessages": [
+        {
+          "turn": 1,
+          "tone": "good",
+          "message": "Harness enters the valley beneath the ruined keep."
+        },
+        {
+          "turn": 1,
+          "tone": "warning",
+          "message": "Recover the Runestone of the Winds from the lower halls and return to town."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "A cold draft whispers through the keep. Someone once fled these halls and did not make it out."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "Vermin Halls: Vermin Halls - depth 1."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "An unstable shrine is feeding the floor's hostility. Seal it before pushing deeper."
+        },
+        {
+          "turn": 45,
+          "tone": "warning",
+          "message": "You descend to Vermin Halls - depth 1."
+        }
+      ]
+    }
+  ],
+  "feedback": "Strengths\n- The board-first HUD reads quickly in motion. Health, threat, and objective framing stay visible without burying the board.\n- Town service screens are easy to parse once opened. The bank/meta layer is especially clear about what gold can do beyond shopping.\n- The floor objective gate gives the first dungeon level a stronger purpose than a simple stair rush.\n\nFriction\n- The first-time flow still benefits from out-of-band knowledge. The harness needed explicit routing to town stairs and service doors because those paths are not strongly signposted from the title or first board state.\n- The log is only visible inside modal surfaces, so real-time combat/context feedback is easy to miss during movement-heavy play.\n- In this run the first objective (Seal The Shrine) did not fully resolve under pressure, which suggests objective affordances or room-read clarity can still be tightened.\n\nRun Notes\n- Objective on depth 1: Seal The Shrine\n- Final state: Vermin Halls - depth 1, turn 63, HP 56/56\n- Assisted visibility was enabled after the first descent so the harness could cover objective/combat surfaces in one repeatable pass."
+}

@@ -1,0 +1,20 @@
+{
+  "name": "castleofthewinds",
+  "version": "1.0.0",
+  "description": "A browser-playable, dependency-light homage to the classic Windows roguelike, rebuilt for phone travel play.",
+  "main": "app.js",
+  "scripts": {
+    "build:fallback": "node scripts/build-app.mjs",
+    "build:pages": "node scripts/build-pages.mjs",
+    "playtest:harness": "node scripts/playtest-harness.mjs",
+    "screenshot:town": "node scripts/capture-town.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "playwright": "^1.58.2"
+  }
+}

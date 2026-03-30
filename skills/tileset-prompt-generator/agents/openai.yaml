@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tileset Prompts"
+  short_description: "Generate disciplined prompts for game tilesets"
+  default_prompt: "Use $tileset-prompt-generator to write a production-style prompt for a top-down town building atlas."
