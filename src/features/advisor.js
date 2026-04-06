@@ -1,12 +1,19 @@
-import { getHealthRatio, getMonsterHealthState } from "../core/entities.js";
+import { getMonsterHealthState } from "../core/entities.js";
 import { getTile, itemsAt } from "../core/world.js";
 import { clamp, distance, escapeHtml } from "../core/utils.js";
-import { getDangerSummary } from "./director.js";
-import { getObjectiveStatusText, getOptionalStatusText } from "./objectives.js";
+import { getDangerSummary, getPressureStatus } from "./director.js";
+import { getObjectiveRoomClear, getObjectiveStatusText, getOptionalStatusText } from "./objectives.js";
+import { renderOnboardingChecklist, shouldShowOnboardingChecklist } from "./onboarding.js";
 
-function buildObjectiveAdvice(game, tile, hpRatio, visible, focus, lootHere) {
+function buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lootHere) {
+  const directive = game.getLoopDirective ? game.getLoopDirective(tile) : null;
   const objectiveText = getObjectiveStatusText(game.currentLevel);
   const optionalText = getOptionalStatusText(game.currentLevel);
+  const objectiveGuide = directive?.primaryText || (game.getObjectiveGuideText ? game.getObjectiveGuideText() : "");
+  const floorThesis = game.getFloorThesisText ? game.getFloorThesisText() : "";
+  const routeCue = directive?.routeCueText || (game.getCurrentRouteCueText ? game.getCurrentRouteCueText() : "");
+  const dangerNote = directive?.supportText || (game.getImmediateDangerNote ? game.getImmediateDangerNote() : "");
+  const townMeta = game.currentDepth === 0 && game.getTownMetaSummary ? game.getTownMetaSummary() : null;
   const actions = [];
   const pushAction = (action, label, note, recommended = false, tab = "") => {
     if (!actions.some((entry) => entry.action === action)) {
@@ -16,90 +23,132 @@ function buildObjectiveAdvice(game, tile, hpRatio, visible, focus, lootHere) {
 
   let advice = objectiveText;
   if (visible.length > 0 && focus) {
-    const health = getMonsterHealthState(focus);
-    advice = `${focus.name}: ${health.label.toLowerCase()}, ${game.getMonsterIntentLabel(focus).toLowerCase()}.`;
-    if (hpRatio < 0.35) {
-      advice = `${focus.name} has you in lethal range. Break contact or spend a tool now.`;
+    const focusIntent = focus.intent?.type || "";
+    const focusDistance = distance(game.player, focus);
+    advice = `Hold against ${focus.name}.`;
+    if (focusIntent === "sleep") {
+      advice = `${focus.name} is sleeping. Open on your terms or slip past.`;
+      pushAction("search", "Scout", "Set the clean route", true);
+      if (game.player.spellsKnown.length > 0) {
+        pushAction("open-hub", "Magic", "Prep a clean opener", false, "magic");
+      }
+    } else if (hpRatio < 0.35 && (focusIntent === "shoot" || focusIntent === "summon" || focusIntent === "charge" || focusDistance <= 2)) {
+      advice = `Break contact now. ${focus.name} can finish this exchange.`;
       pushAction("stairs-up", "Ascend", "Leave the floor", true);
-      pushAction("open-hub", "Magic", "Use control or escape", false, "magic");
-    } else if (focus.ranged) {
+      pushAction("open-hub", "Magic", "Spend control or escape", false, "magic");
+    } else if (focus.ranged && focusIntent !== "sleep") {
+      advice = `Break line of sight on ${focus.name}.`;
       pushAction("open-hub", "Magic", "Answer ranged pressure", true, "magic");
       pushAction("wait", "Hold", "Do not walk into fire", false);
-    } else if (focus.abilities && focus.abilities.includes("charge")) {
+    } else if (focus.abilities && focus.abilities.includes("charge") && focusIntent !== "sleep") {
+      advice = "Sidestep the charge lane before you advance.";
       pushAction("wait", "Hold", "Read the charge lane", true);
       pushAction("open-hub", "Magic", "Slow or burst it", false, "magic");
-    } else if (focus.abilities && focus.abilities.includes("summon")) {
-      pushAction("open-hub", "Magic", "Kill the summoner", true, "magic");
+    } else if (focus.abilities && focus.abilities.includes("summon") && focusIntent !== "sleep") {
+      advice = "Kill the summoner before the room fills.";
+      pushAction("open-hub", "Magic", "Kill summoner", true, "magic");
+    } else if (focusDistance >= 4 && focusIntent === "advance") {
+      advice = `${focus.name} is aware. Set the approach before opening more map.`;
+      pushAction("wait", "Hold", "Read the lane", true);
+      pushAction("search", "Scout", "Check nearby routes", false);
     } else {
+      advice = `${focus.name} is closing. Take the clean trade.`;
       pushAction("wait", "Hold", "Take the clean exchange", false);
     }
   } else if (lootHere.length > 0) {
-    advice = `Underfoot: ${game.summarizeLoot(lootHere, 2)}.`;
+    advice = `Pick up ${game.summarizeLoot(lootHere, 2)} before moving on.`;
     pushAction("pickup", "Pick Up", lootHere.length === 1 ? game.describeItemReadout(lootHere[0]) : `${lootHere.length} items underfoot`, true);
   } else if (tile.objectiveId) {
-    advice = game.currentLevel.floorResolved
-      ? "The floor objective is already cleared. Decide whether to extract or stay greedy."
-      : "You have reached the objective tile. Resolve it before you think about the stairs.";
-    pushAction("interact", "Resolve", "Finish the floor objective", true);
+    const objectiveId = game.currentLevel.floorObjective?.id;
+    const roomClear = getObjectiveRoomClear(game);
+    if (game.currentLevel.floorResolved) {
+      advice = "Objective complete. Leave now or stay greedy.";
+    } else if (objectiveId === "rescue_captive") {
+      advice = roomClear
+        ? "The captive is clear. Step onto the cell to pull them free."
+        : "The captive is pinned here. Clear the room before the rescue can move.";
+      pushAction("wait", "Hold", "Finish the fight before rescuing them", true);
+      if (game.player.spellsKnown.length > 0) {
+        pushAction("open-hub", "Magic", "Spend control to win the room", false, "magic");
+      }
+    } else if (objectiveId === "purge_nest" && !roomClear) {
+      advice = "The nest is exposed, but defenders are still alive. Clear the room first.";
+      pushAction("wait", "Hold", "Finish the room before purging it", true);
+    } else if (objectiveId === "seal_shrine") {
+      advice = "Seal the shrine when ready. It spends mana and spikes floor pressure.";
+      pushAction("interact", "Seal", "Finish the objective", true);
+    } else {
+      advice = "Resolve the objective now.";
+      pushAction("interact", "Resolve", "Finish the floor objective", true);
+    }
   } else if (tile.optionalId) {
-    advice = "Optional value is here. Touch it only if you want more reward and more danger.";
-    pushAction("interact", "Tempt Fate", "Open the optional encounter", true);
+    advice = "Optional reward is here. Touch it only if you want more pressure.";
+    pushAction("interact", "Open Optional", "Take the greed line", true);
   } else if (tile.kind === "stairUp" && game.currentDepth > 0) {
-    advice = hpRatio < 0.45 ? "You have an escape route under your feet." : "The stairs up are ready if you want to bank progress.";
-    pushAction("stairs-up", "Ascend", "Leave the floor", hpRatio < 0.45);
+    if (hpRatio < 0.45) {
+      advice = "Use the stairs up now.";
+      pushAction("stairs-up", "Ascend", "Leave the floor", true);
+    } else if (game.currentLevel.floorResolved) {
+      advice = "Stairs up are ready if you want to bank progress.";
+      pushAction("stairs-up", "Ascend", "Leave the floor", false);
+    } else {
+      advice = "Stairs up are your fallback. Find the objective before you leave.";
+      pushAction("search", game.currentDepth === 1 ? "Find Route" : "Find Objective", "Push toward the floor objective", true);
+    }
   } else if (tile.kind === "stairDown") {
     if (game.currentLevel.floorResolved) {
-      advice = "The stairs down are open.";
+      advice = "Descend if this build is ready for the next floor.";
       pushAction("stairs-down", "Descend", "Push the run deeper", true);
     } else {
-      advice = "The stairs are here, but the floor objective still matters.";
-      pushAction("search", "Scout", "Find the objective", true);
+      advice = "Ignore the stairs. Find the floor objective first.";
+      pushAction("search", "Find Objective", "Scout the floor", true);
     }
-  } else if (game.currentDepth > 0 && hpRatio < 0.75) {
-    advice = "The floor is quiet enough to recover, but resting still creates pressure.";
-    pushAction("rest", "Rest", "Recover until disturbed", true);
+  } else if (game.currentDepth === 0 && (game.player.deepestDepth || 0) === 0) {
+    advice = game.storyFlags?.townServiceVisited
+      ? "You checked a town door. Take the north road into the keep."
+      : "Step onto one labeled town door, then take the north road into the keep.";
+    pushAction("map-focus", "Survey", "Check the north road", true);
+    pushAction("open-briefing", "Briefing", "Hear the run goal", false);
+    pushAction("open-hub", "Journal", "Review the run goal", false, "journal");
+  } else if (game.currentDepth === 0 && townMeta) {
+    advice = directive?.primaryText || townMeta.recommendedAction;
+    pushAction("map-focus", "Survey", "Check current town state", false);
+    pushAction("open-hub", "Journal", "Review town intel", false, "journal");
+  } else if (game.currentDepth > 0 && (hpRatio < 0.75 || manaRatio < 0.65)) {
+    advice = "Recovery is noisy. Sleep only if you can afford waking the floor.";
+    pushAction("sleep", "Sleep", "Recover to full unless spotted", true);
+    pushAction("rest", "Rest", "Take a shorter recovery", false);
     pushAction("search", "Search", "Probe for routes", false);
   } else if (game.currentDepth > 0) {
-    advice = game.currentLevel.floorResolved
-      ? "Objective complete. Search for greed, or leave while the floor still allows it."
-      : objectiveText;
-    pushAction("search", "Search", "Probe for secrets or routes", true);
+    advice = directive?.primaryText || (game.currentLevel.floorResolved
+      ? "Objective complete. Extract or take one last greed line."
+      : game.currentDepth === 1
+        ? `Go to the objective. Search now sketches more of the route. ${objectiveText}`
+        : `Go to the objective. ${objectiveText}`);
+    pushAction(
+      directive?.recommendedActionId === "stairs-up" ? "stairs-up" : "search",
+      directive?.recommendedActionId === "stairs-up" ? "Ascend" : game.currentLevel.floorResolved ? "Search" : game.currentDepth === 1 ? "Find Route" : "Find Objective",
+      directive?.recommendedActionId === "stairs-up"
+        ? "Bank the floor now"
+        : game.currentLevel.floorResolved
+          ? "Probe for secrets or routes"
+          : game.currentDepth === 1
+            ? "Sketch more of the objective route"
+            : "Probe for routes",
+      true
+    );
   }
 
   return {
     advice,
-    objectiveText,
+    objectiveText: directive?.primaryText || objectiveText,
+    objectiveGuide,
+    floorThesis,
+    routeCue,
+    dangerNote,
+    townMeta,
     optionalText,
     actions
-  };
-}
-
-function chooseSecondaryAction(game, actions, primaryAction) {
-  const remaining = actions.filter((entry) => entry.action !== primaryAction);
-  const preferred = remaining.find((entry) => entry.action !== "wait");
-  if (preferred) {
-    return preferred;
-  }
-  if (game.player.spellsKnown.length > 0 && primaryAction !== "open-hub") {
-    return {
-      action: "open-hub",
-      label: "Magic",
-      note: "Cast, burst, or control",
-      tab: "magic"
-    };
-  }
-  if (game.currentDepth > 0) {
-    return {
-      action: "search",
-      label: "Search",
-      note: "Probe for secrets or routes"
-    };
-  }
-  return {
-    action: "open-hub",
-    label: "Journal",
-    note: "Review directives and run notes",
-    tab: "journal"
   };
 }
 
@@ -121,7 +170,15 @@ function buildDockSlots(game, actions) {
         label: game.player.spellsKnown.length > 0 ? "Magic" : "Survey",
         note: game.player.spellsKnown.length > 0 ? "Review spell options" : "Check the minimap",
         action: game.player.spellsKnown.length > 0 ? "open-hub" : "map-focus",
-        tab: game.player.spellsKnown.length > 0 ? "magic" : ""
+        tab: game.player.spellsKnown.length > 0 ? "magic" : "",
+        tone: "primary"
+      },
+      {
+        prompt: "B",
+        label: "Cancel",
+        note: "Leave targeting",
+        action: "target-cancel",
+        tone: "secondary"
       },
       {
         key: "pack",
@@ -129,43 +186,96 @@ function buildDockSlots(game, actions) {
         label: "Pack",
         note: "Review loadout",
         action: "open-hub",
-        tab: "pack"
-      },
-      {
-        key: "back",
-        prompt: "B",
-        label: "Cancel",
-        note: "Leave targeting",
-        action: "target-cancel"
+        tab: "pack",
+        tone: "utility"
       }
     ];
   }
 
-  const primary = actions[0] || {
-    action: game.currentDepth > 0 ? "search" : "map-focus",
-    label: game.currentDepth > 0 ? "Search" : "Survey",
-    note: game.currentDepth > 0 ? "Probe for routes" : "Check the minimap"
+  const candidates = [];
+  const seen = new Set();
+  const firstTownRun = game.currentDepth === 0 && (game.player?.deepestDepth || 0) === 0;
+  const pushCandidate = (entry) => {
+    if (!entry || !entry.action) {
+      return;
+    }
+    const key = `${entry.action}:${entry.tab || ""}`;
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    candidates.push(entry);
   };
-  const secondary = chooseSecondaryAction(game, actions, primary.action);
+
+  actions.forEach(pushCandidate);
+  if (firstTownRun && !game.storyFlags?.townServiceVisited) {
+    pushCandidate({
+      action: "open-briefing",
+      label: "Briefing",
+      note: "Hear the keep objective"
+    });
+  }
+  if (game.player.spellsKnown.length > 0) {
+    pushCandidate({
+      action: "open-hub",
+      label: "Magic",
+      note: "Cast, burst, or control",
+      tab: "magic"
+    });
+  }
+  pushCandidate(game.currentDepth > 0
+    ? {
+        action: "search",
+        label: game.currentLevel?.floorResolved ? "Scout" : "Find Route",
+        note: game.currentLevel?.floorResolved ? "Probe for secrets or greed" : "Probe for routes"
+      }
+    : {
+        action: "map-focus",
+        label: "Survey",
+        note: "Open the field survey"
+      });
+  pushCandidate({
+    action: "wait",
+    label: game.currentDepth > 0 ? "Hold" : "Wait",
+    note: "Spend a careful turn"
+  });
+
+  while (candidates.length < 3) {
+    pushCandidate({
+      action: "open-utility-menu",
+      label: "Menu",
+      note: "Save, settings, and help"
+    });
+  }
 
   return [
     {
       key: "primary",
       prompt: "A",
-      label: primary.label,
-      note: primary.note,
-      action: primary.action,
-      tab: primary.tab || "",
+      label: candidates[0].label,
+      note: candidates[0].note,
+      action: candidates[0].action,
+      tab: candidates[0].tab || "",
       tone: "primary",
       active: true
     },
     {
       key: "secondary",
       prompt: "X",
-      label: secondary.label,
-      note: secondary.note,
-      action: secondary.action,
-      tab: secondary.tab || ""
+      label: candidates[1].label,
+      note: candidates[1].note,
+      action: candidates[1].action,
+      tab: candidates[1].tab || "",
+      tone: "secondary"
+    },
+    {
+      key: "tertiary",
+      prompt: "B",
+      label: candidates[2].label,
+      note: candidates[2].note,
+      action: candidates[2].action,
+      tab: candidates[2].tab || "",
+      tone: "secondary"
     },
     {
       key: "pack",
@@ -173,48 +283,18 @@ function buildDockSlots(game, actions) {
       label: "Pack",
       note: "Review loadout",
       action: "open-hub",
-      tab: "pack"
-    },
-    {
-      key: "back",
-      prompt: "B",
-      label: "Wait",
-      note: "Spend a careful turn",
-      action: "wait"
+      tab: "pack",
+      tone: "utility"
     }
   ];
-}
-
-function renderThreatRows(game, visible, focus) {
-  if (visible.length === 0) {
-    return "<div class='muted'>No visible enemies.</div>";
-  }
-  return visible.slice(0, 4).map((monster) => {
-    const health = getMonsterHealthState(monster);
-    const ratio = Math.round(getHealthRatio(monster) * 100);
-    const isFocus = monster === focus;
-    return `
-      <div class="threat-row${isFocus ? " active" : ""}">
-        <div class="threat-row-main">
-          <div class="threat-row-name">${escapeHtml(monster.name)}</div>
-          <div class="threat-row-meta">${escapeHtml(game.getMonsterRoleLabel(monster))} · ${escapeHtml(game.getMonsterIntentLabel(monster))}</div>
-        </div>
-        <div class="threat-row-side">
-          <div class="threat-tag ${health.tone}">${escapeHtml(health.label)}</div>
-          <div class="threat-row-distance">${distance(game.player, monster)} tiles · ${monster.hp}/${monster.maxHp || monster.hp} HP</div>
-        </div>
-        <div class="meter threat-health"><span style="width:${ratio}%"></span></div>
-      </div>
-    `;
-  }).join("");
 }
 
 export function getAdvisorModel(game) {
   if (!game.player || !game.currentLevel) {
     return {
-      playerHtml: "<div class='muted'>No active run.</div>",
-      threatHtml: "<div class='muted'>No threats yet.</div>",
-      advisorHtml: "<div class='advisor-label'>Field Read</div><div class='advisor-text'>Create a character to begin.</div>",
+      statsHtml: "<div class='muted'>No active run.</div>",
+      objectiveHtml: "<div class='muted'>No active directive.</div>",
+      fieldHtml: "<div class='field-summary-head'><span class='advisor-label'>Field Read</span><span class='field-summary-state'>No active run</span></div><div class='field-summary-text'>Create a character to begin.</div>",
       dockSlots: []
     };
   }
@@ -226,74 +306,134 @@ export function getAdvisorModel(game) {
   const manaRatio = game.player.maxMana > 0 ? game.player.mana / game.player.maxMana : 1;
   const lootHere = itemsAt(game.currentLevel, game.player.x, game.player.y);
   const burdenUi = game.getBurdenUiState();
-  const condition = game.player.slowed ? "Slowed" : burdenUi.state === "overloaded" ? "Overburdened" : burdenUi.state === "warning" || burdenUi.state === "danger" ? "Burdened" : "Steady";
+  const condition = game.player.held
+    ? "Held"
+    : game.player.slowed
+      ? "Slowed"
+      : burdenUi.state === "overloaded"
+        ? "Overburdened"
+        : burdenUi.state === "warning" || burdenUi.state === "danger"
+          ? "Burdened"
+          : "Steady";
   const locationLabel = game.currentDepth > 0 ? `Depth ${game.currentDepth}` : "Town";
-  const objectiveView = buildObjectiveAdvice(game, tile, hpRatio, visible, focus, lootHere);
+  const objectiveView = buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lootHere);
   const visibleLoot = game.getVisibleLootItems ? game.getVisibleLootItems() : [];
   const focusHealth = focus ? getMonsterHealthState(focus) : null;
   const dockSlots = buildDockSlots(game, objectiveView.actions);
+  const pressure = getPressureStatus(game.currentLevel);
+  const firstTownRun = game.currentDepth === 0 && (game.player.deepestDepth || 0) === 0;
+  const returnSting = game.getTownReturnStingText ? game.getTownReturnStingText() : "";
+  const tileAction = game.getTileActionPrompt ? game.getTileActionPrompt(tile) : null;
+  const pinnedEvent = game.getPinnedTickerEntry ? game.getPinnedTickerEntry() : null;
 
-  const playerHtml = `
-    <div class="capsule-topline">
-      <div>
-        <div class="capsule-label">Adventurer</div>
-        <div class="capsule-headline">${escapeHtml(game.player.name)}</div>
-      </div>
-      <div class="capsule-badge ${game.currentDepth > 0 ? "warning" : "good"}">${escapeHtml(locationLabel)}</div>
+  const statsHtml = `
+    <div class="stat-band-head">
+      <span class="stat-band-name">${escapeHtml(game.player.name)}</span>
+      <span class="stat-band-role">${escapeHtml(`${game.player.race} ${game.player.className}`)}</span>
     </div>
-    <div class="meter-stack">
-      <div class="meter-row"><span>Vitality</span><strong>${Math.floor(game.player.hp)}/${game.player.maxHp}</strong></div>
-      <div class="meter hp"><span style="width:${clamp(Math.round(hpRatio * 100), 0, 100)}%"></span></div>
-      <div class="meter-row"><span>Aether</span><strong class="${manaRatio < 0.3 ? "value-warning" : ""}">${Math.floor(game.player.mana)}/${game.player.maxMana}</strong></div>
-      <div class="meter mana"><span style="width:${clamp(Math.round(manaRatio * 100), 0, 100)}%"></span></div>
-      <div class="meter-row"><span>Burden</span><strong class="burden-value burden-${burdenUi.state}">${burdenUi.weight} / ${burdenUi.capacity}</strong></div>
-      <div class="meter burden burden-${burdenUi.state}"><span style="width:${burdenUi.percent}%"></span></div>
-    </div>
-    <div class="capsule-line compact-line"><span>Condition</span><strong class="${game.player.slowed || burdenUi.state !== "safe" ? "value-warning" : ""}">${condition}</strong></div>
-    <div class="capsule-line compact-line"><span>Load Read</span><strong class="burden-${burdenUi.state}">${escapeHtml(burdenUi.label)}</strong></div>
-  `;
-
-  const threatSummary = focus
-    ? `
-      <div class="capsule-topline">
-        <div>
-          <div class="capsule-label">Primary Threat</div>
-          <div class="capsule-headline">${escapeHtml(focus.name)}</div>
-        </div>
-        <div class="capsule-badge ${focusHealth.tone}">${escapeHtml(focusHealth.label)}</div>
+    <div class="rail-stat-row">
+      <div class="rail-stat-pill tone-health">
+        <span>HP</span>
+        <strong>${Math.floor(game.player.hp)}/${game.player.maxHp}</strong>
+        <div class="rail-meter hp"><span style="width:${clamp(Math.round(hpRatio * 100), 0, 100)}%"></span></div>
       </div>
-      <div class="capsule-subline">${escapeHtml(game.getMonsterRoleLabel(focus))} · ${escapeHtml(game.getMonsterIntentLabel(focus))} · ${distance(game.player, focus)} tiles</div>
-      <div class="meter-stack">
-        <div class="meter-row"><span>Enemy Health</span><strong>${focus.hp}/${focus.maxHp || focus.hp}</strong></div>
-        <div class="meter threat-health"><span style="width:${Math.round(getHealthRatio(focus) * 100)}%"></span></div>
+      <div class="rail-stat-pill tone-mana">
+        <span>Mana</span>
+        <strong class="${manaRatio < 0.3 ? "value-warning" : ""}">${Math.floor(game.player.mana)}/${game.player.maxMana}</strong>
+        <div class="rail-meter mana"><span style="width:${clamp(Math.round(manaRatio * 100), 0, 100)}%"></span></div>
       </div>
-      <div class="threat-roster">${renderThreatRows(game, visible, focus)}</div>
-      <div class="capsule-line compact-line"><span>Underfoot</span><strong>${escapeHtml(lootHere.length > 0 ? game.summarizeLoot(lootHere, 2) : "Nothing")}</strong></div>
-    `
-    : `
-      <div class="capsule-topline">
-        <div>
-          <div class="capsule-label">Sightline</div>
-          <div class="capsule-headline">No visible enemies</div>
-        </div>
-        <div class="capsule-badge good">Clear</div>
+      <div class="rail-stat-pill tone-load burden-${burdenUi.state}">
+        <span>Load</span>
+        <strong>${burdenUi.weight}/${burdenUi.capacity}</strong>
+        <div class="rail-meter burden burden-${burdenUi.state}"><span style="width:${burdenUi.percent}%"></span></div>
       </div>
-      <div class="capsule-subline">${escapeHtml(game.currentDepth > 0 ? getDangerSummary(game.currentLevel) : "Town is quiet.")}</div>
-      <div class="capsule-line compact-line"><span>Objective</span><strong>${escapeHtml(objectiveView.objectiveText)}</strong></div>
-      <div class="capsule-line compact-line"><span>Visible Loot</span><strong>${escapeHtml(visibleLoot.length > 0 ? game.summarizeLoot(visibleLoot, 2) : "None in sight")}</strong></div>
-      <div class="capsule-line compact-line"><span>Underfoot</span><strong>${escapeHtml(lootHere.length > 0 ? game.summarizeLoot(lootHere, 2) : "Nothing")}</strong></div>
-    `;
-
-  const advisorHtml = `
-    <div class="advisor-label">Field Read</div>
-    <div class="advisor-text">${escapeHtml(objectiveView.advice)}</div>
-    <div class="advisor-meta">
-      <span class="advisor-chip">${escapeHtml(objectiveView.objectiveText)}</span>
-      ${objectiveView.optionalText ? `<span class="advisor-chip">${escapeHtml(objectiveView.optionalText)}</span>` : ""}
+      <div class="rail-stat-pill tone-meta">
+        <span>State</span>
+        <strong class="${game.player.slowed || burdenUi.state !== "safe" ? "value-warning" : ""}">${escapeHtml(condition)}</strong>
+      </div>
     </div>
   `;
 
-  return { playerHtml, threatHtml: threatSummary, advisorHtml, dockSlots };
+  const ribbonLabel = focus
+    ? (focus.intent?.type === "sleep" ? "Visible Threat" : "Primary Threat")
+    : lootHere.length > 0
+      ? "Underfoot"
+      : tile.objectiveId
+        ? "Objective"
+        : "Field Read";
+  const ribbonState = focus
+    ? `${focus.name} | ${game.getMonsterIntentLabel(focus)} | ${distance(game.player, focus)} tiles`
+    : lootHere.length > 0
+      ? game.summarizeLoot(lootHere, 2)
+      : game.currentDepth > 0
+        ? objectiveView.floorThesis || `${pressure.shortLabel} | ${pressure.countdown}`
+        : firstTownRun
+          ? "North road leads into the keep"
+          : returnSting || "Town is quiet";
+  const ribbonSupport = focus
+    ? `${focusHealth.label} | ${game.getMonsterRoleLabel(focus)}`
+    : objectiveView.routeCue || objectiveView.dangerNote || objectiveView.objectiveGuide || objectiveView.optionalText || objectiveView.objectiveText || (visibleLoot.length > 0
+      ? `Visible loot: ${game.summarizeLoot(visibleLoot, 2)}`
+      : game.currentDepth > 0
+        ? getDangerSummary(game.currentLevel)
+        : firstTownRun
+          ? "Start by walking north from the plaza."
+          : returnSting || "No visible enemies");
+  const supportMarkup = ribbonSupport && ribbonSupport !== objectiveView.advice && ribbonSupport !== ribbonState
+    ? `<div class="field-brief-support">${escapeHtml(ribbonSupport)}</div>`
+    : "";
+  const townMetaMarkup = game.currentDepth === 0 && objectiveView.townMeta
+    ? `<div class="field-brief-support">${escapeHtml(objectiveView.townMeta.summary)}</div>`
+    : "";
+  const onboardingMarkup = shouldShowOnboardingChecklist(game)
+    ? renderOnboardingChecklist(game)
+    : "";
+
+  const fieldHtml = `
+    <div class="field-summary-head">
+      <span class="advisor-label">${escapeHtml(ribbonLabel)}</span>
+      <span class="field-summary-state ${focusHealth ? focusHealth.tone : visible.length > 0 ? "warning" : pressure.tone}">${escapeHtml(ribbonState)}</span>
+    </div>
+    <div class="field-brief-text">${escapeHtml(objectiveView.advice)}</div>
+    ${supportMarkup}
+    ${townMetaMarkup}
+    ${onboardingMarkup}
+  `;
+
+  const townDirective = firstTownRun
+    ? (game.storyFlags?.townServiceVisited
+        ? "Town checked. The north road and keep stairs are ready."
+        : "First stop: step onto any labeled town door. Then go north into the keep.")
+    : returnSting || "Town is quiet.";
+  const routeHint = game.currentDepth > 0 && game.getObjectiveRouteHint
+    ? game.getObjectiveRouteHint()
+    : objectiveView.routeCue;
+  const roomHint = game.currentDepth > 0 && game.getObjectiveRoomHint
+    ? game.getObjectiveRoomHint()
+    : "";
+  const stairsState = game.currentDepth === 0
+    ? (firstTownRun
+        ? (game.storyFlags?.townServiceVisited ? "Keep stairs are open for the first descent." : "Town task first, then keep stairs.")
+        : "Town resets shops, healing, intel, and banked safety for this adventurer.")
+    : game.currentLevel.floorResolved
+      ? "Deeper stairs unlocked. Extract now or push one more greed line."
+      : "Deeper stairs locked until the floor objective is resolved.";
+  const pressureLine = game.currentDepth === 0
+    ? (objectiveView.townMeta?.summary || "Town value is run support: safety, intel, stock, and funded leverage for this adventurer.")
+    : pressure.summary;
+  const directiveLine = tileAction?.detail || roomHint || pinnedEvent?.message || objectiveView.objectiveGuide || objectiveView.optionalText || "";
+  const objectiveHtml = `
+    <div class="objective-band-head">
+      <span class="advisor-label">${escapeHtml(game.currentDepth === 0 ? "Town Plan" : "Current Goal")}</span>
+      <span class="objective-band-state tone-${pressure.tone}">${escapeHtml(game.currentDepth === 0 ? "Run Prep" : pressure.shortLabel)}</span>
+    </div>
+    <div class="objective-band-line">${escapeHtml(game.currentDepth === 0 ? townDirective : routeHint || objectiveView.objectiveText)}</div>
+    <div class="objective-band-line muted-line">${escapeHtml(stairsState)}</div>
+    <div class="objective-band-line muted-line">${escapeHtml(pressureLine)}</div>
+    ${directiveLine ? `<div class="objective-band-line accent-line">${escapeHtml(directiveLine)}</div>` : ""}
+  `;
+
+  return { statsHtml, objectiveHtml, fieldHtml, dockSlots };
 }
 
 export function renderPanels(game) {
@@ -302,24 +442,24 @@ export function renderPanels(game) {
       game.playerCapsule.innerHTML = "<div class='muted'>No active run.</div>";
     }
     if (game.threatCapsule) {
-      game.threatCapsule.innerHTML = "<div class='muted'>No visible threats.</div>";
+      game.threatCapsule.innerHTML = "<div class='muted'>No active directive.</div>";
     }
     if (game.advisorStrip) {
-      game.advisorStrip.innerHTML = "<div class='advisor-label'>Field Read</div><div class='advisor-text'>Create a character to begin.</div>";
+      game.advisorStrip.innerHTML = "<div class='field-summary-head'><span class='advisor-label'>Field Read</span><span class='field-summary-state'>No active run</span></div><div class='field-brief-text'>Create a character to begin.</div>";
     }
     return;
   }
 
   const advisor = getAdvisorModel(game);
   if (game.playerCapsule) {
-    game.playerCapsule.innerHTML = advisor.playerHtml;
+    game.playerCapsule.innerHTML = advisor.statsHtml;
     game.playerCapsule.dataset.burdenState = game.getBurdenUiState().state;
   }
   if (game.threatCapsule) {
-    game.threatCapsule.innerHTML = advisor.threatHtml;
+    game.threatCapsule.innerHTML = advisor.objectiveHtml;
   }
   if (game.advisorStrip) {
-    game.advisorStrip.innerHTML = advisor.advisorHtml;
+    game.advisorStrip.innerHTML = advisor.fieldHtml;
   }
 }
 
@@ -334,7 +474,7 @@ export function renderActionBar(game) {
   const advisor = getAdvisorModel(game);
   game.actionBar.dataset.mode = game.targetMode ? "target" : "field";
   game.actionBar.innerHTML = advisor.dockSlots.map((slot) => `
-    <button class="action-button dock-action dock-slot dock-slot-${slot.key}${slot.tone === "primary" ? " recommended" : ""}${slot.active ? " is-active" : ""}" data-action="${slot.action}"${slot.tab ? ` data-tab="${slot.tab}"` : ""} type="button">
+    <button class="action-button dock-action dock-slot dock-slot-${slot.key} dock-tone-${slot.tone}${slot.tone === "primary" ? " recommended" : ""}${slot.active ? " is-active" : ""}" data-action="${slot.action}"${slot.tab ? ` data-tab="${slot.tab}"` : ""} data-focus-key="dock:${slot.key}" type="button">
       <span class="context-slot">${escapeHtml(slot.prompt)}</span>
       <span class="context-copy">
         <span class="context-main">${escapeHtml(slot.label)}</span>

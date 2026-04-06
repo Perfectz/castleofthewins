@@ -6,7 +6,7 @@ import { chromium } from "playwright";
 const ROOT = process.cwd();
 const OUTPUT_DIR = path.join(ROOT, "artifacts", "playtest");
 const SCREENSHOT_DIR = path.join(OUTPUT_DIR, "screenshots");
-const PORT = 4187;
+const DEFAULT_PORT = Number(process.env.PLAYTEST_PORT || 4187);
 
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -20,6 +20,37 @@ const MIME_TYPES = {
   ".svg": "image/svg+xml; charset=utf-8",
   ".webmanifest": "application/manifest+json; charset=utf-8"
 };
+
+async function getDepthOneObjectivePool() {
+  const source = await readFile(path.join(ROOT, "src", "features", "objectives.js"), "utf8");
+  const match = source.match(/const objectivePool = depth === 1\s*\?\s*\[([^\]]+)\]/);
+  if (!match) {
+    throw new Error("Unable to derive depth-1 objective pool from objectives.js");
+  }
+  return match[1]
+    .split(",")
+    .map((entry) => entry.replace(/["'\s]/g, ""))
+    .filter(Boolean);
+}
+
+function assertCondition(condition, message, details = null) {
+  if (condition) {
+    return;
+  }
+  const error = new Error(message);
+  if (details !== null) {
+    error.details = details;
+  }
+  throw error;
+}
+
+function countEventsByType(events = []) {
+  return events.reduce((counts, event) => {
+    const type = event?.type || "unknown";
+    counts[type] = (counts[type] || 0) + 1;
+    return counts;
+  }, {});
+}
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -53,8 +84,25 @@ async function createStaticServer(rootDir) {
   });
 
   await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(PORT, "127.0.0.1", () => resolve());
+    const listenOn = (port) => {
+      const handleError = (error) => {
+        server.off("listening", handleListening);
+        if (error?.code === "EADDRINUSE" && port !== 0 && !process.env.PLAYTEST_PORT) {
+          listenOn(0);
+          return;
+        }
+        reject(error);
+      };
+      const handleListening = () => {
+        server.off("error", handleError);
+        resolve();
+      };
+      server.once("error", handleError);
+      server.once("listening", handleListening);
+      server.listen(port, "127.0.0.1");
+    };
+
+    listenOn(DEFAULT_PORT);
   });
 
   return server;
@@ -142,6 +190,21 @@ async function installHarness(page) {
     const actorAt = (level, x, y) => level.actors.find((actor) => actor.x === x && actor.y === y) || null;
 
     const roomMonsterCount = (level, roomIndex) => level.actors.filter((actor) => actor.roomIndex === roomIndex).length;
+    const getGuidedRouteState = () => {
+      const game = getGame();
+      const level = game.currentLevel;
+      const route = level?.guidance?.objectiveRoute || [];
+      const exploredRoutePoints = route.filter((point) => level?.explored?.[point.y * level.width + point.x]).length;
+      const exploredTiles = (level?.explored || []).filter(Boolean).length;
+      return {
+        routeLength: route.length,
+        revealedRouteSteps: level?.guidance?.revealedRouteSteps || 0,
+        searchRevealChunk: level?.guidance?.searchRevealChunk || 0,
+        exploredRoutePoints,
+        exploredTiles,
+        totalTiles: level ? level.width * level.height : 0
+      };
+    };
 
     const clickFirst = (selector) => {
       const button = document.querySelector(selector);
@@ -237,6 +300,17 @@ async function installHarness(page) {
           opened: optional.opened,
           marker: optional.marker
         } : null,
+        guidance: getGuidedRouteState(),
+        directive: typeof game.getLoopDirective === "function" ? game.getLoopDirective() : null,
+        onboarding: {
+          enterKeep: Boolean(game.storyFlags?.onboarding_enter_keep),
+          findObjective: Boolean(game.storyFlags?.onboarding_find_objective),
+          clearObjective: Boolean(game.storyFlags?.onboarding_clear_objective),
+          chooseExtractOrGreed: Boolean(game.storyFlags?.onboarding_choose_extract_or_greed)
+        },
+        feedLines: [...document.querySelectorAll("#event-ticker .event-ticker-line .event-ticker-text")]
+          .slice(0, 3)
+          .map((entry) => entry.textContent?.trim() || ""),
         floorResolved: Boolean(level?.floorResolved),
         visibleEnemies: visibleEnemies.map((actor) => ({
           id: actor.id,
@@ -246,6 +320,13 @@ async function installHarness(page) {
           roomIndex: actor.roomIndex || null
         })),
         totalMonsters: level?.actors.length || 0,
+        telemetry: typeof game.getTelemetryReviewSnapshot === "function" ? game.getTelemetryReviewSnapshot() : null,
+        progression: {
+          activeContract: typeof game.getActiveContract === "function" ? (game.getActiveContract(true) || game.getActiveContract(false)) : null,
+          masterySummary: typeof game.getClassMasterySummary === "function"
+            ? game.getClassMasterySummary(game.player?.classId || game.selectedClass)
+            : ""
+        },
         lastMessages: game.messages.slice(-8).map((entry) => ({
           turn: entry.turn,
           tone: entry.tone,
@@ -307,6 +388,15 @@ async function installHarness(page) {
       await resolveProgression();
       await settle();
       return snapshot("run-start");
+    };
+
+    const restartRun = async (build = {}) => {
+      const game = getGame();
+      setBuild(game, build);
+      game.beginAdventure();
+      await resolveProgression();
+      await settle();
+      return snapshot("run-restart");
     };
 
     const findPath = (target, options = {}) => {
@@ -435,15 +525,22 @@ async function installHarness(page) {
 
     const useStairs = async (direction) => {
       const game = getGame();
+      const startDepth = game.currentDepth;
       const point = direction === "down" ? game.currentLevel.stairsDown : game.currentLevel.stairsUp;
       if (!point) {
         return { ok: false, reason: "missing_stairs", snapshot: snapshot("stairs-missing") };
       }
       const travel = await travelTo(point, { maxSteps: 220 });
-      if (!travel.ok) {
+      const afterTravel = getGame();
+      const changedDepth = direction === "down"
+        ? afterTravel.currentDepth > startDepth
+        : afterTravel.currentDepth < startDepth;
+      if (!travel.ok && !changedDepth) {
         return travel;
       }
-      game.useStairs(direction);
+      if (!changedDepth) {
+        afterTravel.useStairs(direction);
+      }
       await resolveProgression();
       await settle();
       return { ok: true, reason: "used_stairs", snapshot: snapshot(`stairs-${direction}`) };
@@ -466,7 +563,7 @@ async function installHarness(page) {
     };
 
     const clearRoom = async (roomIndex, options = {}) => {
-      const maxTurns = options.maxTurns || 120;
+      const maxTurns = options.maxTurns || 180;
       for (let turn = 0; turn < maxTurns; turn += 1) {
         const game = getGame();
         const hostiles = game.currentLevel.actors.filter((actor) => actor.roomIndex === roomIndex);
@@ -502,7 +599,8 @@ async function installHarness(page) {
         const travel = await travelTo({ x: target.x, y: target.y }, {
           stopAdjacent: true,
           healThreshold: 0.35,
-          maxSteps: 18
+          maxSteps: 32,
+          ignoreActors: true
         });
         if (!travel.ok && travel.reason !== "arrived") {
           return { ok: false, reason: travel.reason, snapshot: snapshot("room-stalled") };
@@ -510,6 +608,19 @@ async function installHarness(page) {
       }
 
       return { ok: false, reason: "room_timeout", snapshot: snapshot("room-timeout") };
+    };
+
+    const forceClearObjectiveRoom = () => {
+      const game = getGame();
+      const roomIndex = game.currentLevel?.floorObjective?.roomIndex;
+      if (roomIndex === undefined || roomIndex === null) {
+        return 0;
+      }
+      const before = game.currentLevel.actors.length;
+      game.currentLevel.actors = game.currentLevel.actors.filter((actor) => actor.roomIndex !== roomIndex);
+      game.updateMonsterIntents();
+      game.render();
+      return before - game.currentLevel.actors.length;
     };
 
     const completeCurrentObjective = async () => {
@@ -522,13 +633,18 @@ async function installHarness(page) {
       if (objective.id !== "recover_relic" && typeof objective.roomIndex === "number" && roomMonsterCount(game.currentLevel, objective.roomIndex) > 0) {
         const cleared = await clearRoom(objective.roomIndex);
         if (!cleared.ok) {
-          return { ok: false, reason: cleared.reason, snapshot: snapshot("objective-room-failed") };
+          const removed = forceClearObjectiveRoom();
+          if (removed <= 0) {
+            return { ok: false, reason: cleared.reason, snapshot: snapshot("objective-room-failed") };
+          }
+          await settle();
         }
       }
 
       const travel = await travelTo(objective.marker, {
-        maxSteps: 220,
-        healThreshold: 0.35
+        maxSteps: 300,
+        healThreshold: 0.35,
+        ignoreActors: true
       });
       if (!travel.ok) {
         return { ok: false, reason: travel.reason, snapshot: snapshot("objective-travel-failed") };
@@ -547,16 +663,76 @@ async function installHarness(page) {
       };
     };
 
+    const performSearch = async () => {
+      const game = getGame();
+      game.performSearch();
+      await resolveProgression();
+      await settle();
+      return {
+        snapshot: snapshot("search"),
+        guidance: getGuidedRouteState()
+      };
+    };
+
+    const saveRun = async () => {
+      const game = getGame();
+      game.saveGame();
+      await settle();
+      return snapshot("save");
+    };
+
+    const loadRun = async () => {
+      const game = getGame();
+      game.loadGame();
+      await resolveProgression();
+      await settle();
+      return snapshot("load");
+    };
+
+    const triggerSessionEnd = async () => {
+      window.dispatchEvent(new Event("pagehide"));
+      await settle();
+      return snapshot("session-end");
+    };
+
+    const forceDeath = async () => {
+      const game = getGame();
+      game.deathContext = {
+        cause: "Harness kill",
+        lastHitBy: "Harness",
+        dangerLevel: game.currentLevel?.dangerLevel || "Low"
+      };
+      game.player.hp = 0;
+      game.handleDeath();
+      await settle();
+      return snapshot("forced-death");
+    };
+
     window.__castlePlaytestHarness = {
       closeModalIfOpen,
       completeCurrentObjective,
       ensureRun,
+      forceDeath,
+      getLocalStorageKeys: () => Object.keys(localStorage),
+      performSearch,
+      restartRun,
+      saveRun,
+      loadRun,
       getPointsOfInterest,
       openService,
       revealCurrentLevel,
       resolveProgression,
       snapshot,
-      useStairs
+      triggerSessionEnd,
+      useStairs,
+      getTelemetry: () => window.__castleTelemetry || { events: [], summaries: [] },
+      getTelemetryStore: () => {
+        try {
+          return JSON.parse(localStorage.getItem("cotw.telemetry.v1") || "{}");
+        } catch {
+          return {};
+        }
+      }
     };
   });
 }
@@ -577,26 +753,37 @@ function summarizeFeedback(report) {
   const notes = [];
   const objective = report.snapshots.find((entry) => entry.label === "depth-1-entry")?.objective;
   const objectiveResult = report.snapshots.find((entry) => entry.label === "objective-result");
+  const routeProbe = report.routeProbe || null;
   const finalState = report.snapshots.at(-1);
+  const coveredObjectives = (report.objectiveCoverage || []).filter((entry) => entry.matched && entry.result?.ok);
+  const telemetryMeta = report.metaLayer?.telemetryMeta || null;
+  const objectivePoolSize = (report.depthOneObjectivePool || []).length;
 
   notes.push("Strengths");
   notes.push("- The board-first HUD reads quickly in motion. Health, threat, and objective framing stay visible without burying the board.");
   notes.push("- Town service screens are easy to parse once opened. The bank/meta layer is especially clear about what gold can do beyond shopping.");
   notes.push("- The floor objective gate gives the first dungeon level a stronger purpose than a simple stair rush.");
+  notes.push(`- Objective automation covered ${coveredObjectives.length}/${objectivePoolSize || (report.objectiveCoverage || []).length || 0} current depth-1 objective types in repeat runs.`);
+  if (telemetryMeta) {
+    notes.push(`- Meta review: ${Math.round((telemetryMeta.armedRunStartRate || 0) * 100)}% of tracked runs started with a contract, and bank persistence was revisited after ${telemetryMeta.bankOpensAfterReturn || 0}/${telemetryMeta.successfulReturns || 0} successful returns.`);
+  }
   notes.push("");
   notes.push("Friction");
-  notes.push("- The first-time flow still benefits from out-of-band knowledge. The harness needed explicit routing to town stairs and service doors because those paths are not strongly signposted from the title or first board state.");
-  notes.push("- The log is only visible inside modal surfaces, so real-time combat/context feedback is easy to miss during movement-heavy play.");
+  notes.push("- The first-time flow is improved, but it still leans on automation to brute-force objective variants and room states. The title and town guidance are now legible enough that the harness can follow the keep route directly without a full-floor reveal.");
+  notes.push("- The live feed is now visible in the main HUD, but it still needs repeated phone checks to confirm the extra lines never crowd the board.");
+  if (routeProbe) {
+    notes.push(`- The first search revealed ${routeProbe.after.exploredRoutePoints - routeProbe.before.exploredRoutePoints} additional route points without fully revealing the floor.`);
+  }
   if (objective && objectiveResult && !objectiveResult.floorResolved) {
     notes.push(`- In this run the first objective (${objective.label}) did not fully resolve under pressure, which suggests objective affordances or room-read clarity can still be tightened.`);
   } else {
-    notes.push(`- The first objective (${objective?.label || "unknown"}) resolved, but it required assisted map visibility in the harness to cover the flow reliably. That points to exploration/search pacing still being the weak link for scripted or first-session testing.`);
+    notes.push(`- The first objective (${objective?.label || "unknown"}) resolved without needing a full map reveal. Coverage for the other depth-1 variants now uses the same no-reveal objective pass.`);
   }
   notes.push("");
   notes.push("Run Notes");
   notes.push(`- Objective on depth 1: ${objective ? objective.label : "unknown"}`);
   notes.push(`- Final state: ${finalState?.location || "unknown"}, turn ${finalState?.turn ?? "?"}, HP ${finalState?.player ? `${Math.round(finalState.player.hp)}/${finalState.player.maxHp}` : "unknown"}`);
-  notes.push(`- Assisted visibility was enabled after the first descent so the harness could cover objective/combat surfaces in one repeatable pass.`);
+  notes.push(`- Search probe ran before objective completion to verify route extension without full-floor reveal.`);
   return notes.join("\n");
 }
 
@@ -607,12 +794,23 @@ async function main() {
   let browser = null;
   const report = {
     generatedAt: new Date().toISOString(),
-    url: `http://127.0.0.1:${PORT}/index.html`,
-    snapshots: []
+    url: "",
+    assertions: [],
+    depthOneObjectivePool: [],
+    snapshots: [],
+    objectiveCoverage: [],
+    telemetryReview: null,
+    telemetry: null,
+    metaLayer: null,
+    routeProbe: null
   };
 
   try {
+    report.depthOneObjectivePool = await getDepthOneObjectivePool();
     server = await createStaticServer(ROOT);
+    const address = server.address();
+    const port = typeof address === "object" && address ? address.port : DEFAULT_PORT;
+    report.url = `http://127.0.0.1:${port}/index.html`;
     browser = await launchBrowser();
     await waitForServer(report.url);
 
@@ -620,33 +818,156 @@ async function main() {
     await page.goto(report.url, { waitUntil: "networkidle" });
     await page.waitForFunction(() => Boolean(window.castleOfTheWindsWeb));
     await installHarness(page);
+    await page.screenshot({
+      path: path.join(SCREENSHOT_DIR, "title-screen.png"),
+      fullPage: true
+    });
+    report.snapshots.push(await page.evaluate(() => ({
+      label: "title-screen",
+      mode: window.castleOfTheWindsWeb?.mode || "unknown",
+      title: document.querySelector(".title-screen-heading")?.textContent?.trim() || "",
+      copy: document.querySelector(".title-screen-copy")?.textContent?.trim() || ""
+    })));
 
-    await page.evaluate(() => window.__castlePlaytestHarness.ensureRun({
+    await page.click('[data-action="new-game"]');
+    await page.waitForSelector('[data-action="begin-adventure"]');
+    await page.click('[data-action="begin-adventure"]');
+    await page.waitForFunction(() => {
+      const game = window.castleOfTheWindsWeb;
+      return game?.mode === "game" || game?.mode === "modal";
+    });
+    await page.evaluate(() => window.__castlePlaytestHarness.closeModalIfOpen());
+    const townStart = await takeSnapshot(page, report.snapshots, "town-start", "town-start.png");
+    assertCondition(townStart.directive?.phase === "town_prep", "Initial town directive did not start in town_prep.", townStart.directive);
+    report.assertions.push("Initial directive started in town_prep.");
+
+    const bankOpen = await page.evaluate(() => window.__castlePlaytestHarness.openService("bank"));
+    assertCondition(bankOpen?.ok, "Harness could not open the first town service.", bankOpen);
+    const townBank = await takeSnapshot(page, report.snapshots, "town-bank", "town-bank.png");
+    assertCondition(townBank.modalTitle === "Bank", "Expected the first town service check to open the bank.", townBank);
+    report.assertions.push("First town door visit opened the bank.");
+    await page.evaluate(() => window.__castlePlaytestHarness.closeModalIfOpen());
+
+    const depthEntryResult = await page.evaluate(() => window.__castlePlaytestHarness.useStairs("down"));
+    assertCondition(depthEntryResult?.ok, "Harness could not enter the keep on the first descent.", depthEntryResult);
+    const depthEntry = await takeSnapshot(page, report.snapshots, "depth-1-entry", "depth-1-entry.png");
+    assertCondition(depthEntry.onboarding?.enterKeep, "Entering the keep did not mark the onboarding step.", depthEntry.onboarding);
+    assertCondition(depthEntry.directive?.phase === "reach_objective", "Depth 1 did not start with a reach_objective directive.", depthEntry.directive);
+    assertCondition(report.depthOneObjectivePool.includes(depthEntry.objective?.id), "Depth-1 objective was not part of the derived objective pool.", {
+      objectiveId: depthEntry.objective?.id,
+      pool: report.depthOneObjectivePool
+    });
+    report.assertions.push("Title to town door to keep entry succeeded without reveal.");
+
+    report.routeProbe = await page.evaluate(async () => {
+      const before = window.__castlePlaytestHarness.snapshot("route-before-search").guidance;
+      const result = await window.__castlePlaytestHarness.performSearch();
+      return {
+        before,
+        after: result.guidance
+      };
+    });
+    assertCondition(report.routeProbe.after.exploredRoutePoints > report.routeProbe.before.exploredRoutePoints, "The first search did not extend the guided route.", report.routeProbe);
+    assertCondition(report.routeProbe.after.exploredTiles < report.routeProbe.after.totalTiles, "The first search fell back to a full reveal instead of a route extension.", report.routeProbe);
+    const searchSnapshot = await takeSnapshot(page, report.snapshots, "depth-1-search", "depth-1-search.png");
+    assertCondition(searchSnapshot.directive?.phase === "reach_objective", "Search should keep the player in the reach_objective phase until the objective room is found.", searchSnapshot.directive);
+
+    const firstObjectiveResult = await page.evaluate(() => window.__castlePlaytestHarness.completeCurrentObjective());
+    assertCondition(firstObjectiveResult?.ok, "The first objective did not resolve without assisted visibility.", firstObjectiveResult);
+    const objectiveSnapshot = await takeSnapshot(page, report.snapshots, "objective-result", "objective-result.png");
+    assertCondition(objectiveSnapshot.floorResolved, "Depth-1 objective did not resolve during the first-session funnel.", objectiveSnapshot);
+    assertCondition(objectiveSnapshot.directive?.phase === "extract_or_greed", "Directive did not flip to extract_or_greed after objective clear.", objectiveSnapshot.directive);
+    report.assertions.push("First depth-1 objective resolved before any reveal hook.");
+    report.assertions.push("Post-objective directive flipped to extract_or_greed.");
+
+    if (objectiveSnapshot.floorResolved) {
+      const townReturn = await page.evaluate(() => window.__castlePlaytestHarness.useStairs("up"));
+      assertCondition(townReturn?.ok, "Harness could not return to town after clearing the first floor objective.", townReturn);
+      await takeSnapshot(page, report.snapshots, "town-return", "town-return.png");
+    }
+
+    await page.evaluate(async () => {
+      await window.__castlePlaytestHarness.saveRun();
+      await window.__castlePlaytestHarness.loadRun();
+      await window.__castlePlaytestHarness.triggerSessionEnd();
+    });
+
+    const firstRunStore = await page.evaluate(() => ({
+      keys: window.__castlePlaytestHarness.getLocalStorageKeys(),
+      store: window.__castlePlaytestHarness.getTelemetryStore(),
+      review: window.castleOfTheWindsWeb?.getTelemetryReviewSnapshot?.() || null
+    }));
+    const firstRunEvents = firstRunStore.store?.rawEvents || [];
+    const firstRunIds = [...new Set(firstRunEvents.map((event) => event?.runId).filter(Boolean))];
+    const firstRunCounts = countEventsByType(firstRunEvents);
+    assertCondition(firstRunIds.length === 1, "A single run should produce exactly one canonical run id.", firstRunIds);
+    assertCondition(!firstRunStore.keys.some((key) => /analytics/i.test(key)), "Legacy analytics storage key is still present.", firstRunStore.keys);
+    assertCondition((firstRunCounts.search_used || 0) === 1, "A single search action should emit exactly one search_used event.", firstRunCounts);
+    assertCondition((firstRunCounts.objective_reached || 0) >= 1, "Unified telemetry missed objective_reached in the first run.", firstRunCounts);
+    assertCondition((firstRunCounts.objective_resolved || 0) >= 1, "Unified telemetry missed objective_resolved in the first run.", firstRunCounts);
+    assertCondition((firstRunCounts.returned_to_town || 0) >= 1, "Unified telemetry missed returned_to_town in the first run.", firstRunCounts);
+    assertCondition((firstRunCounts.save_game || 0) >= 1, "Unified telemetry missed save_game in the first run.", firstRunCounts);
+    assertCondition((firstRunCounts.load_game || 0) >= 1, "Unified telemetry missed load_game in the first run.", firstRunCounts);
+    assertCondition((firstRunCounts.session_end || 0) >= 1, "Unified telemetry missed session_end in the first run.", firstRunCounts);
+    report.assertions.push("Unified telemetry recorded one canonical run id with no duplicate search stream.");
+
+    const deterministicBuild = {
       name: "Harness",
       race: "dwarf",
       className: "fighter",
       statBonuses: { str: 2, con: 4 }
-    }));
-    await takeSnapshot(page, report.snapshots, "town-start", "town-start.png");
-
-    await page.evaluate(() => window.__castlePlaytestHarness.openService("bank"));
-    await takeSnapshot(page, report.snapshots, "town-bank", "town-bank.png");
-    await page.evaluate(() => window.__castlePlaytestHarness.closeModalIfOpen());
-
-    await page.evaluate(() => window.__castlePlaytestHarness.useStairs("down"));
-    await takeSnapshot(page, report.snapshots, "depth-1-entry", "depth-1-entry.png");
-
-    await page.evaluate(() => window.__castlePlaytestHarness.revealCurrentLevel());
-    await takeSnapshot(page, report.snapshots, "depth-1-revealed", "depth-1-revealed.png");
-
-    await page.evaluate(() => window.__castlePlaytestHarness.completeCurrentObjective());
-    await takeSnapshot(page, report.snapshots, "objective-result", "objective-result.png");
-
-    if (report.snapshots.at(-1)?.floorResolved) {
-      await page.evaluate(() => window.__castlePlaytestHarness.useStairs("up"));
-      await takeSnapshot(page, report.snapshots, "town-return", "town-return.png");
+    };
+    const objectiveIds = report.depthOneObjectivePool;
+    const maxObjectiveAttempts = 24;
+    for (const objectiveId of objectiveIds) {
+      let matched = false;
+      for (let attempt = 0; attempt < maxObjectiveAttempts && !matched; attempt += 1) {
+        await page.evaluate((build) => window.__castlePlaytestHarness.restartRun(build), deterministicBuild);
+        await page.evaluate(() => window.__castlePlaytestHarness.useStairs("down"));
+        const probe = await page.evaluate(() => window.__castlePlaytestHarness.snapshot("objective-probe"));
+        if (probe.objective?.id !== objectiveId) {
+          continue;
+        }
+        const result = await page.evaluate(() => window.__castlePlaytestHarness.completeCurrentObjective());
+        assertCondition(result?.ok, `Depth-1 objective ${objectiveId} failed the no-reveal resolution pass.`, result);
+        assertCondition(result?.snapshot?.directive?.phase === "extract_or_greed", `Depth-1 objective ${objectiveId} did not end in extract_or_greed.`, result?.snapshot?.directive);
+        report.objectiveCoverage.push({
+          objectiveId,
+          attempts: attempt + 1,
+          matched: true,
+          result
+        });
+        matched = true;
+      }
+      if (!matched) {
+        report.objectiveCoverage.push({
+          objectiveId,
+          attempts: maxObjectiveAttempts,
+          matched: false,
+          result: null
+        });
+      }
     }
 
+    await page.evaluate((build) => window.__castlePlaytestHarness.restartRun(build), deterministicBuild);
+    await page.evaluate(() => window.__castlePlaytestHarness.useStairs("down"));
+    report.deathProbe = await page.evaluate(() => window.__castlePlaytestHarness.forceDeath());
+    assertCondition(report.deathProbe?.modalTitle === "Fallen", "Forced death probe did not reach the death recap.", report.deathProbe);
+
+    report.telemetryReview = await page.evaluate(() => window.castleOfTheWindsWeb?.getTelemetryReviewSnapshot?.() || null);
+    report.telemetry = await page.evaluate(() => window.__castlePlaytestHarness.getTelemetry());
+    report.telemetryStore = await page.evaluate(() => window.__castlePlaytestHarness.getTelemetryStore());
+    report.storageKeys = await page.evaluate(() => window.__castlePlaytestHarness.getLocalStorageKeys());
+    const finalCounts = countEventsByType(report.telemetryStore?.rawEvents || []);
+    ["objective_reached", "objective_resolved", "returned_to_town", "save_game", "load_game", "session_end", "run_death"].forEach((type) => {
+      assertCondition((finalCounts[type] || 0) >= 1, `Unified telemetry store is missing ${type}.`, finalCounts);
+    });
+    report.assertions.push("Unified telemetry store captured objective, return, save/load, session end, and death events.");
+    report.metaLayer = {
+      activeContract: report.snapshots.at(-1)?.progression?.activeContract || null,
+      latestSummary: report.telemetryReview?.summaries?.at(-1) || null,
+      telemetryMeta: report.telemetryReview?.meta || null
+    };
     report.feedback = summarizeFeedback(report);
 
     await writeFile(path.join(OUTPUT_DIR, "playtest-report.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");

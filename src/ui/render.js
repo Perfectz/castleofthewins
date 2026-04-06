@@ -1,61 +1,7 @@
 import { TILE_SIZE, VIEW_SIZE } from "../core/constants.js";
+import { ACTOR_VISUALS, BOARD_PROP_VISUALS, getActorVisual, getBoardPropVisual, getTileVisual, ITEM_VISUAL_IDS, TILESET_VISUALS, TOWN_BUILDING_ASSETS, TOWN_TERRAIN_ASSETS } from "../data/assets.js";
 import { clamp, shadeColor } from "../core/utils.js";
 import { tileDef } from "../core/world.js";
-
-const TOWN_TERRAIN_PATHS = {
-  grass: [
-    "./assets/terrain/town/grass-1.png",
-    "./assets/terrain/town/grass-2.png",
-    "./assets/terrain/town/grass-3.png",
-    "./assets/terrain/town/grass-4.png",
-    "./assets/terrain/town/grass-5.png"
-  ],
-  roadHorizontal: [
-    "./assets/terrain/town/road-horizontal-1.png",
-    "./assets/terrain/town/road-horizontal-2.png",
-    "./assets/terrain/town/road-horizontal-3.png"
-  ],
-  roadVertical: [
-    "./assets/terrain/town/road-vertical-1.png",
-    "./assets/terrain/town/road-vertical-2.png"
-  ],
-  roadCross: "./assets/terrain/town/road-cross-1.png"
-};
-
-const TOWN_BUILDING_PATHS = {
-  general: "./assets/buildings/town/general.png",
-  junk: "./assets/buildings/town/junk.png",
-  armory: "./assets/buildings/town/armory.png",
-  guild: "./assets/buildings/town/guild.png",
-  temple: "./assets/buildings/town/temple.png",
-  bank: "./assets/buildings/town/bank.png",
-  sage: "./assets/buildings/town/house.png"
-};
-
-const MONSTER_ATLAS_PATHS = {
-  beasts: "./assets/enemies/four-dungeon-enemies.jpeg",
-  undead: "./assets/enemies/undead-enemies.png"
-};
-
-const MONSTER_ICON_ASSIGNMENTS = {
-  rat: "rat",
-  slime: "slime",
-  skeleton: "skeletonWarrior",
-  troll: "brute",
-  ogre: "brute",
-  wraith: "wraith"
-};
-
-const MONSTER_ICON_REGIONS = {
-  rat: { atlas: "beasts", x: 90, y: 24, width: 360, height: 360 },
-  bat: { atlas: "beasts", x: 620, y: 20, width: 610, height: 300 },
-  spider: { atlas: "beasts", x: 40, y: 300, width: 560, height: 440 },
-  slime: { atlas: "beasts", x: 770, y: 350, width: 420, height: 340 },
-  skeletonWarrior: { atlas: "undead", x: 70, y: 20, width: 430, height: 340 },
-  skeletonArcher: { atlas: "undead", x: 760, y: 20, width: 360, height: 330 },
-  brute: { atlas: "undead", x: 110, y: 340, width: 450, height: 340 },
-  wraith: { atlas: "undead", x: 760, y: 340, width: 360, height: 320 }
-};
 
 const TOWN_BUILDING_RENDER = {
   general: { width: 0.78, height: 0.66, crop: 0.86, yOffset: 0.5 },
@@ -69,17 +15,66 @@ const TOWN_BUILDING_RENDER = {
 
 const townTerrainImages = buildTownTerrainImages();
 const townBuildingImages = buildTownBuildingImages();
-const monsterIconAtlas = buildMonsterIconAtlas();
+const imageCache = buildImageCache();
+const tintedFrameCache = {};
+const DUNGEON_TERRAIN_THEME = {
+  unseen: "#040506",
+  floor: {
+    base: "#ece9e1",
+    alt: "#e5e1d8",
+    line: "rgba(255,255,255,0.52)",
+    speck: "#d7d3cb"
+  },
+  wall: {
+    base: "#b3b7be",
+    alt: "#9fa5ae",
+    top: "#d9dde3",
+    shadow: "#7a828e"
+  },
+  pillar: {
+    base: "#bcc1c8",
+    alt: "#aab0b8",
+    shadow: "#848c97"
+  },
+  stone: {
+    base: "#ddd8cf",
+    alt: "#d3cec5",
+    line: "#c6c0b7"
+  },
+  fog: {
+    wash: "rgba(114, 118, 126, 0.34)",
+    speck: "rgba(120, 124, 132, 0.45)"
+  },
+  door: {
+    frame: "#7d4d2e",
+    fill: "#b77447",
+    trim: "#d8bc96"
+  },
+  interactable: {
+    objective: "#de8b4d",
+    stairDown: "#be9348",
+    stairUp: "#7bbcd9"
+  }
+};
+
+const BEHAVIOR_BADGES = {
+  pinning_controller: { color: "#7a8dff", symbol: "P" },
+  banner_captain: { color: "#d98d4f", symbol: "B" },
+  corpse_raiser: { color: "#a76fd7", symbol: "R" },
+  stalker: { color: "#66b98e", symbol: "S" },
+  breaker: { color: "#d96f5c", symbol: "X" },
+  coward_caster: { color: "#6fc2d9", symbol: "C" }
+};
 
 function buildTownTerrainImages() {
   if (typeof Image === "undefined") {
     return null;
   }
   return {
-    grass: TOWN_TERRAIN_PATHS.grass.map(loadImage),
-    roadHorizontal: TOWN_TERRAIN_PATHS.roadHorizontal.map(loadImage),
-    roadVertical: TOWN_TERRAIN_PATHS.roadVertical.map(loadImage),
-    roadCross: loadImage(TOWN_TERRAIN_PATHS.roadCross)
+    grass: TOWN_TERRAIN_ASSETS.grass.map(loadImage),
+    roadHorizontal: TOWN_TERRAIN_ASSETS.roadHorizontal.map(loadImage),
+    roadVertical: TOWN_TERRAIN_ASSETS.roadVertical.map(loadImage),
+    roadCross: loadImage(TOWN_TERRAIN_ASSETS.roadCross)
   };
 }
 
@@ -104,7 +99,7 @@ function buildTownBuildingImages() {
     return null;
   }
   return Object.fromEntries(
-    Object.entries(TOWN_BUILDING_PATHS).map(([key, src]) => [key, loadImage(src)])
+    Object.entries(TOWN_BUILDING_ASSETS).map(([key, src]) => [key, loadImage(src)])
   );
 }
 
@@ -112,152 +107,179 @@ function isImageReady(image) {
   return Boolean(image && image.complete && image.naturalWidth > 0);
 }
 
-function buildMonsterIconAtlas() {
+function buildImageCache() {
   if (typeof Image === "undefined") {
     return null;
   }
-  return {
-    images: Object.fromEntries(
-      Object.entries(MONSTER_ATLAS_PATHS).map(([key, path]) => [key, loadImage(path)])
-    ),
-    cache: {}
-  };
-}
-
-function sampleBackdropColor(imageData, width, height) {
-  const points = [
-    [4, 4],
-    [width - 5, 4],
-    [4, height - 5],
-    [width - 5, height - 5]
-  ];
-  const total = { r: 0, g: 0, b: 0 };
-  points.forEach(([x, y]) => {
-    const index = (y * width + x) * 4;
-    total.r += imageData[index];
-    total.g += imageData[index + 1];
-    total.b += imageData[index + 2];
+  const sources = new Set();
+  Object.values(ACTOR_VISUALS).forEach((visual) => {
+    (visual.frames || []).forEach((frame) => sources.add(frame.src));
   });
-  return {
-    r: total.r / points.length,
-    g: total.g / points.length,
-    b: total.b / points.length
-  };
+  Object.values(TILESET_VISUALS).forEach((frames) => {
+    (frames || []).forEach((frame) => sources.add(frame.src));
+  });
+  Object.values(BOARD_PROP_VISUALS).forEach((visual) => {
+    (visual.frames || []).forEach((frame) => sources.add(frame.src));
+  });
+  return Object.fromEntries([...sources].map((src) => [src, loadImage(src)]));
 }
 
-function buildMonsterIcon(image, region) {
-  const sourceCanvas = createCanvas(region.width, region.height);
-  if (!sourceCanvas) {
-    return null;
-  }
-  const sourceCtx = sourceCanvas.getContext("2d", { willReadFrequently: true });
-  sourceCtx.drawImage(
-    image,
-    region.x,
-    region.y,
-    region.width,
-    region.height,
-    0,
-    0,
-    region.width,
-    region.height
-  );
-
-  const imageData = sourceCtx.getImageData(0, 0, region.width, region.height);
-  const pixels = imageData.data;
-  const backdrop = sampleBackdropColor(pixels, region.width, region.height);
-  let minX = region.width;
-  let minY = region.height;
-  let maxX = -1;
-  let maxY = -1;
-
-  for (let y = 0; y < region.height; y += 1) {
-    for (let x = 0; x < region.width; x += 1) {
-      const index = (y * region.width + x) * 4;
-      const dr = pixels[index] - backdrop.r;
-      const dg = pixels[index + 1] - backdrop.g;
-      const db = pixels[index + 2] - backdrop.b;
-      const distance = Math.sqrt((dr * dr) + (dg * dg) + (db * db));
-      if (distance < 28) {
-        pixels[index + 3] = 0;
-        continue;
-      }
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x);
-      maxY = Math.max(maxY, y);
-    }
-  }
-
-  sourceCtx.putImageData(imageData, 0, 0);
-  if (maxX < minX || maxY < minY) {
-    return sourceCanvas;
-  }
-
-  const padding = 10;
-  const trimmedWidth = (maxX - minX) + 1;
-  const trimmedHeight = (maxY - minY) + 1;
-  const outputCanvas = createCanvas(trimmedWidth + (padding * 2), trimmedHeight + (padding * 2));
-  if (!outputCanvas) {
-    return sourceCanvas;
-  }
-  const outputCtx = outputCanvas.getContext("2d");
-  outputCtx.drawImage(
-    sourceCanvas,
-    minX,
-    minY,
-    trimmedWidth,
-    trimmedHeight,
-    padding,
-    padding,
-    trimmedWidth,
-    trimmedHeight
-  );
-  return outputCanvas;
+function getImage(src) {
+  return imageCache ? imageCache[src] : null;
 }
 
-function getMonsterIcon(monster) {
-  const iconKey = MONSTER_ICON_ASSIGNMENTS[monster.id] || monster.icon || monster.sprite;
-  const region = MONSTER_ICON_REGIONS[iconKey];
-  if (!monsterIconAtlas || !region) {
+function resolveFrame(frame, tint = "") {
+  if (!frame || !frame.src) {
     return null;
   }
-  const image = monsterIconAtlas.images[region.atlas];
+  const image = getImage(frame.src);
   if (!isImageReady(image)) {
     return null;
   }
-  if (!monsterIconAtlas.cache[iconKey]) {
-    monsterIconAtlas.cache[iconKey] = buildMonsterIcon(image, region);
+  if (!tint) {
+    return image;
   }
-  return monsterIconAtlas.cache[iconKey];
+  const cacheKey = `${frame.src}:${frame.x}:${frame.y}:${frame.width}:${frame.height}:${tint}`;
+  if (tintedFrameCache[cacheKey]) {
+    return tintedFrameCache[cacheKey];
+  }
+  const canvas = createCanvas(frame.width, frame.height);
+  if (!canvas) {
+    return image;
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(image, frame.x || 0, frame.y || 0, frame.width, frame.height, 0, 0, frame.width, frame.height);
+  ctx.globalCompositeOperation = "source-atop";
+  ctx.fillStyle = tint;
+  ctx.globalAlpha = 0.38;
+  ctx.fillRect(0, 0, frame.width, frame.height);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+  tintedFrameCache[cacheKey] = canvas;
+  return canvas;
 }
 
-function drawMonsterIcon(ctx, monster, sx, sy) {
-  const icon = getMonsterIcon(monster);
-  if (!icon) {
+function drawFrame(ctx, frame, dx, dy, width, height, options = {}) {
+  if (!frame) {
     return false;
   }
+  const source = resolveFrame(frame, options.tint || "");
+  if (!source) {
+    return false;
+  }
+  const sx = frame.x || 0;
+  const sy = frame.y || 0;
+  const sw = frame.width || source.width;
+  const sh = frame.height || source.height;
+  if (source === getImage(frame.src)) {
+    ctx.drawImage(source, sx, sy, sw, sh, dx, dy, width, height);
+  } else {
+    ctx.drawImage(source, 0, 0, sw, sh, dx, dy, width, height);
+  }
+  return true;
+}
 
+function drawSpriteVisual(ctx, visual, sx, sy, time = 0, options = {}) {
+  if (!visual?.frames?.length) {
+    return false;
+  }
+  const frameCount = visual.frames.length;
+  const frameIndex = frameCount <= 1 ? 0 : Math.floor(time / 220) % frameCount;
+  const frame = visual.frames[frameIndex];
   const tileX = sx * TILE_SIZE;
   const tileY = sy * TILE_SIZE;
-  const drawArea = TILE_SIZE - 2;
-  const scale = Math.min(drawArea / icon.width, drawArea / icon.height);
-  const width = icon.width * scale;
-  const height = icon.height * scale;
-  const dx = tileX + ((TILE_SIZE - width) / 2);
-  const dy = tileY + TILE_SIZE - height - 1;
+  const bob = options.reducedMotion ? 0 : Math.sin((time + sx * 35 + sy * 41) / 190) * (visual.bob || 0.3);
+  const scale = visual.scale || 0.72;
+  const width = Math.round(TILE_SIZE * scale);
+  const height = Math.round(TILE_SIZE * scale);
+  const dx = tileX + Math.round((TILE_SIZE - width) / 2);
+  const dy = tileY + TILE_SIZE - height - 2 + bob;
 
-  ctx.fillStyle = "rgba(6, 8, 10, 0.32)";
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "rgba(6, 8, 10, 0.18)";
   ctx.beginPath();
-  ctx.ellipse(tileX + 12, tileY + 18, 7, 3, 0, 0, Math.PI * 2);
+  ctx.ellipse(tileX + 12, tileY + 19, 5, 2, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.drawImage(icon, dx, dy, width, height);
+  drawFrame(ctx, frame, dx, dy, width, height, { tint: options.tint || visual.tint || "" });
+  ctx.restore();
   return true;
 }
 
 function tileHash(x, y, modulo) {
   const hash = ((x * 73856093) ^ (y * 19349663)) >>> 0;
   return modulo > 0 ? hash % modulo : 0;
+}
+
+function fillStipple(ctx, x, y, width, height, baseColor, speckColor, step = 5, offsetSeed = 0) {
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(x, y, width, height);
+  ctx.fillStyle = speckColor;
+  for (let py = y + ((offsetSeed % step) + 1); py < y + height; py += step) {
+    for (let px = x + (((offsetSeed * 2) % step) + 1); px < x + width; px += step) {
+      ctx.fillRect(px, py, 1, 1);
+    }
+  }
+}
+
+function drawDungeonTerrainBase(ctx, tile, worldX, worldY, x, y, visible) {
+  const seed = tileHash(worldX, worldY, 11);
+  const floorTheme = DUNGEON_TERRAIN_THEME.floor;
+  const wallTheme = DUNGEON_TERRAIN_THEME.wall;
+  const stoneTheme = DUNGEON_TERRAIN_THEME.stone;
+  const pillarTheme = DUNGEON_TERRAIN_THEME.pillar;
+  const fog = DUNGEON_TERRAIN_THEME.fog;
+  switch (tile.kind) {
+    case "floor":
+    case "secretDoor":
+    case "trap":
+    case "altar":
+    case "fountain":
+    case "throne":
+    case "stairDown":
+    case "stairUp":
+      fillStipple(ctx, x, y, TILE_SIZE, TILE_SIZE, seed % 2 === 0 ? floorTheme.base : floorTheme.alt, floorTheme.speck, 5, seed);
+      ctx.fillStyle = floorTheme.line;
+      ctx.fillRect(x, y, TILE_SIZE, 1);
+      break;
+    case "stone":
+    case "plaza":
+    case "buildingFloor":
+      fillStipple(ctx, x, y, TILE_SIZE, TILE_SIZE, seed % 2 === 0 ? stoneTheme.base : stoneTheme.alt, stoneTheme.line, 6, seed);
+      break;
+    case "wall":
+    case "buildingWall":
+    case "secretWall":
+      ctx.fillStyle = seed % 2 === 0 ? wallTheme.base : wallTheme.alt;
+      ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+      ctx.fillStyle = wallTheme.top;
+      ctx.fillRect(x, y, TILE_SIZE, 3);
+      ctx.fillStyle = wallTheme.shadow;
+      ctx.fillRect(x, y + TILE_SIZE - 3, TILE_SIZE, 3);
+      ctx.fillRect(x + TILE_SIZE - 3, y, 3, TILE_SIZE);
+      break;
+    case "pillar":
+      ctx.fillStyle = seed % 2 === 0 ? pillarTheme.base : pillarTheme.alt;
+      ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+      ctx.fillStyle = "#e4e7eb";
+      ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, 2);
+      ctx.fillStyle = pillarTheme.shadow;
+      ctx.fillRect(x + 2, y + TILE_SIZE - 4, TILE_SIZE - 4, 2);
+      break;
+    default:
+      return false;
+  }
+  if (!visible) {
+    ctx.fillStyle = fog.wash;
+    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+    ctx.fillStyle = fog.speck;
+    for (let py = y + 2; py < y + TILE_SIZE; py += 4) {
+      for (let px = x + ((py + seed) % 3); px < x + TILE_SIZE; px += 4) {
+        ctx.fillRect(px, py, 1, 1);
+      }
+    }
+  }
+  return true;
 }
 
 function getTileKind(level, x, y) {
@@ -285,7 +307,7 @@ function getTownBuildingAt(level, x, y) {
     x < building.x + building.w &&
     y >= building.y &&
     y < building.y + building.h &&
-    TOWN_BUILDING_PATHS[building.service]
+    TOWN_BUILDING_ASSETS[building.service]
   ) || null;
 }
 
@@ -389,41 +411,44 @@ export function drawTile(ctx, level, tile, worldX, worldY, sx, sy, visible) {
   if (drawTownTerrainTile(ctx, level, tile, worldX, worldY, sx, sy, visible)) {
     return;
   }
+  const usedDungeonTheme = level.kind !== "town" && drawDungeonTerrainBase(ctx, tile, worldX, worldY, x, y, visible);
+  if (!usedDungeonTheme) {
+    const baseKind = tile.kind === "secretDoor"
+      ? "floor"
+      : tile.kind === "altar" || tile.kind === "trap" || tile.kind === "fountain" || tile.kind === "throne" || tile.kind === "stairDown" || tile.kind === "stairUp"
+        ? "floor"
+        : tile.kind === "stone" || tile.kind === "plaza" || tile.kind === "buildingFloor"
+          ? "stone"
+          : tile.kind;
+    const dungeonVisual = getTileVisual(baseKind, worldX, worldY);
+    if (dungeonVisual && drawFrame(ctx, dungeonVisual, x, y, TILE_SIZE, TILE_SIZE)) {
+      if (!visible) {
+        ctx.fillStyle = "rgba(4, 6, 10, 0.46)";
+        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+      }
+    } else {
+      const palette = visible ? tile.palette : tile.palette.map((color) => shadeColor(color, -90));
+      ctx.fillStyle = palette[0];
+      ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+      ctx.fillStyle = palette[1];
+      ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+    }
+  }
   const palette = visible ? tile.palette : tile.palette.map((color) => shadeColor(color, -90));
-  ctx.fillStyle = palette[0];
-  ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-  ctx.fillStyle = palette[1];
-  ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-
   switch (tile.kind) {
     case "wall":
     case "buildingWall":
     case "pillar":
-      ctx.fillStyle = palette[2];
-      if (tile.kind === "pillar") {
-        ctx.fillRect(x + 7, y + 4, 10, 16);
-        ctx.fillRect(x + 5, y + 6, 14, 3);
-        ctx.fillRect(x + 5, y + 17, 14, 3);
-      } else {
-        for (let yy = 3; yy < TILE_SIZE; yy += 7) {
-          const offset = yy % 14 === 3 ? 0 : 6;
-          for (let xx = 0; xx < TILE_SIZE; xx += 12) {
-            ctx.fillRect(x + 1 + xx + offset, y + yy, 8, 3);
-          }
-        }
-      }
       break;
     case "road":
     case "floor":
     case "buildingFloor":
     case "plaza":
     case "stone":
-      ctx.fillStyle = visible ? "rgba(5, 9, 10, 0.12)" : "rgba(5, 9, 10, 0.24)";
-      ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
-      ctx.fillStyle = palette[2];
-      ctx.fillRect(x + 6, y + 6, 3, 3);
-      ctx.fillRect(x + 14, y + 11, 3, 3);
-      ctx.fillRect(x + 10, y + 16, 2, 2);
+      if (visible) {
+        ctx.fillStyle = "rgba(255, 248, 236, 0.03)";
+        ctx.fillRect(x, y, TILE_SIZE, 1);
+      }
       break;
     case "tree":
       ctx.fillStyle = "#4e341b";
@@ -435,16 +460,21 @@ export function drawTile(ctx, level, tile, worldX, worldY, sx, sy, visible) {
       break;
     case "stairDown":
     case "stairUp":
-      ctx.fillStyle = palette[2];
-      for (let i = 0; i < 5; i += 1) {
-        ctx.fillRect(x + 5 + i * 2, y + 5 + i * 3, 10 - i * 2, 2);
-      }
+      drawFrame(ctx, getTileVisual(tile.kind, worldX, worldY), x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+      ctx.strokeStyle = tile.kind === "stairDown" ? DUNGEON_TERRAIN_THEME.interactable.stairDown : DUNGEON_TERRAIN_THEME.interactable.stairUp;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 2.5, y + 2.5, TILE_SIZE - 5, TILE_SIZE - 5);
       break;
     case "buildingDoor":
+    case "secretDoor":
       ctx.fillStyle = "#6c4621";
-      ctx.fillRect(x + 7, y + 5, 10, 14);
-      ctx.fillStyle = "#d4b073";
-      ctx.fillRect(x + 9, y + 7, 6, 10);
+      ctx.fillStyle = DUNGEON_TERRAIN_THEME.door.frame;
+      ctx.fillRect(x + 6, y + 4, 12, 15);
+      ctx.fillStyle = DUNGEON_TERRAIN_THEME.door.fill;
+      ctx.fillRect(x + 8, y + 6, 8, 11);
+      ctx.strokeStyle = visible ? DUNGEON_TERRAIN_THEME.door.trim : "rgba(132, 111, 72, 0.45)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x + 6.5, y + 4.5, 11, 14);
       break;
     case "sign":
       ctx.fillStyle = "#6d4b22";
@@ -453,22 +483,10 @@ export function drawTile(ctx, level, tile, worldX, worldY, sx, sy, visible) {
       ctx.fillRect(x + 5, y + 4, 14, 7);
       break;
     case "altar":
-      ctx.fillStyle = "#cabdd7";
-      ctx.fillRect(x + 5, y + 6, 14, 10);
-      ctx.fillStyle = palette[2];
-      ctx.fillRect(x + 8, y + 16, 8, 3);
+      drawFrame(ctx, getTileVisual("altar", worldX, worldY), x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
       break;
     case "trap":
-      ctx.fillStyle = palette[2];
-      ctx.beginPath();
-      ctx.moveTo(x + 4, y + 19);
-      ctx.lineTo(x + 8, y + 7);
-      ctx.lineTo(x + 12, y + 19);
-      ctx.lineTo(x + 16, y + 7);
-      ctx.lineTo(x + 20, y + 19);
-      ctx.strokeStyle = palette[2];
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      drawFrame(ctx, getTileVisual("trap", worldX, worldY), x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
       break;
     case "fountain":
       ctx.fillStyle = palette[2];
@@ -478,21 +496,26 @@ export function drawTile(ctx, level, tile, worldX, worldY, sx, sy, visible) {
       ctx.strokeStyle = palette[2];
       ctx.lineWidth = 2;
       ctx.stroke();
+      ctx.fillStyle = visible ? "#d5f6ff" : palette[2];
+      ctx.fillRect(x + 11, y + 8, 2, 3);
       break;
     case "throne":
-      ctx.fillStyle = palette[2];
-      ctx.fillRect(x + 7, y + 13, 10, 6);
-      ctx.fillRect(x + 9, y + 7, 6, 7);
-      ctx.fillRect(x + 5, y + 10, 2, 7);
-      ctx.fillRect(x + 17, y + 10, 2, 7);
-      break;
-    case "secretDoor":
-      ctx.fillStyle = palette[2];
-      ctx.fillRect(x + 8, y + 5, 8, 14);
-      ctx.fillRect(x + 10, y + 9, 4, 2);
+      drawFrame(ctx, getTileVisual("throne", worldX, worldY), x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
       break;
     default:
       break;
+  }
+  if (tile.roomEventId && visible) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(238, 170, 92, 0.92)";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x + 2.5, y + 2.5, TILE_SIZE - 5, TILE_SIZE - 5);
+    ctx.restore();
+  } else if (tile.discoveryId && visible) {
+    ctx.save();
+    ctx.fillStyle = "rgba(125, 193, 214, 0.92)";
+    ctx.fillRect(x + TILE_SIZE - 6, y + 3, 3, 3);
+    ctx.restore();
   }
 }
 
@@ -539,7 +562,95 @@ export function drawTownBuildings(ctx, level, view) {
     ctx.globalAlpha = anyVisible ? 0.96 : 0.45;
     ctx.drawImage(image, 0, 0, image.naturalWidth, sourceHeight, drawX, drawY, drawWidth, drawHeight);
     ctx.restore();
+
+    const doorX = building.x + Math.floor(building.w / 2) - view.x;
+    const doorY = building.y + building.h - 1 - view.y;
+    if (doorX < 0 || doorY < 0 || doorX >= VIEW_SIZE || doorY >= VIEW_SIZE) {
+      continue;
+    }
+    const label = building.name || building.service || "Service";
+    ctx.save();
+    ctx.font = "700 9px Trebuchet MS";
+    const pillWidth = Math.min(building.w * TILE_SIZE - 10, Math.max(46, ctx.measureText(label).width + 16));
+    const pillX = doorX * TILE_SIZE + (TILE_SIZE - pillWidth) / 2;
+    const pillY = top * TILE_SIZE + 4;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = anyVisible ? "rgba(17, 23, 28, 0.92)" : "rgba(17, 23, 28, 0.56)";
+    ctx.strokeStyle = anyVisible ? "rgba(242, 215, 166, 0.68)" : "rgba(242, 215, 166, 0.32)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(pillX, pillY, pillWidth, 14, 7);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = anyVisible ? "#f3ddb1" : "rgba(243, 221, 177, 0.7)";
+    ctx.fillText(label, pillX + pillWidth / 2, pillY + 7);
+    ctx.restore();
   }
+}
+
+export function drawBoardProps(ctx, level, view, time = 0, options = {}) {
+  if (!level?.props || level.props.length === 0) {
+    return;
+  }
+  const reducedMotion = Boolean(options.reducedMotion);
+  level.props.forEach((prop, index) => {
+    const visual = getBoardPropVisual(prop.propId);
+    if (!visual) {
+      return;
+    }
+    const sx = prop.x - view.x;
+    const sy = prop.y - view.y;
+    if (sx < 0 || sy < 0 || sx >= VIEW_SIZE || sy >= VIEW_SIZE) {
+      return;
+    }
+    if (level.kind !== "town" && !level.visible[prop.y * level.width + prop.x] && !prop.alwaysVisible) {
+      return;
+    }
+    if (visual.light) {
+      const cx = sx * TILE_SIZE + 12;
+      const cy = sy * TILE_SIZE + 12;
+      const pulse = reducedMotion ? 0.18 : 0.16 + (Math.sin((time + index * 45) / 170) + 1) * 0.05;
+      const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, TILE_SIZE * 0.95);
+      glow.addColorStop(0, rgbaWithAlpha(visual.tint || "rgba(255, 199, 128, 0.36)", pulse));
+      glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(sx * TILE_SIZE - 6, sy * TILE_SIZE - 6, TILE_SIZE + 12, TILE_SIZE + 12);
+    }
+    const frames = visual.frames || [];
+    const frame = frames.length <= 1 ? frames[0] : frames[Math.floor(time / 220) % frames.length];
+    if (!frame) {
+      return;
+    }
+    const lift = Math.round((visual.lift || 0) * TILE_SIZE);
+    const scale = visual.scale || 0.68;
+    const size = Math.round(TILE_SIZE * scale);
+    const offset = Math.round((TILE_SIZE - size) / 2);
+    drawFrame(ctx, frame, sx * TILE_SIZE + offset, sy * TILE_SIZE + TILE_SIZE - size - 2 - lift, size, size, {
+      tint: visual.tint || ""
+    });
+  });
+  const corpses = Array.isArray(level?.corpses) ? level.corpses : [];
+  corpses.forEach((corpse) => {
+    const sx = corpse.x - view.x;
+    const sy = corpse.y - view.y;
+    if (sx < 0 || sy < 0 || sx >= VIEW_SIZE || sy >= VIEW_SIZE) {
+      return;
+    }
+    if (level.kind !== "town" && !level.visible[corpse.y * level.width + corpse.x]) {
+      return;
+    }
+    ctx.save();
+    ctx.strokeStyle = "rgba(110, 62, 86, 0.82)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(sx * TILE_SIZE + 7, sy * TILE_SIZE + 7);
+    ctx.lineTo(sx * TILE_SIZE + 17, sy * TILE_SIZE + 17);
+    ctx.moveTo(sx * TILE_SIZE + 17, sy * TILE_SIZE + 7);
+    ctx.lineTo(sx * TILE_SIZE + 7, sy * TILE_SIZE + 17);
+    ctx.stroke();
+    ctx.restore();
+  });
 }
 
 export function drawPlayer(ctx, player, sx, sy, time = 0, options = {}) {
@@ -557,18 +668,21 @@ export function drawPlayer(ctx, player, sx, sy, time = 0, options = {}) {
   ctx.lineWidth = 2;
   ctx.strokeRect(x + 2.5, y + 2.5, TILE_SIZE - 5, TILE_SIZE - 5);
   ctx.restore();
-  ctx.fillStyle = "#f0d271";
-  ctx.beginPath();
-  ctx.arc(x + 12, y + 7, 4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#254c93";
-  ctx.fillRect(x + 8, y + 11, 8, 9);
-  ctx.fillStyle = "#7b1f1f";
-  ctx.fillRect(x + 7, y + 18, 4, 4);
-  ctx.fillRect(x + 13, y + 18, 4, 4);
-  if (player.equipment.weapon) {
-    ctx.fillStyle = "#d0d0d0";
-    ctx.fillRect(x + 17, y + 10, 2, 10);
+  const visual = getActorVisual(player.classId) || getActorVisual(player.raceId) || getActorVisual("fighter");
+  if (!drawSpriteVisual(ctx, visual, sx, sy, time, options)) {
+    ctx.fillStyle = "#f0d271";
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 7, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#254c93";
+    ctx.fillRect(x + 8, y + 11, 8, 9);
+    ctx.fillStyle = "#7b1f1f";
+    ctx.fillRect(x + 7, y + 18, 4, 4);
+    ctx.fillRect(x + 13, y + 18, 4, 4);
+    if (player.equipment.weapon) {
+      ctx.fillStyle = "#d0d0d0";
+      ctx.fillRect(x + 17, y + 10, 2, 10);
+    }
   }
 }
 
@@ -585,85 +699,111 @@ export function drawMonster(ctx, monster, sx, sy, time = 0, options = {}) {
   ctx.fillStyle = aura;
   ctx.fillRect(x - 2, y - 2, TILE_SIZE + 4, TILE_SIZE + 4);
   ctx.restore();
-  if (drawMonsterIcon(ctx, monster, sx, sy)) {
-    return;
+  const visual = getActorVisual(monster.visualId || monster.sprite);
+  const drewSprite = drawSpriteVisual(ctx, visual, sx, sy, time, {
+    ...options,
+    tint: monster.color
+  });
+  if (!drewSprite) {
+    ctx.fillStyle = monster.color;
+    switch (monster.sprite) {
+      case "rat":
+        ctx.beginPath();
+        ctx.ellipse(x + 11, y + 13, 7, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(x + 16, y + 11, 5, 2);
+        break;
+      case "kobold":
+      case "goblin":
+      case "orc":
+      case "troll":
+      case "ogre":
+        ctx.fillRect(x + 8, y + 9, 8, 10);
+        ctx.fillRect(x + 9, y + 4, 6, 6);
+        ctx.fillRect(x + 6, y + 18, 4, 4);
+        ctx.fillRect(x + 14, y + 18, 4, 4);
+        break;
+      case "wolf":
+        ctx.beginPath();
+        ctx.moveTo(x + 4, y + 14);
+        ctx.lineTo(x + 10, y + 8);
+        ctx.lineTo(x + 19, y + 12);
+        ctx.lineTo(x + 17, y + 18);
+        ctx.lineTo(x + 8, y + 18);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case "skeleton":
+        ctx.fillRect(x + 10, y + 5, 4, 14);
+        ctx.fillRect(x + 7, y + 9, 10, 3);
+        ctx.beginPath();
+        ctx.arc(x + 12, y + 5, 5, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case "slime":
+        ctx.beginPath();
+        ctx.arc(x + 12, y + 13, 8, Math.PI, 0);
+        ctx.lineTo(x + 20, y + 17);
+        ctx.lineTo(x + 4, y + 17);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case "wraith":
+        ctx.beginPath();
+        ctx.moveTo(x + 12, y + 4);
+        ctx.lineTo(x + 18, y + 10);
+        ctx.lineTo(x + 16, y + 19);
+        ctx.lineTo(x + 12, y + 16);
+        ctx.lineTo(x + 8, y + 19);
+        ctx.lineTo(x + 6, y + 10);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case "mage":
+        ctx.fillRect(x + 8, y + 7, 8, 12);
+        ctx.beginPath();
+        ctx.arc(x + 12, y + 6, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#d8d0f0";
+        ctx.fillRect(x + 17, y + 8, 2, 10);
+        break;
+      case "dragon":
+        ctx.beginPath();
+        ctx.moveTo(x + 3, y + 16);
+        ctx.lineTo(x + 8, y + 7);
+        ctx.lineTo(x + 15, y + 5);
+        ctx.lineTo(x + 21, y + 11);
+        ctx.lineTo(x + 18, y + 18);
+        ctx.lineTo(x + 10, y + 20);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      default:
+        ctx.fillRect(x + 8, y + 8, 8, 8);
+        break;
+    }
   }
-  ctx.fillStyle = monster.color;
-  switch (monster.sprite) {
-    case "rat":
-      ctx.beginPath();
-      ctx.ellipse(x + 11, y + 13, 7, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillRect(x + 16, y + 11, 5, 2);
-      break;
-    case "kobold":
-    case "goblin":
-    case "orc":
-    case "troll":
-    case "ogre":
-      ctx.fillRect(x + 8, y + 9, 8, 10);
-      ctx.fillRect(x + 9, y + 4, 6, 6);
-      ctx.fillRect(x + 6, y + 18, 4, 4);
-      ctx.fillRect(x + 14, y + 18, 4, 4);
-      break;
-    case "wolf":
-      ctx.beginPath();
-      ctx.moveTo(x + 4, y + 14);
-      ctx.lineTo(x + 10, y + 8);
-      ctx.lineTo(x + 19, y + 12);
-      ctx.lineTo(x + 17, y + 18);
-      ctx.lineTo(x + 8, y + 18);
-      ctx.closePath();
-      ctx.fill();
-      break;
-    case "skeleton":
-      ctx.fillRect(x + 10, y + 5, 4, 14);
-      ctx.fillRect(x + 7, y + 9, 10, 3);
-      ctx.beginPath();
-      ctx.arc(x + 12, y + 5, 5, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-    case "slime":
-      ctx.beginPath();
-      ctx.arc(x + 12, y + 13, 8, Math.PI, 0);
-      ctx.lineTo(x + 20, y + 17);
-      ctx.lineTo(x + 4, y + 17);
-      ctx.closePath();
-      ctx.fill();
-      break;
-    case "wraith":
-      ctx.beginPath();
-      ctx.moveTo(x + 12, y + 4);
-      ctx.lineTo(x + 18, y + 10);
-      ctx.lineTo(x + 16, y + 19);
-      ctx.lineTo(x + 12, y + 16);
-      ctx.lineTo(x + 8, y + 19);
-      ctx.lineTo(x + 6, y + 10);
-      ctx.closePath();
-      ctx.fill();
-      break;
-    case "mage":
-      ctx.fillRect(x + 8, y + 7, 8, 12);
-      ctx.beginPath();
-      ctx.arc(x + 12, y + 6, 5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#d8d0f0";
-      ctx.fillRect(x + 17, y + 8, 2, 10);
-      break;
-    case "dragon":
-      ctx.beginPath();
-      ctx.moveTo(x + 3, y + 16);
-      ctx.lineTo(x + 8, y + 7);
-      ctx.lineTo(x + 15, y + 5);
-      ctx.lineTo(x + 21, y + 11);
-      ctx.lineTo(x + 18, y + 18);
-      ctx.lineTo(x + 10, y + 20);
-      ctx.closePath();
-      ctx.fill();
-      break;
-    default:
-      ctx.fillRect(x + 8, y + 8, 8, 8);
-      break;
+  if (monster.elite) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(246, 212, 117, 0.92)";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x + 1.5, y + 1.5, TILE_SIZE - 3, TILE_SIZE - 3);
+    ctx.restore();
+  }
+  const badge = monster.behaviorKit ? BEHAVIOR_BADGES[monster.behaviorKit] : null;
+  if (badge) {
+    ctx.save();
+    ctx.fillStyle = "rgba(11, 13, 17, 0.86)";
+    ctx.fillRect(x + TILE_SIZE - 10, y + 2, 8, 8);
+    ctx.strokeStyle = badge.color;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + TILE_SIZE - 10.5, y + 1.5, 8, 8);
+    ctx.fillStyle = badge.color;
+    ctx.font = "bold 7px Trebuchet MS";
+    ctx.textAlign = "center";
+    ctx.fillText(badge.symbol, x + TILE_SIZE - 6, y + 8);
+    ctx.textAlign = "left";
+    ctx.restore();
   }
 }
 
@@ -699,11 +839,18 @@ export function drawItem(ctx, item, sx, sy, time = 0, options = {}) {
   ctx.fillStyle = glow;
   ctx.fillRect(x - 2, y - 2, TILE_SIZE + 4, TILE_SIZE + 4);
   ctx.restore();
-  if (item.kind === "gold") {
-    ctx.fillStyle = "#e4c850";
-    ctx.beginPath();
-    ctx.arc(x + 12, y + 12, 5, 0, Math.PI * 2);
-    ctx.fill();
+  const itemVisualId = item.visualId
+    || (item.kind === "gold" ? ITEM_VISUAL_IDS.gold : "")
+    || (item.kind === "quest" ? ITEM_VISUAL_IDS.quest : "")
+    || (item.kind === "weapon" ? ITEM_VISUAL_IDS.defaultWeapon : "")
+    || (item.kind === "armor" ? ITEM_VISUAL_IDS.defaultArmor : "")
+    || (item.kind === "charged" ? ITEM_VISUAL_IDS.defaultCharged : "")
+    || (item.kind === "spellbook" ? ITEM_VISUAL_IDS.defaultSpellbook : "")
+    || ITEM_VISUAL_IDS.defaultConsumable;
+  const frame = getTileVisual(itemVisualId, item.x || sx, item.y || sy);
+  const itemSize = Math.round(TILE_SIZE * 0.62);
+  const itemOffset = Math.round((TILE_SIZE - itemSize) / 2);
+  if (frame && drawFrame(ctx, frame, x + itemOffset, y + TILE_SIZE - itemSize - 3, itemSize, itemSize)) {
     return;
   }
   const color = item.kind === "consumable" ? "#9f3256" : item.kind === "spellbook" ? "#7040a8" : item.kind === "quest" ? "#b7f0ff" : item.kind === "charged" ? "#63a4d2" : "#c4c4c4";
@@ -780,6 +927,7 @@ export function drawBoardAtmosphere(ctx, level, view, time, options = {}) {
   }
   const reducedMotion = Boolean(options.reducedMotion);
   const depth = options.depth || 0;
+  const firstTownRun = Boolean(options.firstTownRun);
   const overlay = level.kind === "town"
     ? { fill: "rgba(214, 170, 88, 0.035)" }
     : depth >= 6
@@ -794,13 +942,40 @@ export function drawBoardAtmosphere(ctx, level, view, time, options = {}) {
   ctx.fillStyle = overlay.fill;
   ctx.fillRect(0, 0, VIEW_SIZE * TILE_SIZE, VIEW_SIZE * TILE_SIZE);
 
+  const drawRoomTint = (room, fill, stroke = "") => {
+    if (!room) {
+      return;
+    }
+    const left = (room.x - view.x) * TILE_SIZE;
+    const top = (room.y - view.y) * TILE_SIZE;
+    const width = room.w * TILE_SIZE;
+    const height = room.h * TILE_SIZE;
+    if (left + width <= 0 || top + height <= 0 || left >= VIEW_SIZE * TILE_SIZE || top >= VIEW_SIZE * TILE_SIZE) {
+      return;
+    }
+    ctx.fillStyle = fill;
+    ctx.fillRect(left, top, width, height);
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(left + 1, top + 1, width - 2, height - 2);
+    }
+  };
+
+  if (level.floorObjective && !level.floorResolved && level.rooms?.[level.floorObjective.roomIndex]) {
+    drawRoomTint(level.rooms[level.floorObjective.roomIndex], "rgba(255, 110, 78, 0.055)", "rgba(255, 166, 145, 0.16)");
+  }
+  if (level.floorOptional && !level.floorOptional.opened && level.rooms?.[level.floorOptional.roomIndex]) {
+    drawRoomTint(level.rooms[level.floorOptional.roomIndex], "rgba(184, 116, 255, 0.04)", "rgba(214, 180, 255, 0.12)");
+  }
+
   const pulseTime = reducedMotion ? 0.55 : 0.45 + Math.sin(time / 260) * 0.15;
   const featureColors = {
-    stairDown: "rgba(255, 211, 107, 0.18)",
-    stairUp: "rgba(127, 204, 255, 0.16)",
-    fountain: "rgba(139, 205, 233, 0.18)",
-    throne: "rgba(214, 170, 88, 0.18)",
-    altar: "rgba(212, 168, 255, 0.2)"
+    stairDown: firstTownRun ? "rgba(255, 211, 107, 0.3)" : "rgba(255, 211, 107, 0.22)",
+    stairUp: "rgba(127, 204, 255, 0.2)",
+    fountain: "rgba(139, 205, 233, 0.22)",
+    throne: "rgba(214, 170, 88, 0.22)",
+    altar: "rgba(212, 168, 255, 0.24)"
   };
 
   for (let sy = 0; sy < VIEW_SIZE; sy += 1) {
@@ -818,8 +993,40 @@ export function drawBoardAtmosphere(ctx, level, view, time, options = {}) {
       gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = gradient;
       ctx.fillRect(sx * TILE_SIZE, sy * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+
+      if (firstTownRun && tile.kind === "stairDown" && level.kind === "town") {
+        ctx.fillStyle = "rgba(255, 228, 162, 0.9)";
+        ctx.beginPath();
+        ctx.moveTo(sx * TILE_SIZE + 12, sy * TILE_SIZE + 6);
+        ctx.lineTo(sx * TILE_SIZE + 7, sy * TILE_SIZE + 12);
+        ctx.lineTo(sx * TILE_SIZE + 10, sy * TILE_SIZE + 12);
+        ctx.lineTo(sx * TILE_SIZE + 10, sy * TILE_SIZE + 17);
+        ctx.lineTo(sx * TILE_SIZE + 14, sy * TILE_SIZE + 17);
+        ctx.lineTo(sx * TILE_SIZE + 14, sy * TILE_SIZE + 12);
+        ctx.lineTo(sx * TILE_SIZE + 17, sy * TILE_SIZE + 12);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
   }
+
+  const drawMarkerBeacon = (marker, color) => {
+    if (!marker || !tileOnScreen(marker, view)) {
+      return;
+    }
+    const sx = marker.x - view.x;
+    const sy = marker.y - view.y;
+    const cx = screenTilePosition(sx, 12);
+    const cy = screenTilePosition(sy, 12);
+    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, TILE_SIZE * 1.3);
+    gradient.addColorStop(0, rgbaWithAlpha(color, reducedMotion ? 0.18 : 0.22 + Math.sin(time / 130) * 0.04));
+    gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(sx * TILE_SIZE - 8, sy * TILE_SIZE - 8, TILE_SIZE + 16, TILE_SIZE + 16);
+  };
+
+  drawMarkerBeacon(level.floorObjective && !level.floorResolved ? level.floorObjective.marker : null, "rgba(255, 124, 92, 0.55)");
+  drawMarkerBeacon(level.floorOptional && !level.floorOptional.opened ? level.floorOptional.marker : null, "rgba(194, 138, 255, 0.48)");
   ctx.restore();
 }
 
@@ -870,6 +1077,22 @@ export function drawMonsterIntent(ctx, monster, sx, sy, time = 0, options = {}) 
   const y = sy * TILE_SIZE;
   const reducedMotion = Boolean(options.reducedMotion);
   const pulsingThreat = ["shoot", "charge", "summon"].includes(monster.intent.type);
+  const player = options.player || null;
+  if (player && (monster.intent.type === "shoot" || monster.intent.type === "charge")) {
+    const lineColor = monster.intent.type === "shoot" ? "rgba(255, 208, 111, 0.28)" : "rgba(255, 128, 96, 0.34)";
+    ctx.save();
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = monster.intent.type === "shoot" ? 2 : 3;
+    if (!reducedMotion) {
+      ctx.setLineDash(monster.intent.type === "shoot" ? [4, 4] : [7, 3]);
+      ctx.lineDashOffset = -time / 45;
+    }
+    ctx.beginPath();
+    ctx.moveTo(x + 12, y + 12);
+    ctx.lineTo((player.x - options.view.x) * TILE_SIZE + 12, (player.y - options.view.y) * TILE_SIZE + 12);
+    ctx.stroke();
+    ctx.restore();
+  }
   if (pulsingThreat) {
     ctx.save();
     ctx.fillStyle = monster.intent.color || "#f2deb1";
@@ -885,6 +1108,11 @@ export function drawMonsterIntent(ctx, monster, sx, sy, time = 0, options = {}) 
   ctx.font = "bold 10px Trebuchet MS";
   ctx.textAlign = "center";
   ctx.fillText(monster.intent.symbol, x + 7, y + 10);
+  if (monster.elite) {
+    ctx.strokeStyle = "rgba(246, 212, 117, 0.88)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 1.5, y + 0.5, 11, 11);
+  }
   ctx.textAlign = "left";
 }
 

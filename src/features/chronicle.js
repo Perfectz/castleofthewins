@@ -29,6 +29,12 @@ export function noteDeathContext(game, context) {
 }
 
 function formatChronicleLine(entry) {
+  if (entry.type === "story_scene") {
+    return entry.payload?.label || "Received a town briefing.";
+  }
+  if (entry.type === "discovery_found") {
+    return `Found ${entry.payload.label} on depth ${entry.depth}.`;
+  }
   if (entry.type === "objective_complete") {
     return `Objective cleared: ${entry.payload.label} on depth ${entry.depth}.`;
   }
@@ -37,6 +43,12 @@ function formatChronicleLine(entry) {
   }
   if (entry.type === "elite_kill") {
     return `Killed ${entry.payload.label} on depth ${entry.depth}.`;
+  }
+  if (entry.type === "milestone_clear") {
+    return entry.payload?.summary || `Broke ${entry.payload.label} on depth ${entry.depth}.`;
+  }
+  if (entry.type === "room_event_clear") {
+    return `Resolved ${entry.payload.label} on depth ${entry.depth}.`;
   }
   if (entry.type === "town_unlock") {
     return `Funded town upgrade: ${entry.payload.label}.`;
@@ -75,6 +87,12 @@ export function buildDeathRecapMarkup(game) {
   const recentMarkup = recent.length === 0
     ? "<div class='muted'>No major beats were recorded.</div>"
     : recent.map((entry) => `<div class="log-line">${escapeHtml(formatChronicleLine(entry))}</div>`).join("");
+  const summary = game.lastRunSummary || null;
+  const persistentChanges = Array.isArray(summary?.persistentChanges) ? summary.persistentChanges : [];
+  const activeContract = typeof game.getActiveContract === "function" ? game.getActiveContract(true) || game.getActiveContract(false) : null;
+  const masterySummary = typeof game.getClassMasterySummary === "function"
+    ? game.getClassMasterySummary(game.player?.classId)
+    : "No mastery track.";
 
   return `
     <div class="section-block text-block">
@@ -90,6 +108,14 @@ export function buildDeathRecapMarkup(game) {
     <div class="section-block">
       <div class="field-label">Run Chronicle</div>
       <div class="message-log journal-log">${recentMarkup}</div>
+    </div>
+    <div class="section-block">
+      <div class="field-label">Town Persistence</div>
+      <div class="text-block">
+        ${escapeHtml(`Mastery: ${masterySummary}`)}<br><br>
+        ${escapeHtml(activeContract ? `Active contract: ${activeContract.name}` : "Active contract: none armed")}<br><br>
+        ${escapeHtml(persistentChanges.length > 0 ? persistentChanges.join(", ") : "No permanent unlock changed during this run.")}
+      </div>
     </div>
   `;
 }

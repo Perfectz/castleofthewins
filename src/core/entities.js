@@ -1,8 +1,8 @@
-import { CLASSES, ITEM_DEFS, MONSTER_DEFS, RACES, SHOPS, SPELLS } from "../data/content.js";
+import { CLASSES, ITEM_DEFS, LOOT_AFFIX_DEFS, MONSTER_DEFS, RACES, SHOPS, SPELLS } from "../data/content.js";
 import { choice, randInt, shuffle, structuredCloneCompat } from "./utils.js";
 
 export function weightedMonster(depth) {
-  const options = MONSTER_DEFS.filter((monster) => monster.depth <= depth + 1);
+  const options = MONSTER_DEFS.filter((monster) => monster.depth <= depth + 1 && !monster.unique);
   const bucket = [];
   options.forEach((monster) => {
     const weight = Math.max(1, 8 - Math.abs(depth - monster.depth) * 2);
@@ -25,9 +25,10 @@ export function createMonster(template, x, y) {
     attack: template.attack + Math.floor(depthBonus / 2),
     defense: template.defense + Math.floor(depthBonus / 2),
     exp: template.exp + depthBonus * 6,
-    mana: template.spells ? 12 : 0,
+    mana: typeof template.mana === "number" ? template.mana : template.spells ? 12 : 0,
     alerted: 0,
     sleeping: Math.random() < 0.4,
+    held: 0,
     chargeWindup: null,
     intent: null
   };
@@ -60,7 +61,8 @@ export function createItem(id, overrides = {}) {
   } else {
     item.identified = true;
   }
-  return { ...item, ...overrides };
+  const resolved = { ...item, ...overrides };
+  return applyLootAffix(resolved, resolved.affixId);
 }
 
 export function createTownItem(id) {
@@ -77,6 +79,11 @@ export function createTownItem(id) {
 }
 
 export function rollTreasure(depth) {
+  let options = {};
+  if (typeof depth === "object") {
+    options = depth || {};
+    depth = options.depth || 1;
+  }
   const pool = Object.values(ITEM_DEFS).filter((item) => item.rarity <= depth + 2 && item.kind !== "quest");
   const bucket = [];
   pool.forEach((item) => {
@@ -85,7 +92,136 @@ export function rollTreasure(depth) {
       bucket.push(item.id);
     }
   });
-  return createItem(choice(bucket));
+  const item = createItem(choice(bucket));
+  if (!item) {
+    return null;
+  }
+  const affixChance = options.quality === "milestone"
+    ? 1
+    : options.quality === "elite"
+      ? 0.8
+      : options.quality === "guarded"
+        ? 0.55
+        : depth >= 5
+          ? 0.32
+          : depth >= 3
+            ? 0.18
+            : 0;
+  if ((item.kind === "weapon" || item.kind === "armor") && !item.affixId && affixChance > 0 && Math.random() < affixChance) {
+    item.affixId = pickLootAffixId(item, depth, options);
+    applyLootAffix(item, item.affixId);
+  }
+  return item;
+}
+
+function getLootAffix(item) {
+  return item?.affixId ? LOOT_AFFIX_DEFS[item.affixId] || null : null;
+}
+
+function applyLootAffix(item, affixId) {
+  if (!item || !affixId || item.affixApplied) {
+    return item;
+  }
+  const affix = LOOT_AFFIX_DEFS[affixId];
+  if (!affix) {
+    return item;
+  }
+  const stats = affix.stats || {};
+  item.affixId = affixId;
+  item.affixApplied = true;
+  item.affixCategory = affix.category;
+  item.affixTags = affix.tags || [];
+  if (stats.power) {
+    item.power = (item.power || 0) + stats.power;
+  }
+  if (stats.armor) {
+    item.armor = (item.armor || 0) + stats.armor;
+  }
+  if (stats.accuracyBonus) {
+    item.accuracyBonus = (item.accuracyBonus || 0) + stats.accuracyBonus;
+  }
+  if (stats.critBonus) {
+    item.critBonus = (item.critBonus || 0) + stats.critBonus;
+  }
+  if (stats.guardBonus) {
+    item.guardBonus = (item.guardBonus || 0) + stats.guardBonus;
+  }
+  if (stats.wardBonus) {
+    item.wardBonus = (item.wardBonus || 0) + stats.wardBonus;
+  }
+  if (stats.manaBonus) {
+    item.manaBonus = (item.manaBonus || 0) + stats.manaBonus;
+  }
+  if (stats.dexBonus) {
+    item.dexBonus = (item.dexBonus || 0) + stats.dexBonus;
+  }
+  if (stats.searchBonus) {
+    item.searchBonus = (item.searchBonus || 0) + stats.searchBonus;
+  }
+  if (stats.lightBonus) {
+    item.lightBonus = (item.lightBonus || 0) + stats.lightBonus;
+  }
+  if (stats.bonusVsUndead) {
+    item.bonusVsUndead = (item.bonusVsUndead || 0) + stats.bonusVsUndead;
+  }
+  if (stats.overcastRelief) {
+    item.overcastRelief = (item.overcastRelief || 0) + stats.overcastRelief;
+  }
+  if (stats.cursedBias) {
+    item.cursed = true;
+  }
+  return item;
+}
+
+function pickLootAffixId(item, depth, options = {}) {
+  if (options.affixId && LOOT_AFFIX_DEFS[options.affixId]) {
+    return options.affixId;
+  }
+  const candidates = [];
+  const push = (id, weight = 1) => {
+    for (let index = 0; index < weight; index += 1) {
+      candidates.push(id);
+    }
+  };
+  if (item.kind === "weapon") {
+    push("executioners", 3);
+    push("gravebane", depth >= 4 ? 2 : 1);
+    if ((item.manaBonus || 0) > 0) {
+      push("stormtouched", 3);
+    }
+    if ((item.weight || 0) <= 4) {
+      push("scouts", 2);
+    }
+  }
+  if (item.kind === "armor") {
+    if (item.slot === "body" || item.slot === "offhand" || item.slot === "head") {
+      push("wardens", 3);
+    }
+    if (item.slot === "cloak" || item.slot === "feet" || item.slot === "amulet") {
+      push("scouts", 2);
+    }
+    if ((item.manaBonus || 0) > 0 || (item.wardBonus || 0) > 0 || item.slot === "ring" || item.slot === "amulet") {
+      push("stormtouched", 3);
+    }
+    if (depth >= 4) {
+      push("gravebane", 1);
+    }
+  }
+  if (options.quality === "elite" || options.quality === "milestone") {
+    push("wardens", 2);
+    push("executioners", 2);
+    push("stormtouched", 2);
+    if (depth >= 4) {
+      push("gravebane", 2);
+    }
+  }
+  if (options.quality === "guarded") {
+    push("wardens", 3);
+  }
+  if (depth >= 5) {
+    push("hollow", 1);
+  }
+  return choice(candidates.length > 0 ? candidates : Object.keys(LOOT_AFFIX_DEFS));
 }
 
 export function getRace(id) {
@@ -109,10 +245,44 @@ export function describeItem(item) {
     }
   }
   if (item.kind === "weapon") {
-    return `Weapon, power ${getItemPower(item)}${item.identified && item.cursed ? ", cursed" : ""}`;
+    const details = [`Weapon, power ${getItemPower(item)}`];
+    if (item.affixId) {
+      details.push(LOOT_AFFIX_DEFS[item.affixId]?.description || "specialized");
+    }
+    if (getItemAccuracyBonus(item)) {
+      details.push(`${getItemAccuracyBonus(item) > 0 ? "+" : ""}${getItemAccuracyBonus(item)} accuracy`);
+    }
+    if (getItemCritBonus(item)) {
+      details.push(`+${getItemCritBonus(item)} crit`);
+    }
+    if (getItemManaBonus(item)) {
+      details.push(`+${getItemManaBonus(item)} mana`);
+    }
+    if (getItemWardBonus(item)) {
+      details.push(`ward ${getItemWardBonus(item)}`);
+    }
+    if (getItemBonusVsUndead(item)) {
+      details.push(`+${getItemBonusVsUndead(item)} vs undead`);
+    }
+    if (getItemOvercastRelief(item)) {
+      details.push(`-${getItemOvercastRelief(item)} overcast loss`);
+    }
+    if (item.identified && item.cursed) {
+      details.push("cursed");
+    }
+    return details.join(", ");
   }
   if (item.kind === "armor") {
     const details = [`Armor ${getItemArmor(item)}`];
+    if (item.affixId) {
+      details.push(LOOT_AFFIX_DEFS[item.affixId]?.description || "specialized");
+    }
+    if (getItemGuardBonus(item)) {
+      details.push(`guard ${getItemGuardBonus(item)}`);
+    }
+    if (getItemWardBonus(item)) {
+      details.push(`ward ${getItemWardBonus(item)}`);
+    }
     if (getItemManaBonus(item)) {
       details.push(`+${getItemManaBonus(item)} mana`);
     }
@@ -121,6 +291,21 @@ export function describeItem(item) {
     }
     if (getItemLightBonus(item)) {
       details.push(`+${getItemLightBonus(item)} sight`);
+    }
+    if (getItemSearchBonus(item)) {
+      details.push(`+${getItemSearchBonus(item)} search`);
+    }
+    if (getItemFireResist(item)) {
+      details.push(`fire resist ${getItemFireResist(item)}`);
+    }
+    if (getItemColdResist(item)) {
+      details.push(`cold resist ${getItemColdResist(item)}`);
+    }
+    if (getItemBonusVsUndead(item)) {
+      details.push(`+${getItemBonusVsUndead(item)} vs undead`);
+    }
+    if (getItemOvercastRelief(item)) {
+      details.push(`-${getItemOvercastRelief(item)} overcast loss`);
     }
     if (item.identified && item.cursed) {
       details.push("cursed");
@@ -167,6 +352,9 @@ export function getItemName(item, forceReveal = false) {
   if ((item.kind === "weapon" || item.kind === "armor") && item.enchantment) {
     parts.push(item.enchantment > 0 ? `+${item.enchantment}` : `${item.enchantment}`);
   }
+  if (item.affixId && (forceReveal || item.identified || !canIdentify(item))) {
+    parts.push(LOOT_AFFIX_DEFS[item.affixId]?.name || "");
+  }
   parts.push(item.name);
   if (item.kind === "charged" && (forceReveal || item.identified)) {
     parts.push(`(${item.charges}/${item.maxCharges || item.charges})`);
@@ -182,6 +370,14 @@ export function getItemArmor(item) {
   return Math.max(0, (item.armor || 0) + (item.enchantment || 0));
 }
 
+export function getItemAccuracyBonus(item) {
+  return item ? (item.accuracyBonus || 0) : 0;
+}
+
+export function getItemCritBonus(item) {
+  return item ? Math.max(0, item.critBonus || 0) : 0;
+}
+
 export function getItemManaBonus(item) {
   return (item.manaBonus || 0) + ((item.kind === "armor" && item.enchantment > 0 && item.slot === "ring") ? item.enchantment : 0);
 }
@@ -194,10 +390,50 @@ export function getItemLightBonus(item) {
   return (item.lightBonus || 0) + ((item.kind === "armor" && item.enchantment > 1 && item.slot === "amulet") ? 1 : 0);
 }
 
+export function getItemGuardBonus(item) {
+  return (item.guardBonus || 0) + ((item.kind === "armor" && item.enchantment > 1 && item.slot === "offhand") ? 1 : 0);
+}
+
+export function getItemWardBonus(item) {
+  return (item.wardBonus || 0) + ((item.kind === "armor" && item.enchantment > 1 && (item.slot === "ring" || item.slot === "amulet" || item.slot === "cloak")) ? 1 : 0);
+}
+
+export function getItemFireResist(item) {
+  return item ? (item.fireResist || 0) : 0;
+}
+
+export function getItemColdResist(item) {
+  return item ? (item.coldResist || 0) : 0;
+}
+
+export function getItemSearchBonus(item) {
+  return item ? (item.searchBonus || 0) : 0;
+}
+
+export function getItemBonusVsUndead(item) {
+  return item ? (item.bonusVsUndead || 0) : 0;
+}
+
+export function getItemOvercastRelief(item) {
+  return item ? (item.overcastRelief || 0) : 0;
+}
+
 export function getItemValue(item) {
   let value = item.value || 0;
   if (item.enchantment) {
     value += item.enchantment * 18;
+  }
+  value += getItemAccuracyBonus(item) * 10;
+  value += getItemCritBonus(item) * 14;
+  value += getItemGuardBonus(item) * 16;
+  value += getItemWardBonus(item) * 18;
+  value += getItemSearchBonus(item) * 10;
+  value += getItemFireResist(item) * 12;
+  value += getItemColdResist(item) * 12;
+  value += getItemBonusVsUndead(item) * 16;
+  value += getItemOvercastRelief(item) * 18;
+  if (item.affixId) {
+    value += 26;
   }
   if (item.cursed) {
     value = Math.max(1, Math.round(value * 0.5));
@@ -296,10 +532,10 @@ export function shopAcceptsItem(shopId, item) {
     return item.kind === "weapon" || item.kind === "armor";
   }
   if (shopId === "guild") {
-    return item.kind === "spellbook" || item.kind === "charged";
+    return item.kind === "spellbook" || item.kind === "charged" || (item.kind === "weapon" && item.manaBonus) || (item.kind === "armor" && (item.manaBonus || item.wardBonus));
   }
   if (shopId === "general") {
-    return item.kind === "consumable" || item.kind === "charged";
+    return item.kind === "consumable" || item.kind === "charged" || (item.kind === "armor" && ["feet", "cloak", "amulet"].includes(item.slot));
   }
   return false;
 }
@@ -361,6 +597,12 @@ export function normalizePlayer(player) {
   normalized.deepestDepth = normalized.deepestDepth || normalized.currentDepth || 0;
   normalized.slowed = normalized.slowed || 0;
   normalized.tempGuard = normalized.tempGuard || 0;
+  normalized.held = normalized.held || 0;
+  normalized.lightBuffTurns = normalized.lightBuffTurns || 0;
+  normalized.arcaneWardTurns = normalized.arcaneWardTurns || 0;
+  normalized.stoneSkinTurns = normalized.stoneSkinTurns || 0;
+  normalized.resistFireTurns = normalized.resistFireTurns || 0;
+  normalized.resistColdTurns = normalized.resistColdTurns || 0;
   normalized.perks = Array.isArray(normalized.perks) ? normalized.perks : [];
   normalized.relics = Array.isArray(normalized.relics) ? normalized.relics : [];
   normalized.knownRumors = Array.isArray(normalized.knownRumors) ? normalized.knownRumors : [];
@@ -370,6 +612,25 @@ export function normalizePlayer(player) {
     templeFavor: 0,
     ...(normalized.runCurrencies || {})
   };
+  normalized.quest = {
+    hasRunestone: false,
+    complete: false,
+    milestonesCleared: [],
+    namedBossesDefeated: [],
+    briefingsSeen: [],
+    discoveryIdsFound: [],
+    storyBeatFlags: {},
+    npcSceneFlags: {},
+    returnSting: null,
+    ...(normalized.quest || {})
+  };
+  normalized.quest.milestonesCleared = Array.isArray(normalized.quest.milestonesCleared) ? normalized.quest.milestonesCleared : [];
+  normalized.quest.namedBossesDefeated = Array.isArray(normalized.quest.namedBossesDefeated) ? normalized.quest.namedBossesDefeated : [];
+  normalized.quest.briefingsSeen = Array.isArray(normalized.quest.briefingsSeen) ? normalized.quest.briefingsSeen : [];
+  normalized.quest.discoveryIdsFound = Array.isArray(normalized.quest.discoveryIdsFound) ? normalized.quest.discoveryIdsFound : [];
+  normalized.quest.storyBeatFlags = normalized.quest.storyBeatFlags || {};
+  normalized.quest.npcSceneFlags = normalized.quest.npcSceneFlags || {};
+  normalized.quest.returnSting = normalized.quest.returnSting || null;
   normalized.inventory = (normalized.inventory || []).map(normalizeItem);
   Object.keys(normalized.equipment || {}).forEach((slot) => {
     if (normalized.equipment[slot]) {
@@ -384,6 +645,12 @@ export function normalizeLevels(levels) {
     ...level,
     floorObjective: level.floorObjective || null,
     floorOptional: level.floorOptional || null,
+    floorSpecial: level.floorSpecial || null,
+    floorSpecialSummary: level.floorSpecialSummary || "",
+    activeEliteNames: Array.isArray(level.activeEliteNames) ? level.activeEliteNames : [],
+    milestone: level.milestone || null,
+    discoveries: level.discoveries || [],
+    reservedRoomIndexes: level.reservedRoomIndexes || [],
     floorResolved: Boolean(level.floorResolved),
     dangerScore: level.dangerScore || 0,
     dangerLevel: level.dangerLevel || "Low",
@@ -396,6 +663,7 @@ export function normalizeLevels(levels) {
       sleeping: actor.sleeping ?? false,
       alerted: actor.alerted || 0,
       mana: actor.mana || 0,
+      held: actor.held || 0,
       chargeWindup: actor.chargeWindup || null,
       intent: null,
       maxHp: actor.maxHp || actor.hp || 1,

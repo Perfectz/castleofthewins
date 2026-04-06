@@ -4,11 +4,14 @@
   "description": "A browser-playable, dependency-light homage to the classic Windows roguelike, rebuilt for phone travel play.",
   "main": "app.js",
   "scripts": {
+    "build": "node scripts/build-app.mjs",
     "build:fallback": "node scripts/build-app.mjs",
     "build:pages": "node scripts/build-pages.mjs",
     "playtest:harness": "node scripts/playtest-harness.mjs",
+    "screenshot:mobile": "node scripts/capture-mobile-ui.mjs",
     "screenshot:town": "node scripts/capture-town.mjs",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test:rules": "npm run build && node --test tests/rules.test.mjs",
+    "test": "npm run build && node scripts/playtest-harness.mjs"
   },
   "keywords": [],
   "author": "",

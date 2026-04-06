@@ -1,11 +1,34 @@
 import { BOON_DEFS, OBJECTIVE_DEFS, OPTIONAL_ENCOUNTER_DEFS, RELIC_DEFS, RUMOR_DEFS } from "../data/content.js";
 import { createItem, rollTreasure } from "../core/entities.js";
-import { actorAt, itemsAt, randomRoomTile, setTile, tileDef } from "../core/world.js";
-import { choice, randInt, shuffle } from "../core/utils.js";
+import { actorAt, addLevelProp, centerOf, itemsAt, randomRoomTile, revealCircle, setTile, tileDef } from "../core/world.js";
+import { choice, distance, randInt, shuffle } from "../core/utils.js";
 import { spawnObjectiveGuard } from "./encounters.js";
 
 function getAvailableOptionals(townUnlocks = {}) {
   return Object.values(OPTIONAL_ENCOUNTER_DEFS).filter((optional) => !optional.unlock || townUnlocks[optional.unlock]);
+}
+
+function getDirectiveRooms(level) {
+  const safeRoomIndexes = new Set(level.safeEntryRoomIndexes || [0]);
+  const reservedRoomIndexes = new Set(level.reservedRoomIndexes || []);
+  if (typeof level.exitRoomIndex === "number") {
+    reservedRoomIndexes.add(level.exitRoomIndex);
+  }
+  const rooms = (level.rooms || []).filter((room, index) => index > 0 && !safeRoomIndexes.has(index) && !reservedRoomIndexes.has(index));
+  const fallbackRooms = (level.rooms || []).filter((room, index) => index > 0 && !reservedRoomIndexes.has(index));
+  return rooms.length >= 2 ? rooms : fallbackRooms;
+}
+
+function roomsOverlapOrTouch(left, right) {
+  if (!left || !right) {
+    return false;
+  }
+  return !(
+    left.x + left.w + 1 < right.x
+    || right.x + right.w + 1 < left.x
+    || left.y + left.h + 1 < right.y
+    || right.y + right.h + 1 < left.y
+  );
 }
 
 function placeObjectiveTile(level, room, tileKind, extra = {}) {
@@ -37,6 +60,122 @@ function placeObjectiveItem(level, room, objectiveId, depth) {
   return null;
 }
 
+function roomCorners(room) {
+  return [
+    { x: room.x + 1, y: room.y + 1 },
+    { x: room.x + room.w - 2, y: room.y + 1 },
+    { x: room.x + 1, y: room.y + room.h - 2 },
+    { x: room.x + room.w - 2, y: room.y + room.h - 2 }
+  ];
+}
+
+function addRoomTorches(level, room, propId = "roomTorch", count = 2) {
+  roomCorners(room).slice(0, count).forEach((corner, index) => {
+    addLevelProp(level, {
+      id: `${propId}-${room.x}-${room.y}-${index}`,
+      x: corner.x,
+      y: corner.y,
+      propId,
+      layer: "fixture",
+      light: true
+    });
+  });
+}
+
+function addRoomDress(level, room, objectiveId, optionalId = "") {
+  if (objectiveId === "recover_relic") {
+    addRoomTorches(level, room, "roomTorch", 4);
+    return;
+  }
+  if (objectiveId === "rescue_captive") {
+    addRoomTorches(level, room, "shrineTorch", 2);
+    addLevelProp(level, {
+      id: `rescue-banner-${room.x}-${room.y}`,
+      x: room.x + Math.max(1, Math.floor(room.w / 2)),
+      y: room.y + 1,
+      propId: "rescueBanner",
+      layer: "fixture"
+    });
+    return;
+  }
+  if (objectiveId === "purge_nest") {
+    addRoomTorches(level, room, "roomTorch", 2);
+    return;
+  }
+  if (objectiveId === "seal_shrine") {
+    addRoomTorches(level, room, "shrineTorch", 4);
+    return;
+  }
+  if (optionalId === "vault_room") {
+    addRoomTorches(level, room, "roomTorch", 2);
+  }
+}
+
+function decorateObjectiveMarker(level, objective, room) {
+  if (!objective?.marker) {
+    return;
+  }
+  if (objective.id === "recover_relic") {
+    addLevelProp(level, {
+      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
+      x: objective.marker.x,
+      y: objective.marker.y,
+      propId: "relicPedestal",
+      layer: "fixture",
+      light: true
+    });
+  } else if (objective.id === "secure_supplies") {
+    addLevelProp(level, {
+      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
+      x: objective.marker.x,
+      y: objective.marker.y,
+      propId: "vaultChest",
+      layer: "fixture"
+    });
+  } else if (objective.id === "rescue_captive") {
+    addLevelProp(level, {
+      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
+      x: objective.marker.x,
+      y: objective.marker.y,
+      propId: "prisonerCell",
+      layer: "fixture"
+    });
+  } else if (objective.id === "purge_nest") {
+    addLevelProp(level, {
+      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
+      x: objective.marker.x,
+      y: objective.marker.y,
+      propId: "broodNest",
+      layer: "fixture"
+    });
+  } else if (objective.id === "seal_shrine" || objective.id === "break_beacon") {
+    addLevelProp(level, {
+      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
+      x: objective.marker.x,
+      y: objective.marker.y,
+      propId: "shrineSeal",
+      layer: "fixture",
+      light: true
+    });
+  }
+  addRoomDress(level, room, objective.id);
+}
+
+function decorateOptionalMarker(level, optional, room) {
+  if (!optional?.marker) {
+    return;
+  }
+  addLevelProp(level, {
+    id: `optional-${optional.id}-${optional.marker.x}-${optional.marker.y}`,
+    x: optional.marker.x,
+    y: optional.marker.y,
+    propId: optional.visualId || "vaultChest",
+    layer: "fixture",
+    light: optional.id === "ghost_merchant" || optional.id === "blood_altar" || optional.id === "moon_well"
+  });
+  addRoomDress(level, room, "", optional.id);
+}
+
 function setupObjectiveState(level, depth, objectiveId, room, roomIndex) {
   const definition = OBJECTIVE_DEFS[objectiveId];
   const objective = {
@@ -51,6 +190,15 @@ function setupObjectiveState(level, depth, objectiveId, room, roomIndex) {
   if (objectiveId === "recover_relic") {
     objective.marker = placeObjectiveItem(level, room, objectiveId, depth);
     objective.detail = "Claim the relic and survive the greed decision that follows.";
+  } else if (objectiveId === "secure_supplies") {
+    objective.marker = placeObjectiveItem(level, room, objectiveId, depth);
+    if (objective.marker) {
+      const cacheItem = level.items.find((entry) => entry.objectiveId === objectiveId && entry.x === objective.marker.x && entry.y === objective.marker.y);
+      if (cacheItem) {
+        cacheItem.name = "Field Cache";
+      }
+    }
+    objective.detail = "Recover the sealed cache and carry the supplies back into the run.";
   } else if (objectiveId === "purge_nest") {
     objective.marker = placeObjectiveTile(level, room, "throne", {
       label: "Brood Nest",
@@ -73,9 +221,17 @@ function setupObjectiveState(level, depth, objectiveId, room, roomIndex) {
       objectiveAction: "seal"
     });
     objective.detail = "Seal the shrine and weather the answer from the floor.";
+  } else if (objectiveId === "break_beacon") {
+    objective.marker = placeObjectiveTile(level, room, "altar", {
+      label: "Alarm Beacon",
+      objectiveId,
+      objectiveAction: "breakBeacon"
+    });
+    objective.detail = "Clear the room, then smash the beacon before it pulls more patrols into the floor.";
   }
 
-  spawnObjectiveGuard(level, depth, room, roomIndex);
+  spawnObjectiveGuard(level, depth, room, roomIndex, objectiveId);
+  decorateObjectiveMarker(level, objective, room);
   return objective;
 }
 
@@ -119,8 +275,21 @@ function setupOptionalState(level, depth, optionalId, room, roomIndex) {
       optionalId,
       optionalAction: "cache"
     });
+  } else if (optionalId === "scout_cache") {
+    optional.marker = placeObjectiveTile(level, room, "throne", {
+      label: "Scout Cache",
+      optionalId,
+      optionalAction: "scout"
+    });
+  } else if (optionalId === "moon_well") {
+    optional.marker = placeObjectiveTile(level, room, "fountain", {
+      label: "Moon Well",
+      optionalId,
+      optionalAction: "moonWell"
+    });
   }
 
+  decorateOptionalMarker(level, optional, room);
   return optional;
 }
 
@@ -128,13 +297,31 @@ export function setupFloorDirectives(level, depth, townUnlocks = {}) {
   if (!level || level.kind !== "dungeon" || !level.rooms || level.rooms.length < 3) {
     return null;
   }
-  const rooms = level.rooms.slice(1);
-  const orderedRooms = shuffle(rooms);
-  const objectiveRoom = orderedRooms[Math.max(0, orderedRooms.length - 1)];
-  const optionalRoom = orderedRooms[Math.max(0, orderedRooms.length - 2)] || orderedRooms[0];
-  const objectiveId = choice(Object.keys(OBJECTIVE_DEFS));
+  if (level.milestone?.id === "depth7_stormwarden" || depth >= 7) {
+    level.floorObjective = null;
+    level.floorOptional = null;
+    level.floorResolved = false;
+    return { floorObjective: null, floorOptional: null };
+  }
+  const rooms = getDirectiveRooms(level);
+  const entryPoint = centerOf(level.rooms[0]);
+  const orderedRooms = shuffle(rooms).sort((left, right) => distance(centerOf(left), entryPoint) - distance(centerOf(right), entryPoint));
+  const objectiveRoom = depth === 1
+    ? orderedRooms[Math.min(1, orderedRooms.length - 1)]
+    : orderedRooms[Math.max(0, orderedRooms.length - 1)];
+  const optionalCandidates = (depth === 1 ? orderedRooms.slice().reverse() : orderedRooms.slice().reverse())
+    .filter((room) => room && room !== objectiveRoom && !roomsOverlapOrTouch(room, objectiveRoom));
+  const optionalRoom = optionalCandidates[0]
+    || orderedRooms.find((room) => room && room !== objectiveRoom)
+    || orderedRooms[0];
+  const objectivePool = depth === 1
+    ? ["recover_relic", "seal_shrine", "purge_nest", "rescue_captive"]
+    : Object.keys(OBJECTIVE_DEFS);
+  const objectiveId = choice(objectivePool);
   const availableOptionals = getAvailableOptionals(townUnlocks);
-  const optionalId = availableOptionals.length > 0 ? choice(availableOptionals).id : null;
+  const optionalId = depth === 1 && level.tutorialFloor
+    ? null
+    : availableOptionals.length > 0 ? choice(availableOptionals).id : null;
 
   level.floorObjective = setupObjectiveState(level, depth, objectiveId, objectiveRoom, level.rooms.indexOf(objectiveRoom));
   level.floorOptional = optionalId ? setupOptionalState(level, depth, optionalId, optionalRoom, level.rooms.indexOf(optionalRoom)) : null;
@@ -163,6 +350,25 @@ export function getObjectiveRoomClear(game) {
   return !game.currentLevel.actors.some((monster) => monster.roomIndex === roomIndex && monster.hp > 0);
 }
 
+export function getObjectiveDefendersRemaining(level) {
+  const roomIndex = level?.floorObjective?.roomIndex;
+  if (roomIndex === undefined || roomIndex === null) {
+    return 0;
+  }
+  return level.actors.filter((monster) => monster.roomIndex === roomIndex && monster.hp > 0).length;
+}
+
+function updatePropState(level, propId, nextPropId) {
+  if (!level?.props) {
+    return;
+  }
+  level.props.forEach((prop) => {
+    if (prop.propId === propId) {
+      prop.propId = nextPropId;
+    }
+  });
+}
+
 function applyObjectiveReward(game, source) {
   const objective = game.currentLevel?.floorObjective;
   if (!objective || objective.rewardClaimed) {
@@ -179,6 +385,14 @@ function applyObjectiveReward(game, source) {
       depth: game.currentDepth
     });
   }
+  if (game.recordTelemetry) {
+    game.recordTelemetry("objective_resolved", {
+      objectiveId: objective.id,
+      rewardType: objective.rewardType || "relic",
+      source: source || objective.id,
+      searchCount: game.telemetry?.activeRun?.searchCount || 0
+    });
+  }
 }
 
 export function resolveFloorObjective(game, reason = "completed") {
@@ -186,24 +400,36 @@ export function resolveFloorObjective(game, reason = "completed") {
   if (!objective || objective.status === "resolved") {
     return false;
   }
+  game.markOnboarding?.("clear_objective");
   objective.status = "resolved";
   game.currentLevel.floorResolved = true;
   game.floorResolved = true;
   const label = OBJECTIVE_DEFS[objective.id]?.label || "Objective";
-  game.log(`${label} complete. The floor is now yours to cash out or greed.`, "good");
+  game.log(`${label} complete. Stairs up bank the floor now. Staying for greed will keep raising pressure.`, "good");
+  if (objective.marker && game.emitReadout) {
+    game.emitReadout("Objective", objective.marker.x, objective.marker.y, "#ffd3bf", 520);
+  }
   if (game.increaseDanger) {
     game.increaseDanger("objective_clear", 1);
   }
+  if (game.getObjectiveRumorBonus && game.grantRumorToken) {
+    const rumorBonus = game.getObjectiveRumorBonus();
+    if (rumorBonus > 0) {
+      game.grantRumorToken(rumorBonus);
+      game.log(`Contract payout: +${rumorBonus} rumor token${rumorBonus === 1 ? "" : "s"}.`, "good");
+    }
+  }
+  game.onObjectiveResolved?.(objective.id);
   applyObjectiveReward(game, reason);
   return true;
 }
 
 export function handleObjectivePickup(game, item) {
-  if (!item || item.objectiveId !== "recover_relic") {
+  if (!item || !["recover_relic", "secure_supplies"].includes(item.objectiveId)) {
     return false;
   }
   resolveFloorObjective(game, "pickup");
-  game.log("You secure the relic and feel the floor shift around you.", "good");
+  game.log(item.objectiveId === "secure_supplies" ? "You secure the cache and feel the floor shift around you." : "You secure the relic and feel the floor shift around you.", "good");
   return true;
 }
 
@@ -219,7 +445,11 @@ function grantOptionalReward(game, optionalId) {
     game.grantBoon("windfall");
     return;
   }
-  if (optionalId === "ghost_merchant" || optionalId === "vault_room") {
+  if (optionalId === "scout_cache") {
+    game.grantRumorToken(1);
+    return;
+  }
+  if (optionalId === "ghost_merchant" || optionalId === "vault_room" || optionalId === "moon_well") {
     game.grantRumorToken(1);
   }
 }
@@ -235,10 +465,16 @@ export function handleOptionalInteraction(game, tile) {
   if (game.markGreedAction) {
     game.markGreedAction(optional.id);
   }
+  game.markOnboarding?.("choose_extract_or_greed");
+  game.recordTelemetry?.("optional_triggered", {
+    optionalId: optional.id
+  });
+  const greedGoldMultiplier = game.getGreedGoldMultiplier ? game.getGreedGoldMultiplier() : 1;
+  const greedRumorBonus = game.getGreedRumorBonus ? game.getGreedRumorBonus() : 0;
 
   switch (optional.id) {
     case "cursed_cache": {
-      const gold = randInt(35, 85) * Math.max(1, game.currentDepth);
+      const gold = Math.round(randInt(35, 85) * Math.max(1, game.currentDepth) * greedGoldMultiplier);
       game.player.gold += gold;
       game.addItemToInventory(rollTreasure(game.currentDepth + 1));
       if (Math.random() < 0.5) {
@@ -250,6 +486,7 @@ export function handleOptionalInteraction(game, tile) {
         }
       }
       game.log(`The cache breaks open: ${gold} gold and one dangerous prize.`, "good");
+      updatePropState(game.currentLevel, "cacheClosed", "cacheOpen");
       break;
     }
     case "ghost_merchant": {
@@ -271,9 +508,30 @@ export function handleOptionalInteraction(game, tile) {
       break;
     }
     case "vault_room": {
-      const gold = randInt(40, 110) * Math.max(1, game.currentDepth);
+      const gold = Math.round(randInt(40, 110) * Math.max(1, game.currentDepth) * greedGoldMultiplier);
       game.player.gold += gold;
       game.log(`The vault yields ${gold} gold and draws attention from the floor.`, "good");
+      updatePropState(game.currentLevel, "vaultChest", "openedChest");
+      break;
+    }
+    case "scout_cache": {
+      game.addItemToInventory(createItem("mappingScroll", { identified: true }));
+      game.grantRumorToken?.(1);
+      if (game.revealGuidedObjectiveRoute) {
+        game.revealGuidedObjectiveRoute("scout_cache");
+        game.revealGuidedObjectiveRoute("scout_cache");
+      }
+      game.log("The scout cache yields route notes and a clean mapping scroll.", "good");
+      updatePropState(game.currentLevel, "cacheClosed", "cacheOpen");
+      break;
+    }
+    case "moon_well": {
+      game.player.hp = game.player.maxHp;
+      game.player.mana = game.player.maxMana;
+      for (let index = 0; index < 18; index += 1) {
+        revealCircle(game.currentLevel, randInt(1, game.currentLevel.width - 2), randInt(1, game.currentLevel.height - 2), 2);
+      }
+      game.log("Moonlight floods the room, restoring you and sketching more of the floor.", "good");
       break;
     }
     default:
@@ -281,7 +539,8 @@ export function handleOptionalInteraction(game, tile) {
   }
 
   if (game.increaseDanger) {
-    game.increaseDanger(`optional_${optional.id}`, optional.id === "vault_room" ? 3 : 2);
+    const dangerBonus = game.getGreedDangerBonus ? game.getGreedDangerBonus() : 0;
+    game.increaseDanger(`optional_${optional.id}`, (optional.id === "vault_room" ? 3 : 2) + dangerBonus);
   }
   if (game.recordChronicleEvent) {
     game.recordChronicleEvent("greed_choice", {
@@ -290,13 +549,22 @@ export function handleOptionalInteraction(game, tile) {
       depth: game.currentDepth
     });
   }
+  game.recordTelemetry?.("optional_triggered", {
+    optionalId: optional.id,
+    source: "interaction"
+  });
   grantOptionalReward(game, optional.id);
+  if (greedRumorBonus > 0 && game.grantRumorToken) {
+    game.grantRumorToken(greedRumorBonus);
+    game.log(`Contract payout: +${greedRumorBonus} rumor token${greedRumorBonus === 1 ? "" : "s"}.`, "good");
+  }
   return true;
 }
 
 export function handleObjectiveInteraction(game, tile) {
   const objective = game.currentLevel?.floorObjective;
   if (objective && tile.objectiveId === objective.id) {
+    game.markOnboarding?.("find_objective");
     if (objective.id === "purge_nest") {
       if (!getObjectiveRoomClear(game)) {
         game.log("The nest still has living defenders. Clear the room first.", "warning");
@@ -321,6 +589,10 @@ export function handleObjectiveInteraction(game, tile) {
       game.increaseDanger?.("seal_shrine", 2);
       return resolveFloorObjective(game, "seal");
     }
+    if (objective.id === "break_beacon") {
+      game.log("You smash the beacon. The hall falls dark for a precious moment.", "good");
+      return resolveFloorObjective(game, "beacon");
+    }
   }
 
   if (tile.optionalId) {
@@ -332,12 +604,19 @@ export function handleObjectiveInteraction(game, tile) {
 
 export function getObjectiveStatusText(level) {
   if (!level || !level.floorObjective) {
+    if (level?.milestone && level.milestone.status !== "cleared") {
+      return `${level.milestone.name}: ${level.milestone.journal || "Break the guardian and press on."}`;
+    }
     return "No active floor objective.";
   }
   if (level.floorResolved) {
     return `Objective cleared: ${level.floorObjective.shortLabel}. Extraction or greed.`;
   }
-  return `${level.floorObjective.shortLabel}: ${level.floorObjective.detail || level.floorObjective.summary}`;
+  const blockers = getObjectiveDefendersRemaining(level);
+  if (blockers > 0) {
+    return `${level.floorObjective.shortLabel}: ${level.floorObjective.detail || level.floorObjective.summary} ${blockers} defender${blockers === 1 ? "" : "s"} remain. Deeper stairs stay sealed until this is done.`;
+  }
+  return `${level.floorObjective.shortLabel}: ${level.floorObjective.detail || level.floorObjective.summary} Room clear. Step onto the marker to resolve it and unlock the stairs.`;
 }
 
 export function getOptionalStatusText(level) {
@@ -351,7 +630,7 @@ export function getOptionalStatusText(level) {
 }
 
 export function grantObjectiveRumor(game) {
-  const rumorPool = [RUMOR_DEFS.relic_hunt, RUMOR_DEFS.nest, RUMOR_DEFS.captive].filter(Boolean);
+  const rumorPool = [RUMOR_DEFS.relic_hunt, RUMOR_DEFS.nest, RUMOR_DEFS.captive, RUMOR_DEFS.supplies, RUMOR_DEFS.beacon].filter(Boolean);
   const rumor = choice(rumorPool);
   if (rumor && game.learnRumor) {
     game.learnRumor(rumor.id);
@@ -360,6 +639,9 @@ export function grantObjectiveRumor(game) {
 
 export function getObjectiveRewardPreview(level) {
   if (!level || !level.floorObjective) {
+    if (level?.milestone?.id === "depth7_stormwarden") {
+      return "Runestone objective";
+    }
     return null;
   }
   if (level.floorObjective.rewardType === "relic") {

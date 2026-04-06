@@ -231,6 +231,12 @@ export function getBuildArmorBonus(game) {
   if (game.player.tempGuard) {
     armor += game.player.tempGuard;
   }
+  if ((game.player.arcaneWardTurns || 0) > 0) {
+    armor += 2;
+  }
+  if ((game.player.stoneSkinTurns || 0) > 0) {
+    armor += 4;
+  }
   if (hasRelic(game, "survivor_talisman")) {
     armor += 1;
   }

@@ -8,7 +8,7 @@ Open [index.html](./index.html) directly in a browser, or serve the folder with 
 Direct `file://` launch uses the bundled fallback script for Chrome compatibility.
 For offline installation on a phone, serve once over HTTP/HTTPS so the service worker and manifest can install.
 
-Examples:
+## Local Server Example
 
 ```powershell
 python -m http.server 8000
@@ -29,6 +29,24 @@ The workflow builds a clean `dist/` folder and deploys only the files the game n
 If your repository name stays `castleofthewins`, the Pages URL will be:
 
 `https://perfectz.github.io/castleofthewins/`
+
+### Updating GitHub Pages after you make changes
+
+Use this flow each time you want the live GitHub Pages site to update:
+
+```bash
+git add .
+git commit -m "Describe your change"
+git push origin main
+```
+
+After the push:
+
+1. Open your repo on GitHub and go to **Actions**.
+2. Wait for the Pages deploy workflow to finish (green check).
+3. Refresh your Pages URL.
+
+If you do not see your update right away, hard-refresh once (or open in an incognito tab) to bypass cached files.
 
 ## Controls
 

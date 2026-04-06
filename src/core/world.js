@@ -12,6 +12,8 @@ export function blankLevel(width, height, kind) {
     explored: new Array(width * height).fill(false),
     actors: [],
     items: [],
+    props: [],
+    corpses: [],
     start: { x: 1, y: 1 }
   };
 }
@@ -173,6 +175,21 @@ export function actorAt(level, x, y) {
 
 export function itemsAt(level, x, y) {
   return level.items.filter((item) => item.x === x && item.y === y);
+}
+
+export function addLevelProp(level, prop) {
+  if (!level.props) {
+    level.props = [];
+  }
+  level.props.push(prop);
+  return prop;
+}
+
+export function propsAt(level, x, y) {
+  if (!level?.props) {
+    return [];
+  }
+  return level.props.filter((prop) => prop.x === x && prop.y === y);
 }
 
 export function isOccupied(level, x, y) {
@@ -352,7 +369,15 @@ export function addSecretVault(level, depth) {
   if (!level.rooms || level.rooms.length < 3 || Math.random() > 0.75) {
     return;
   }
-  const room = choice(level.rooms.slice(1));
+  const reservedRoomIndexes = new Set(level.reservedRoomIndexes || []);
+  if (typeof level.exitRoomIndex === "number") {
+    reservedRoomIndexes.add(level.exitRoomIndex);
+  }
+  const eligibleRooms = level.rooms.filter((room, index) => index > 0 && !reservedRoomIndexes.has(index));
+  const room = choice(eligibleRooms.length > 0 ? eligibleRooms : level.rooms.slice(1, -1));
+  if (!room) {
+    return;
+  }
   const vaultX = room.x + 1;
   const vaultY = room.y + 1;
   const width = Math.max(3, Math.min(5, room.w - 2));
