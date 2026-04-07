@@ -1,0 +1,11 @@
+---
+description: Rules for end-to-end rule tests
+globs: tests/**/*.mjs
+---
+
+# Test Rules
+
+- Tests in this repo are high-value browser behavior checks, not just unit tests.
+- Keep selectors and setup flows aligned with the runtime.
+- When changing mechanics, prefer updating assertions to reflect intended behavior rather than weakening coverage.
+- If a test becomes hard to maintain, simplify the setup, not the behavioral expectation.

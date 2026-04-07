@@ -1,0 +1,11 @@
+---
+description: Rules for the browser shell and top-level markup
+globs: index.html
+---
+
+# HTML Shell Rules
+
+- `index.html` is the app shell, not a framework template.
+- Preserve ids, template structure, and `data-action` hooks unless the task explicitly includes updating their consumers.
+- Remember that the shell supports both the title/creation flow and in-run overlays.
+- Any structural UI change should be checked against mobile usability.

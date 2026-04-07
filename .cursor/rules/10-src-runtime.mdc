@@ -1,0 +1,12 @@
+---
+description: Rules for gameplay and runtime source files
+globs: src/**/*.js
+---
+
+# Runtime Source Rules
+
+- `src/game.js` is the coordinator. Avoid dumping new feature logic there if an existing feature module owns the behavior.
+- Keep rules/data in `src/core/*.js`, `src/data/*.js`, and `src/features/*.js`; keep drawing in `src/ui/render.js`.
+- Preserve the project’s plain-object, helper-first style.
+- When changing content tables, watch for downstream balance and selector/test assumptions.
+- When changing player progression, objectives, contracts, or telemetry, check whether tests or harness scripts need updates.

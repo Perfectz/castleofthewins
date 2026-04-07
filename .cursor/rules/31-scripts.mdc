@@ -1,0 +1,11 @@
+---
+description: Rules for build and playtest scripts
+globs: scripts/**/*.mjs
+---
+
+# Script Rules
+
+- Build and playtest scripts are part of the developer workflow contract.
+- `scripts/build-app.mjs` controls fallback bundle order. Keep it accurate.
+- Screenshot and harness scripts should remain deterministic and safe to rerun.
+- When changing file paths, selectors, or output locations, update the affected script in the same change.

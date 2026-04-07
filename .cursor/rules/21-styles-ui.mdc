@@ -1,0 +1,11 @@
+---
+description: Rules for global game styling
+globs: styles.css
+---
+
+# Styling Rules
+
+- Keep the visual direction grounded in the current fantasy/mobile shell instead of generic app UI.
+- Preserve readability on phones first.
+- Favor existing CSS custom properties and existing component patterns over isolated one-off styles.
+- Avoid changes that break the board viewport, bottom action band, modal sheets, or touch targets.
