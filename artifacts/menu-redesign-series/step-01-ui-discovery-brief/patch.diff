@@ -1,0 +1,1517 @@
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step01-patch-TzhjOs\\index.html" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\index.html"
+index 6d7a5d2..394e2e5 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step01-patch-TzhjOs\\index.html"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\index.html"
+@@ -99,9 +99,9 @@
+             <div class="title-hero-footer">
+               <div id="title-save-summary" class="title-save-summary hidden"></div>
+               <div class="modal-actions title-actions">
+-                <button class="action-button primary" data-action="new-game" data-focus-key="title:new-game" type="button">New Run</button>
+-                <button id="title-load-button" class="action-button" data-action="load-game" data-focus-key="title:load" type="button">Continue</button>
+-                <button class="action-button title-help-link" data-action="help" data-focus-key="title:help" type="button">Help</button>
++                <button class="action-button primary" data-action="new-game" data-focus-key="title:new-game" type="button">Start Run</button>
++                <button id="title-load-button" class="action-button" data-action="load-game" data-focus-key="title:load" type="button">Continue Save</button>
++                <button class="action-button title-help-link" data-action="help" data-focus-key="title:help" type="button">Learn Basics</button>
+               </div>
+             </div>
+           </div>
+@@ -170,31 +170,34 @@
+ 
+   <template id="utility-menu-template">
+     <div class="modal mobile-sheet utility-menu-sheet">
+-      <div class="modal-title">Run Menu</div>
++      <div class="modal-title">Adventure Menu</div>
+       <div class="modal-body utility-menu-body">
++        <div class="text-block utility-menu-intro">
++          Save progress, review the mission, or change device settings without losing your place on the board.
++        </div>
+         <section class="utility-menu-panel">
+-          <div class="field-label">Current Run</div>
++          <div class="field-label">Right Now</div>
+           <div id="utility-run-summary" class="utility-menu-summary"></div>
+         </section>
+         <section class="utility-menu-panel">
+-          <div class="field-label">Saved Run</div>
++          <div class="field-label">Resume Point</div>
+           <div id="utility-save-summary" class="utility-menu-summary"></div>
+         </section>
+         <section class="utility-menu-panel">
+-          <div class="field-label">Controls</div>
++          <div class="field-label">Device & Controls</div>
+           <div id="utility-control-summary" class="utility-menu-summary"></div>
+         </section>
+         <div class="utility-menu-actions">
+-          <button class="action-button" data-action="view-map" data-focus-key="utility:map" type="button">Map</button>
++          <button class="action-button" data-action="view-map" data-focus-key="utility:map" type="button">Floor Map</button>
+           <button id="utility-save-button" class="action-button primary" data-action="save-game" data-focus-key="utility:save" type="button">Save Slot</button>
+           <button id="utility-load-button" class="action-button" data-action="load-game" data-focus-key="utility:load" type="button">Load Slot</button>
+-          <button class="action-button" data-action="open-briefing" data-focus-key="utility:briefing" type="button">Briefing</button>
+-          <button id="utility-stats-button" class="action-button" data-action="open-character-sheet" data-focus-key="utility:stats" type="button">Stats</button>
++          <button class="action-button" data-action="open-briefing" data-focus-key="utility:briefing" type="button">Mission</button>
++          <button id="utility-stats-button" class="action-button" data-action="open-character-sheet" data-focus-key="utility:stats" type="button">Character</button>
+           <button class="action-button" data-action="open-hub" data-tab="journal" data-focus-key="utility:journal" type="button">Journal & Log</button>
+           <button class="action-button" data-action="export-telemetry" data-focus-key="utility:trace" type="button">Export Trace</button>
+           <button class="action-button" data-action="settings" data-focus-key="utility:settings" type="button">Settings</button>
+           <button class="action-button" data-action="help" data-focus-key="utility:help" type="button">How to Play</button>
+-          <button class="action-button" data-action="close-modal" data-focus-key="utility:close" type="button">Close</button>
++          <button class="action-button" data-action="close-modal" data-focus-key="utility:close" type="button">Return to Run</button>
+         </div>
+       </div>
+     </div>
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step01-patch-TzhjOs\\src\\game.js" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\src\\game.js"
+index cbb64ae..f279c1b 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step01-patch-TzhjOs\\src\\game.js"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\src\\game.js"
+@@ -5780,7 +5780,7 @@ export class Game {
+       fallbackFocus = true
+     } = options;
+     this.mode = "modal";
+-    this.showSimpleModal("Settings", `
++    this.showSimpleModal("Device Settings", `
+       <div class="section-block text-block">Travel settings are stored on this device.</div>
+       <div class="shop-row">
+         <div><strong>Touch Controls</strong><div class="muted">Show the on-screen movement pad when not hidden.</div></div>
+@@ -8668,7 +8668,7 @@ export class Game {
+       return;
+     }
+     this.mode = "modal";
+-    this.showSimpleModal("Briefing", `
++    this.showSimpleModal("Mission Briefing", `
+       <div class="section-block text-block"><strong>${escapeHtml(this.getCurrentChapterObjective())}</strong></div>
+       <div class="section-block text-block">${escapeHtml(this.getActiveBriefingText())}</div>
+       ${this.currentDepth === 0 ? `<div class="section-block text-block muted">${escapeHtml(this.storyFlags.townServiceVisited ? onboardingMeta.briefingTownChecked : onboardingMeta.briefingTownUnchecked)}</div>` : ""}
+@@ -10508,7 +10508,7 @@ export class Game {
+     const title = this.activeHubTab === "magic"
+       ? "Magic"
+       : this.activeHubTab === "journal"
+-        ? "Journal"
++        ? "Run Journal"
+         : "Pack & Equipment";
+ 
+     this.showSimpleModal(title, `
+@@ -11010,7 +11010,7 @@ export class Game {
+ 
+   showHelpModal() {
+     this.mode = "modal";
+-    this.showSimpleModal("Help", `
++    this.showSimpleModal("How to Play", `
+       <div class="section-block text-block">
+         This mobile build is tuned for travel play: portrait layout, offline installability, paired controller support,
+         touch fallback, targeted spells, heavier dungeon pressure, and clearer combat feedback.
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step01-patch-TzhjOs\\styles.css" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\styles.css"
+index 9faef79..372f3c9 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step01-patch-TzhjOs\\styles.css"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\styles.css"
+@@ -5630,6 +5630,11 @@ body {
+   gap: 12px;
+ }
+ 
++.utility-menu-intro {
++  grid-column: 1 / -1;
++  margin: 0;
++  color: var(--ui-text-dim);
++}
+ 
+ .utility-menu-actions {
+   grid-column: 1 / -1;
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step01-patch-TzhjOs\\artifacts\\menu-redesign-series\\SERIES_INDEX.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\SERIES_INDEX.md"
+index d468e51..c840c9e 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step01-patch-TzhjOs\\artifacts\\menu-redesign-series\\SERIES_INDEX.md"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\SERIES_INDEX.md"
+@@ -8,3 +8,12 @@
+ - Key screenshots: `screenshots/before/mobile-04-town.png`, `screenshots/before/mobile-12-dungeon-hud.png`, `screenshots/before/mobile-13-run-menu.png`, `screenshots/before/mobile-14-pack.png`, `screenshots/before/mobile-21-level-up.png`, `screenshots/after/mobile-baseline-atlas-board.png`, `screenshots/after/mobile-hud-callout-board.png`
+ - What this step proved: The current UI already has a coherent visual language, but critical information is distributed across enough surfaces that navigation and readability need deliberate redesign, especially on phone-sized screens. It also proved that a reproducible screenshot baseline can be generated from live runtime states without modifying production code.
+ - What the next step should investigate: Consolidate the information architecture around HUD, ticker, advisor, journal, briefing, and utility surfaces. Test whether town services and in-run system menus should share fewer patterns or clearer role distinctions.
++
++## Step 01: UI Discovery Brief
++
++- Folder path: `artifacts/menu-redesign-series/step-01-ui-discovery-brief/`
++- Three-sentence summary: This step turns the baseline atlas into a product-oriented discovery brief that defines what the menu system must do for first-time players, returning players, and expert optimizers. It pairs that analysis with a small visible shipment: clearer title-screen CTA copy and clearer naming across the in-run system menu and support surfaces. The result is a sharper mental model without changing core flow structure or adding heavy implementation risk.
++- Main changes: title CTA relabeling for onboarding and resume clarity, `Adventure Menu` naming plus orientation copy and clearer action labels, and role-forward titles for `Run Journal`, `How to Play`, `Device Settings`, and `Mission Briefing`
++- Key screenshots: `screenshots/before/before-mobile-01-title.png`, `screenshots/after/after-mobile-01-title.png`, `screenshots/before/before-desktop-04-run-menu.png`, `screenshots/after/after-desktop-04-run-menu.png`, `screenshots/after/after-mobile-07-journal.png`, `screenshots/after/after-mobile-08-help.png`, `screenshots/after/after-mobile-09-settings.png`
++- What this step proved: Small naming and microcopy changes can improve menu comprehension immediately, especially where one surface is carrying several adjacent jobs. It also proved that pairing discovery with a tiny shipment creates better evidence than analysis alone, because the design principles are tested in the live product right away.
++- What should happen next: Rework the boundary between persistent HUD information and modal support surfaces, with special attention to the overlap among advisor, ticker, briefing, and journal. Explore whether reward and progression screens need a stronger visual identity than ordinary utility sheets.
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\README.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\README.md"
+new file mode 100644
+index 0000000..33e16f3
+--- /dev/null
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\README.md"
+@@ -0,0 +1,13 @@
++# Step 01: UI Discovery Brief
++
++Discovery matters here because the current menu system is doing several jobs at once: onboarding, system support, run management, town planning, inventory review, spell management, and progression interruption handling. Without a brief, redesign work would drift toward isolated polish instead of solving the more important question of which menu surface should answer which player need.
++
++This step answers one core question: what must the menu system accomplish for real players on a phone-first roguelike, and what tiny changes can prove those principles in the live UI right now? To answer that, the step combines code inspection, runtime Playwright captures, and a small visible shipment.
++
++What changed:
++
++- The title-screen CTAs were renamed for clearer first-run versus returning-run intent.
++- The in-run system menu was reframed as `Adventure Menu`, with clearer section names, clearer action labels, and a short orientation sentence.
++- Support surfaces now declare their roles more directly through titles such as `Run Journal`, `How to Play`, `Device Settings`, and `Mission Briefing`.
++
++What comes next: use this discovery brief to decide whether the next redesign step should simplify the support-surface architecture, re-rank HUD information, or differentiate progression and reward overlays from ordinary utility sheets.
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\blog-ready.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\blog-ready.md"
+new file mode 100644
+index 0000000..e7c9344
+--- /dev/null
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\blog-ready.md"
+@@ -0,0 +1,49 @@
++# Title
++
++Discovery With Teeth: Defining a Game Menu System and Shipping a Small Fix
++
++# Hook
++
++The fastest way to improve a confusing menu system is not always a redesign. Sometimes it is a sharper product brief and one honest, visible shipment.
++
++# Summary
++
++This step took a phone-first dungeon crawler’s modal-heavy menu system and turned it into a product and UX discovery brief backed by Playwright evidence. The brief defined the menu system’s jobs, player types, tradeoffs, and success criteria, then translated the strongest finding into a small live shipment: clearer entry copy on the title screen and clearer naming across the in-run system menu and support surfaces. The result is modest by design, but it proves that better boundaries and better labels can improve comprehension immediately without touching deeper game systems.
++
++# Draft
++
++There is a familiar failure mode in UI redesign work: a team correctly senses that the interface is hard to parse, then jumps straight into structure or visuals before it has defined what the system is supposed to do. In games, that problem gets worse because menus are often carrying multiple responsibilities at once. They are not just menus. They are onboarding tools, system explainers, save surfaces, inventory managers, mission reminders, progression interrupters, and recovery screens.
++
++That was exactly the situation in this project. The game is a phone-first, browser-playable, turn-based dungeon crawler with a strong existing visual identity and a dense support layer. Important context is split across the board, a live feed, the advisor strip, the journal, the briefing view, pack and magic hubs, settings, and a general system menu. The baseline atlas from step 00 made one thing clear: the product did not mainly have a styling problem. It had a boundary problem.
++
++So this step focused on discovery first. Using code inspection and Playwright runtime captures, the work defined what the menu system must accomplish for real players. First-time players need plain-language entry points and a reliable place to look when they are confused. Returning players need to resume a save without second-guessing what they are continuing. Short-session phone players need fast access to support surfaces without losing their place. Expert players still need dense management tools for inventory, spells, and progression.
++
++From that came the core design principle: name surfaces by the question they answer.
++
++That principle seems obvious, but the baseline showed several places where the game was still using generic naming. `Run Menu` functioned partly as a save surface, partly as a mission and support hub, and partly as a systems menu. `Help`, `Settings`, and `Journal` were accurate but broad. The title-screen CTAs were serviceable, yet they did not fully separate "start fresh," "resume a save," and "teach me the basics."
++
++Rather than turning the discovery brief into a speculative redesign, this step shipped a small proof. The title-screen buttons became `Start Run`, `Continue Save`, and `Learn Basics`. The in-run menu became `Adventure Menu`, gained a one-line explanation of its role, and used clearer panel and button labels such as `Right Now`, `Resume Point`, `Floor Map`, `Mission`, `Character`, `Journal & Log`, `How to Play`, and `Return to Run`. Support surfaces were also retitled to better match player intent: `Run Journal`, `How to Play`, `Device Settings`, and `Mission Briefing`.
++
++These are not dramatic changes, and that is exactly why they are useful. They test the discovery brief without introducing structural noise. The runtime screenshots show immediate improvement in comprehension, especially in the title flow and the system-menu flow. The UI still needs deeper work, but the step proves that the strongest discovery finding was real: boundary clarity matters more than ornamental polish at this stage.
++
++The broader lesson is that UX discovery is most valuable when it changes the product, even in a tiny way. A brief with no shipment risks becoming theory. A shipment with no brief risks being arbitrary. Put them together and the team learns faster, with less risk and better evidence.
++
++# Lessons
++
++- A dense game UI usually has a boundary problem before it has a styling problem.
++- Naming is product design. Clearer labels can materially improve comprehension without structural change.
++- Pairing discovery with a tiny shipment produces stronger evidence than analysis alone.
++
++# Quotes
++
++- "Name surfaces by the question they answer."
++- "The menu system was not mainly too ugly. It was too broad in what each surface claimed to be."
++- "A tiny shipment can validate a discovery brief faster than another week of discussion."
++
++# Screenshot suggestions
++
++- `screenshots/before/before-mobile-01-title.png`
++- `screenshots/after/after-mobile-01-title.png`
++- `screenshots/before/before-desktop-04-run-menu.png`
++- `screenshots/after/after-desktop-04-run-menu.png`
++- `screenshots/after/after-mobile-08-help.png`
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\changed-files.txt" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\changed-files.txt"
+new file mode 100644
+index 0000000..cc6f10a
+--- /dev/null
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\changed-files.txt"
+@@ -0,0 +1,53 @@
++index.html
++src/game.js
++styles.css
++artifacts/menu-redesign-series/SERIES_INDEX.md
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\blog-ready.md
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\changes.md
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\comparison.md
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\data\capture-after.json
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\data\capture-before.json
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\data\capture-step-01.mjs
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\linked-post.md
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\patch.diff
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\prompt.md
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\README.md
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\report.md
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshot-manifest.md
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-desktop-01-title.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-desktop-02-creation.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-desktop-03-town.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-desktop-04-run-menu.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-desktop-05-pack.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-desktop-06-magic.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-desktop-07-journal.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-desktop-08-help.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-desktop-09-settings.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-mobile-01-title.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-mobile-02-creation.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-mobile-03-town.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-mobile-04-run-menu.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-mobile-05-pack.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-mobile-06-magic.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-mobile-07-journal.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-mobile-08-help.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\after\after-mobile-09-settings.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-desktop-01-title.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-desktop-02-creation.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-desktop-03-town.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-desktop-04-run-menu.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-desktop-05-pack.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-desktop-06-magic.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-desktop-07-journal.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-desktop-08-help.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-desktop-09-settings.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-mobile-01-title.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-mobile-02-creation.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-mobile-03-town.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-mobile-04-run-menu.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-mobile-05-pack.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-mobile-06-magic.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-mobile-07-journal.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-mobile-08-help.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\screenshots\before\before-mobile-09-settings.png
++artifacts\menu-redesign-series\step-01-ui-discovery-brief\teaching-notes.md
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\changes.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\changes.md"
+new file mode 100644
+index 0000000..23dcd54
+--- /dev/null
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\changes.md"
+@@ -0,0 +1,47 @@
++# Changes
++
++## Exact changed files
++
++- `index.html`
++- `src/game.js`
++- `styles.css`
++
++## What changed
++
++- Title-screen CTA labels were renamed:
++  - `New Run` to `Start Run`
++  - `Continue` to `Continue Save`
++  - `How to Play` to `Learn Basics`
++- The utility-menu template was reframed:
++  - `Run Menu` to `Adventure Menu`
++  - added a short orientation sentence
++  - `Current Run` to `Right Now`
++  - `Saved Run` to `Resume Point`
++  - `Controls` to `Device & Controls`
++  - `Map` to `Floor Map`
++  - `Briefing` to `Mission`
++  - `Stats` to `Character`
++  - `Journal` to `Journal & Log`
++  - `Help` to `How to Play`
++  - `Close` to `Return to Run`
++- Support-surface titles were renamed in runtime code:
++  - `Journal` to `Run Journal`
++  - `Help` to `How to Play`
++  - `Settings` to `Device Settings`
++  - `Briefing` to `Mission Briefing`
++- Added `.utility-menu-intro` styling in `styles.css`.
++
++## Why
++
++The discovery brief identified boundary clarity as the highest-value low-risk improvement. These changes make surface purpose more obvious without changing flow order, navigation behavior, or gameplay systems.
++
++## Risk
++
++- Low. The work is limited to copy, labels, and one small layout text block.
++- Main risk: longer labels could wrap awkwardly on narrow screens.
++- Runtime check: matched Playwright screenshots confirmed the new copy renders correctly in the targeted flows.
++
++## Rollback notes
++
++- Revert `index.html`, `src/game.js`, and `styles.css` to remove the shipment.
++- No state migration, save-format change, or gameplay logic rollback is required.
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\comparison.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\comparison.md"
+new file mode 100644
+index 0000000..f44ccc1
+--- /dev/null
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\comparison.md"
+@@ -0,0 +1,36 @@
++# Comparison
++
++## Title screen
++
++- Before: `New Run`, `Continue`, and `How to Play` were functional but generic.
++- After: `Start Run`, `Continue Save`, and `Learn Basics` separate the three entry jobs more clearly.
++- Evidence: `before-mobile-01-title.png` versus `after-mobile-01-title.png`
++
++## In-run system menu
++
++- Before: `Run Menu` read heavily as a save manager because the save summaries dominated the layout and the action labels were generic.
++- After: `Adventure Menu` introduces the surface as a support hub, the intro sentence explains its purpose, section labels name the panels by job, and the action buttons now read as `Floor Map`, `Mission`, `Character`, `Journal & Log`, `How to Play`, and `Return to Run`.
++- Evidence: `before-desktop-04-run-menu.png` versus `after-desktop-04-run-menu.png`
++
++## Journal
++
++- Before: the surface title was simply `Journal`, which did not distinguish it from mission briefing or general help.
++- After: `Run Journal` makes it clear that this is the persistent run-history and context surface.
++- Evidence: `before-mobile-07-journal.png` versus `after-mobile-07-journal.png`
++
++## Help
++
++- Before: `Help` was accurate but generic.
++- After: `How to Play` speaks the player’s question directly, which is better for onboarding and re-entry.
++- Evidence: `before-mobile-08-help.png` versus `after-mobile-08-help.png`
++
++## Settings
++
++- Before: `Settings` did not signal that this screen controls device comfort and presentation rather than gameplay rules.
++- After: `Device Settings` narrows the expectation and reduces ambiguity.
++- Evidence: `before-mobile-09-settings.png` versus `after-mobile-09-settings.png`
++
++## Unchanged control shots
++
++- Creation, town, pack, and magic were captured before and after as control screens.
++- These were intentionally left structurally unchanged in this step so the small shipment stayed focused on discovery-backed naming and orientation improvements.
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\data\\capture-after.json" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\data\\capture-after.json"
+new file mode 100644
+index 0000000..ba1f190
+--- /dev/null
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\data\\capture-after.json"
+@@ -0,0 +1,239 @@
++{
++  "generatedAt": "2026-04-07T00:50:28.944Z",
++  "captures": [
++    {
++      "filename": "after-mobile-01-title.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-01-title.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Title",
++      "whyCaptured": "First-time and returning-player entry point.",
++      "beforeAfter": "after",
++      "modalTitle": null,
++      "mode": "title",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "after-mobile-02-creation.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-02-creation.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Creation",
++      "whyCaptured": "Onboarding and early commitment screen.",
++      "beforeAfter": "after",
++      "modalTitle": "Create Adventurer",
++      "mode": "creation",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "after-mobile-03-town.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-03-town.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Town",
++      "whyCaptured": "First in-world orientation and menu entry-point context.",
++      "beforeAfter": "after",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 0,
++      "levelKind": "town"
++    },
++    {
++      "filename": "after-mobile-04-run-menu.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-04-run-menu.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "In-run menu",
++      "whyCaptured": "Primary system hub for save, goal review, and support actions.",
++      "beforeAfter": "after",
++      "modalTitle": "Adventure Menu",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-mobile-05-pack.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-05-pack.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Pack",
++      "whyCaptured": "Inventory and equipment management baseline.",
++      "beforeAfter": "after",
++      "modalTitle": "Pack & Equipment",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-mobile-06-magic.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-06-magic.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Magic",
++      "whyCaptured": "Spell management and scanability baseline.",
++      "beforeAfter": "after",
++      "modalTitle": "Magic",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-mobile-07-journal.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-07-journal.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Journal",
++      "whyCaptured": "Goal, story, and run-history baseline.",
++      "beforeAfter": "after",
++      "modalTitle": "Run Journal",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-mobile-08-help.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-08-help.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Help",
++      "whyCaptured": "Reference and onboarding support surface.",
++      "beforeAfter": "after",
++      "modalTitle": "How to Play",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-mobile-09-settings.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-09-settings.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Settings",
++      "whyCaptured": "Device and comfort-settings surface.",
++      "beforeAfter": "after",
++      "modalTitle": "Device Settings",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-desktop-01-title.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-01-title.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Title",
++      "whyCaptured": "First-time and returning-player entry point.",
++      "beforeAfter": "after",
++      "modalTitle": null,
++      "mode": "title",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "after-desktop-02-creation.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-02-creation.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Creation",
++      "whyCaptured": "Onboarding and early commitment screen.",
++      "beforeAfter": "after",
++      "modalTitle": "Create Adventurer",
++      "mode": "creation",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "after-desktop-03-town.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-03-town.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Town",
++      "whyCaptured": "First in-world orientation and menu entry-point context.",
++      "beforeAfter": "after",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 0,
++      "levelKind": "town"
++    },
++    {
++      "filename": "after-desktop-04-run-menu.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-04-run-menu.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "In-run menu",
++      "whyCaptured": "Primary system hub for save, goal review, and support actions.",
++      "beforeAfter": "after",
++      "modalTitle": "Adventure Menu",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-desktop-05-pack.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-05-pack.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Pack",
++      "whyCaptured": "Inventory and equipment management baseline.",
++      "beforeAfter": "after",
++      "modalTitle": "Pack & Equipment",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-desktop-06-magic.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-06-magic.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Magic",
++      "whyCaptured": "Spell management and scanability baseline.",
++      "beforeAfter": "after",
++      "modalTitle": "Magic",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-desktop-07-journal.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-07-journal.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Journal",
++      "whyCaptured": "Goal, story, and run-history baseline.",
++      "beforeAfter": "after",
++      "modalTitle": "Run Journal",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-desktop-08-help.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-08-help.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Help",
++      "whyCaptured": "Reference and onboarding support surface.",
++      "beforeAfter": "after",
++      "modalTitle": "How to Play",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-desktop-09-settings.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-09-settings.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Settings",
++      "whyCaptured": "Device and comfort-settings surface.",
++      "beforeAfter": "after",
++      "modalTitle": "Device Settings",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    }
++  ]
++}
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\data\\capture-before.json" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\data\\capture-before.json"
+new file mode 100644
+index 0000000..9734a26
+--- /dev/null
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\data\\capture-before.json"
+@@ -0,0 +1,239 @@
++{
++  "generatedAt": "2026-04-07T00:48:21.392Z",
++  "captures": [
++    {
++      "filename": "before-mobile-01-title.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-01-title.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Title",
++      "whyCaptured": "First-time and returning-player entry point.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "title",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "before-mobile-02-creation.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-02-creation.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Creation",
++      "whyCaptured": "Onboarding and early commitment screen.",
++      "beforeAfter": "before",
++      "modalTitle": "Create Adventurer",
++      "mode": "creation",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "before-mobile-03-town.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-03-town.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Town",
++      "whyCaptured": "First in-world orientation and menu entry-point context.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 0,
++      "levelKind": "town"
++    },
++    {
++      "filename": "before-mobile-04-run-menu.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-04-run-menu.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "In-run menu",
++      "whyCaptured": "Primary system hub for save, goal review, and support actions.",
++      "beforeAfter": "before",
++      "modalTitle": "Run Menu",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-mobile-05-pack.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-05-pack.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Pack",
++      "whyCaptured": "Inventory and equipment management baseline.",
++      "beforeAfter": "before",
++      "modalTitle": "Pack & Equipment",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-mobile-06-magic.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-06-magic.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Magic",
++      "whyCaptured": "Spell management and scanability baseline.",
++      "beforeAfter": "before",
++      "modalTitle": "Magic",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-mobile-07-journal.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-07-journal.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Journal",
++      "whyCaptured": "Goal, story, and run-history baseline.",
++      "beforeAfter": "before",
++      "modalTitle": "Journal",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-mobile-08-help.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-08-help.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Help",
++      "whyCaptured": "Reference and onboarding support surface.",
++      "beforeAfter": "before",
++      "modalTitle": "Help",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-mobile-09-settings.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-09-settings.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Settings",
++      "whyCaptured": "Device and comfort-settings surface.",
++      "beforeAfter": "before",
++      "modalTitle": "Settings",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-desktop-01-title.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-01-title.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Title",
++      "whyCaptured": "First-time and returning-player entry point.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "title",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "before-desktop-02-creation.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-02-creation.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Creation",
++      "whyCaptured": "Onboarding and early commitment screen.",
++      "beforeAfter": "before",
++      "modalTitle": "Create Adventurer",
++      "mode": "creation",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "before-desktop-03-town.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-03-town.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Town",
++      "whyCaptured": "First in-world orientation and menu entry-point context.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 0,
++      "levelKind": "town"
++    },
++    {
++      "filename": "before-desktop-04-run-menu.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-04-run-menu.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "In-run menu",
++      "whyCaptured": "Primary system hub for save, goal review, and support actions.",
++      "beforeAfter": "before",
++      "modalTitle": "Run Menu",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-desktop-05-pack.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-05-pack.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Pack",
++      "whyCaptured": "Inventory and equipment management baseline.",
++      "beforeAfter": "before",
++      "modalTitle": "Pack & Equipment",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-desktop-06-magic.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-06-magic.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Magic",
++      "whyCaptured": "Spell management and scanability baseline.",
++      "beforeAfter": "before",
++      "modalTitle": "Magic",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-desktop-07-journal.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-07-journal.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Journal",
++      "whyCaptured": "Goal, story, and run-history baseline.",
++      "beforeAfter": "before",
++      "modalTitle": "Journal",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-desktop-08-help.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-08-help.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Help",
++      "whyCaptured": "Reference and onboarding support surface.",
++      "beforeAfter": "before",
++      "modalTitle": "Help",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-desktop-09-settings.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-09-settings.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Settings",
++      "whyCaptured": "Device and comfort-settings surface.",
++      "beforeAfter": "before",
++      "modalTitle": "Settings",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    }
++  ]
++}
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\data\\capture-step-01.mjs" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\data\\capture-step-01.mjs"
+new file mode 100644
+index 0000000..f677be8
+--- /dev/null
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\data\\capture-step-01.mjs"
+@@ -0,0 +1,248 @@
++import { mkdir, readFile, writeFile } from "node:fs/promises";
++import http from "node:http";
++import path from "node:path";
++import { chromium } from "playwright";
++
++const ROOT = process.cwd();
++const STEP_ROOT = path.join(ROOT, "artifacts", "menu-redesign-series", "step-01-ui-discovery-brief");
++const DATA_DIR = path.join(STEP_ROOT, "data");
++const PORT = 4313;
++
++const stage = process.argv[2];
++
++if (!["before", "after"].includes(stage)) {
++  console.error("Usage: node capture-step-01.mjs <before|after>");
++  process.exit(1);
++}
++
++const OUT_DIR = path.join(STEP_ROOT, "screenshots", stage);
++
++const MIME_TYPES = {
++  ".css": "text/css; charset=utf-8",
++  ".html": "text/html; charset=utf-8",
++  ".jpeg": "image/jpeg",
++  ".jpg": "image/jpeg",
++  ".js": "text/javascript; charset=utf-8",
++  ".json": "application/json; charset=utf-8",
++  ".mjs": "text/javascript; charset=utf-8",
++  ".png": "image/png",
++  ".svg": "image/svg+xml; charset=utf-8",
++  ".webmanifest": "application/manifest+json; charset=utf-8"
++};
++
++const VIEWPORTS = [
++  { key: "mobile", width: 430, height: 932, deviceScaleFactor: 2 },
++  { key: "desktop", width: 1440, height: 1200, deviceScaleFactor: 1 }
++];
++
++const FLOWS = [
++  ["title", "Title", "First-time and returning-player entry point."],
++  ["creation", "Creation", "Onboarding and early commitment screen."],
++  ["town", "Town", "First in-world orientation and menu entry-point context."],
++  ["run-menu", "In-run menu", "Primary system hub for save, goal review, and support actions."],
++  ["pack", "Pack", "Inventory and equipment management baseline."],
++  ["magic", "Magic", "Spell management and scanability baseline."],
++  ["journal", "Journal", "Goal, story, and run-history baseline."],
++  ["help", "Help", "Reference and onboarding support surface."],
++  ["settings", "Settings", "Device and comfort-settings surface."]
++];
++
++function getMimeType(filePath) {
++  return MIME_TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream";
++}
++
++async function createStaticServer(rootDir) {
++  const server = http.createServer(async (request, response) => {
++    try {
++      const requestPath = new URL(request.url, "http://127.0.0.1").pathname;
++      const relativePath = requestPath === "/" ? "index.html" : decodeURIComponent(requestPath.replace(/^\/+/, ""));
++      const resolvedPath = path.resolve(rootDir, relativePath);
++      const relativeFromRoot = path.relative(rootDir, resolvedPath);
++
++      if (relativeFromRoot.startsWith("..") || path.isAbsolute(relativeFromRoot)) {
++        response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
++        response.end("Forbidden");
++        return;
++      }
++
++      const body = await readFile(resolvedPath);
++      response.writeHead(200, { "Content-Type": getMimeType(resolvedPath) });
++      response.end(body);
++    } catch (error) {
++      response.writeHead(error && error.code === "ENOENT" ? 404 : 500, { "Content-Type": "text/plain; charset=utf-8" });
++      response.end(error && error.code === "ENOENT" ? "Not found" : "Server error");
++    }
++  });
++
++  await new Promise((resolve, reject) => {
++    server.once("error", reject);
++    server.listen(PORT, "127.0.0.1", () => resolve());
++  });
++
++  return server;
++}
++
++async function loadTitle(page) {
++  await page.goto(`http://127.0.0.1:${PORT}/index.html`, { waitUntil: "networkidle" });
++  await page.waitForFunction(() => Boolean(window.castleOfTheWindsWeb));
++  await page.waitForTimeout(400);
++}
++
++async function startRun(page) {
++  await loadTitle(page);
++  await page.click('[data-action="new-game"]');
++  await page.waitForSelector('[data-action="begin-adventure"]');
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    game.selectedRace = "dwarf";
++    game.selectedClass = "fighter";
++    game.creationName = "Morgan";
++    game.creationStatBonuses = { str: 2, dex: 0, con: 4, int: 0 };
++    game.render();
++  });
++  await page.click('[data-action="begin-adventure"]');
++  await page.waitForFunction(() => {
++    const game = window.castleOfTheWindsWeb;
++    return game?.mode === "game" || game?.mode === "modal";
++  });
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    if (game.mode === "modal") {
++      game.closeModal();
++    }
++    game.render();
++  });
++  await page.waitForTimeout(450);
++}
++
++async function enterDungeon(page) {
++  await startRun(page);
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    game.placePlayerAt(game.currentLevel.stairsDown.x, game.currentLevel.stairsDown.y);
++    game.useStairs("down");
++    if (game.mode === "modal") {
++      game.closeModal();
++    }
++    game.render();
++  });
++  await page.waitForTimeout(500);
++}
++
++async function stageFlow(page, id) {
++  if (id === "title") {
++    await loadTitle(page);
++    return;
++  }
++  if (id === "creation") {
++    await loadTitle(page);
++    await page.click('[data-action="new-game"]');
++    await page.waitForSelector('[data-action="begin-adventure"]');
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (id === "town") {
++    await startRun(page);
++    return;
++  }
++
++  await enterDungeon(page);
++
++  if (id === "run-menu") {
++    await page.click('[data-action="open-utility-menu"]');
++  } else if (id === "pack") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showHubModal("pack"));
++  } else if (id === "magic") {
++    await page.evaluate(() => {
++      const game = window.castleOfTheWindsWeb;
++      game.player.spellsKnown = Array.from(new Set([...(game.player.spellsKnown || []), "magicMissile", "healMinor", "identify"]));
++      game.render();
++      game.showHubModal("magic");
++    });
++  } else if (id === "journal") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showHubModal("journal"));
++  } else if (id === "help") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showHelpModal());
++  } else if (id === "settings") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showSettingsModal());
++  }
++  await page.waitForTimeout(250);
++}
++
++async function captureState(page) {
++  return await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    return {
++      mode: game?.mode || "",
++      depth: game?.currentDepth ?? null,
++      levelKind: game?.currentLevel?.kind || null,
++      modalTitle: document.querySelector(".modal-title")?.textContent?.trim() || null
++    };
++  });
++}
++
++async function captureViewport(browser, viewport) {
++  const page = await browser.newPage({
++    viewport: { width: viewport.width, height: viewport.height },
++    deviceScaleFactor: viewport.deviceScaleFactor
++  });
++  const rows = [];
++  try {
++    for (const [order, flow] of FLOWS.entries()) {
++      const [id, flowName, whyCaptured] = flow;
++      await stageFlow(page, id);
++      const filename = `${stage}-${viewport.key}-${String(order + 1).padStart(2, "0")}-${id}.png`;
++      const fullPath = path.join(OUT_DIR, filename);
++      await page.screenshot({ path: fullPath, fullPage: true });
++      const state = await captureState(page);
++      rows.push({
++        filename,
++        path: fullPath,
++        viewport: `${viewport.width}x${viewport.height}`,
++        viewportClass: viewport.key,
++        flowName,
++        whyCaptured,
++        beforeAfter: stage,
++        modalTitle: state.modalTitle,
++        mode: state.mode,
++        depth: state.depth,
++        levelKind: state.levelKind
++      });
++    }
++  } finally {
++    await page.close();
++  }
++  return rows;
++}
++
++async function main() {
++  await mkdir(OUT_DIR, { recursive: true });
++  await mkdir(DATA_DIR, { recursive: true });
++
++  const server = await createStaticServer(ROOT);
++  let browser = null;
++
++  try {
++    browser = await chromium.launch({ headless: true });
++    const captures = [];
++    for (const viewport of VIEWPORTS) {
++      captures.push(...await captureViewport(browser, viewport));
++    }
++    await writeFile(
++      path.join(DATA_DIR, `capture-${stage}.json`),
++      `${JSON.stringify({ generatedAt: new Date().toISOString(), captures }, null, 2)}\n`,
++      "utf8"
++    );
++    console.log(path.join(DATA_DIR, `capture-${stage}.json`));
++  } finally {
++    if (browser) {
++      await browser.close();
++    }
++    await new Promise((resolve) => server.close(resolve));
++  }
++}
++
++main().catch((error) => {
++  console.error(error);
++  process.exit(1);
++});
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\linked-post.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\linked-post.md"
+new file mode 100644
+index 0000000..1589544
+--- /dev/null
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\linked-post.md"
+@@ -0,0 +1,13 @@
++# Teaser
++
++Step 01 of the menu redesign series is done: a UX discovery brief grounded in live Playwright captures, plus a small shipped UI pass that clarifies the title flow and the in-run system menu.
++
++# Follow-up blurb
++
++The important result is not that the UI suddenly looks new. It is that the menu system now names its support surfaces more honestly, which gives the next redesign step a stronger product foundation.
++
++# 3 headlines
++
++- Discovery First, Then a Small UI Win
++- Defining What a Game Menu Must Do Before Redesigning It
++- Step 01: A UX Brief and a Low-Risk Shipment
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\prompt.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\prompt.md"
+new file mode 100644
+index 0000000..00a9fb3
+--- /dev/null
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\prompt.md"
+@@ -0,0 +1,73 @@
++You are a senior product and UX discovery team working inside a real game repo with code access and Playwright access.
++
++Context:
++- This is a phone-first, browser-playable, single-player, turn-based dungeon crawler.
++- The menu system is modal-heavy.
++- Important context is split across HUD, ticker, advisor, journal, and menu flows.
++- This step should define what the menu system must accomplish, then ship 1-2 visible, low-risk improvements that reflect those principles.
++
++Task:
++Create a UI discovery brief for the menu system, then implement 1-2 small visible changes that embody the strongest discovery findings.
++
++You must:
++1. Create or update the root folder: artifacts/menu-redesign-series/
++2. Create or update: artifacts/menu-redesign-series/SERIES_INDEX.md
++3. Create this step folder: artifacts/menu-redesign-series/step-01-ui-discovery-brief/
++4. Inside the step folder create:
++   - prompt.md
++   - README.md
++   - report.md
++   - comparison.md
++   - changes.md
++   - teaching-notes.md
++   - blog-ready.md
++   - linked-post.md
++   - changed-files.txt
++   - screenshot-manifest.md
++   - screenshots/before/
++   - screenshots/after/
++   - data/
++   - patch.diff if git is available
++5. Save this exact prompt into prompt.md
++6. Launch the game with Playwright
++7. Capture before screenshots of the most relevant flows:
++   - title
++   - creation
++   - town
++   - in-run menu
++   - pack
++   - magic
++   - journal/help/settings
++8. Inspect both code and runtime behavior
++9. Define:
++   - what jobs the menu system must do
++   - which player types it must serve
++   - what “good” looks like for onboarding, in-run decisions, town prep, inventory/spell management, and reward selection
++   - key tradeoffs such as clarity vs density and first-time readability vs expert speed
++10. Implement 1-2 visible, low-risk changes that reflect the discovery brief, such as:
++   - clearer labels
++   - stronger primary action emphasis
++   - better section naming
++   - improved microcopy
++   - clearer menu entry points
++11. Capture matching after screenshots of the same screens
++12. Update SERIES_INDEX.md with step summary, folder path, main changes, key screenshots, what this step proved, and what should happen next
++
++Required file contents:
++- README.md: why discovery matters, what question this step answers, what changed, what comes next
++- report.md: discovery summary, UX goals, UX non-goals, menu principles, success criteria, decisions made
++- comparison.md: paired before/after notes for each changed screen
++- changes.md: exact changed files, what changed, why, risk, rollback notes
++- teaching-notes.md: explain why this prompt pairs analysis with a small visible shipment
++- blog-ready.md: title, hook, 100-150 word summary, 400-800 word blog draft, lessons, quotes, screenshot suggestions
++- linked-post.md: teaser, follow-up blurb, 3 headlines
++- changed-files.txt: one path per line
++- screenshot-manifest.md: filename, viewport, flow name, why captured, before/after
++
++Important rules:
++- Do not rely on code inspection alone
++- Use Playwright screenshots as evidence
++- Keep the changes small and principle-driven
++- The after state must show visible UI movement, not just analysis
++
++Finish by summarizing what you created and the exact folder path.
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\report.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\report.md"
+new file mode 100644
+index 0000000..3a66780
+--- /dev/null
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\report.md"
+@@ -0,0 +1,95 @@
++# Report
++
++## Discovery summary
++
++The menu system is not a single menu. It is a family of surfaces that currently share one visual language and one modal pattern, even when they serve different jobs. Runtime captures show that this consistency helps the game feel cohesive, but it also blurs the difference between onboarding, run-state support, inventory management, and system settings.
++
++The strongest discovery finding is boundary clarity. Players can access the information they need, but the UI does not always declare which surface answers which question. That is most visible in the in-run system menu and the support surfaces around it: briefing, journal, help, and settings.
++
++## What jobs the menu system must do
++
++1. Start or resume a run with confidence.
++2. Explain the current objective, pressure, and next likely action without forcing the player to hunt across multiple surfaces.
++3. Let players manage pack and spells quickly on a phone-sized screen.
++4. Support town prep by surfacing persistence, banking, market state, and next-run planning.
++5. Interrupt play cleanly for progression, rewards, and failure states.
++6. Teach controls and rules on demand without feeling like a separate product.
++
++## Player types the menu system must serve
++
++- First-descent players: need plain language, clear entry points, and strong signposting for what to open when confused.
++- Returning save-slot players: need to resume quickly and understand whether they are continuing a run, reviewing town persistence, or starting over.
++- Short-session phone players: need fast access to pack, journal, and support surfaces without losing their place mentally.
++- System optimizers: need dense information and efficient flows for equipment, spells, rewards, and town planning.
++
++## What good looks like
++
++### Onboarding
++
++- The title screen clearly separates starting fresh, continuing a save, and learning basics.
++- Support surfaces use role-forward names instead of generic names.
++- A confused player can identify the right surface in one guess.
++
++### In-run decisions
++
++- The system menu acts as a true support hub, not as a mislabeled save screen.
++- Menu entry points tell the player why they should open them.
++- Information about current status, mission, and support actions is easy to scan.
++
++### Town prep
++
++- The player can tell the difference between immediate run state and persistent town state.
++- Banking, save/load, contracts, and market review feel related but not conflated.
++
++### Inventory and spell management
++
++- Pack and spell views stay fast for experts but readable for first-time users.
++- Titles and tabs help the player distinguish loadout, spellbook, and long-form run history.
++
++### Reward selection
++
++- Reward and progression overlays should feel important and interruptive in a good way, rather than like another generic sheet.
++
++## UX goals
++
++- Clarify surface roles without increasing flow depth.
++- Preserve expert speed while reducing first-time ambiguity.
++- Keep the phone-first character of the UI intact.
++- Improve the menu system through naming and microcopy before attempting structural redesign.
++
++## UX non-goals
++
++- No art-direction overhaul.
++- No full information-architecture rewrite in this step.
++- No changes to inventory logic, spell systems, save architecture, or progression rules.
++- No attempt to solve every dense surface immediately.
++
++## Menu principles
++
++- Name surfaces by the question they answer.
++- Use the system menu as a support hub, not as a dumping ground.
++- Keep management surfaces distinct from progression moments.
++- Let first-time players orient quickly without stripping power from expert players.
++- Prefer small, truthful copy changes before larger structural changes.
++
++## Success criteria
++
++- A first-time player can tell the difference between starting a run, continuing a save, and learning controls from the title screen alone.
++- The in-run menu reads as a support hub for mission, character, save, and settings instead of as a mislabeled save sheet.
++- Journal, help, and settings titles explain themselves more clearly in screenshots without requiring extra explanation.
++- The shipped changes are visible in matched before and after captures and do not alter core game logic.
++
++## Key tradeoffs
++
++- Clarity versus density: the game benefits from rich information, but not every surface can carry the same level of density at all times.
++- First-time readability versus expert speed: stronger naming can help new players without necessarily slowing experts.
++- Shared visual language versus surface distinction: consistency is good, but some surfaces need clearer identity.
++- Persistent support versus board space: every always-on cue competes with the playfield on phone screens.
++
++## Decisions made in this step
++
++- Rename title-screen CTAs to make first-run, returning-run, and learning paths more explicit.
++- Rename `Run Menu` to `Adventure Menu` and add one sentence explaining its job.
++- Rename utility actions to more clearly reflect player intent: `Floor Map`, `Mission`, `Character`, `Journal & Log`, `How to Play`, and `Return to Run`.
++- Rename support-surface titles to `Run Journal`, `How to Play`, `Device Settings`, and `Mission Briefing`.
++- Leave pack and magic structures unchanged for now, treating them as control shots rather than redesign targets in this step.
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshot-manifest.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshot-manifest.md"
+new file mode 100644
+index 0000000..8477fc7
+--- /dev/null
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshot-manifest.md"
+@@ -0,0 +1,40 @@
++# Screenshot Manifest
++
++| Filename | Viewport | Flow name | Why captured | Before/after |
++| --- | --- | --- | --- | --- |
++| before-mobile-01-title.png | 430x932 | Title | First-time and returning-player entry point. | before |
++| before-mobile-02-creation.png | 430x932 | Creation | Onboarding and early commitment screen. | before |
++| before-mobile-03-town.png | 430x932 | Town | First in-world orientation and menu entry-point context. | before |
++| before-mobile-04-run-menu.png | 430x932 | In-run menu | Primary system hub for save, goal review, and support actions. | before |
++| before-mobile-05-pack.png | 430x932 | Pack | Inventory and equipment management baseline. | before |
++| before-mobile-06-magic.png | 430x932 | Magic | Spell management and scanability baseline. | before |
++| before-mobile-07-journal.png | 430x932 | Journal | Goal, story, and run-history baseline. | before |
++| before-mobile-08-help.png | 430x932 | Help | Reference and onboarding support surface. | before |
++| before-mobile-09-settings.png | 430x932 | Settings | Device and comfort-settings surface. | before |
++| before-desktop-01-title.png | 1440x1200 | Title | First-time and returning-player entry point. | before |
++| before-desktop-02-creation.png | 1440x1200 | Creation | Onboarding and early commitment screen. | before |
++| before-desktop-03-town.png | 1440x1200 | Town | First in-world orientation and menu entry-point context. | before |
++| before-desktop-04-run-menu.png | 1440x1200 | In-run menu | Primary system hub for save, goal review, and support actions. | before |
++| before-desktop-05-pack.png | 1440x1200 | Pack | Inventory and equipment management baseline. | before |
++| before-desktop-06-magic.png | 1440x1200 | Magic | Spell management and scanability baseline. | before |
++| before-desktop-07-journal.png | 1440x1200 | Journal | Goal, story, and run-history baseline. | before |
++| before-desktop-08-help.png | 1440x1200 | Help | Reference and onboarding support surface. | before |
++| before-desktop-09-settings.png | 1440x1200 | Settings | Device and comfort-settings surface. | before |
++| after-mobile-01-title.png | 430x932 | Title | First-time and returning-player entry point. | after |
++| after-mobile-02-creation.png | 430x932 | Creation | Onboarding and early commitment screen. | after |
++| after-mobile-03-town.png | 430x932 | Town | First in-world orientation and menu entry-point context. | after |
++| after-mobile-04-run-menu.png | 430x932 | In-run menu | Primary system hub for save, goal review, and support actions. | after |
++| after-mobile-05-pack.png | 430x932 | Pack | Inventory and equipment management baseline. | after |
++| after-mobile-06-magic.png | 430x932 | Magic | Spell management and scanability baseline. | after |
++| after-mobile-07-journal.png | 430x932 | Journal | Goal, story, and run-history baseline. | after |
++| after-mobile-08-help.png | 430x932 | Help | Reference and onboarding support surface. | after |
++| after-mobile-09-settings.png | 430x932 | Settings | Device and comfort-settings surface. | after |
++| after-desktop-01-title.png | 1440x1200 | Title | First-time and returning-player entry point. | after |
++| after-desktop-02-creation.png | 1440x1200 | Creation | Onboarding and early commitment screen. | after |
++| after-desktop-03-town.png | 1440x1200 | Town | First in-world orientation and menu entry-point context. | after |
++| after-desktop-04-run-menu.png | 1440x1200 | In-run menu | Primary system hub for save, goal review, and support actions. | after |
++| after-desktop-05-pack.png | 1440x1200 | Pack | Inventory and equipment management baseline. | after |
++| after-desktop-06-magic.png | 1440x1200 | Magic | Spell management and scanability baseline. | after |
++| after-desktop-07-journal.png | 1440x1200 | Journal | Goal, story, and run-history baseline. | after |
++| after-desktop-08-help.png | 1440x1200 | Help | Reference and onboarding support surface. | after |
++| after-desktop-09-settings.png | 1440x1200 | Settings | Device and comfort-settings surface. | after |
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-01-title.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-01-title.png"
+new file mode 100644
+index 0000000..e8dbc42
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-01-title.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-02-creation.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-02-creation.png"
+new file mode 100644
+index 0000000..1826381
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-02-creation.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-03-town.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-03-town.png"
+new file mode 100644
+index 0000000..6dbfad4
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-03-town.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-04-run-menu.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-04-run-menu.png"
+new file mode 100644
+index 0000000..102d030
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-04-run-menu.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-05-pack.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-05-pack.png"
+new file mode 100644
+index 0000000..0deb70a
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-05-pack.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-06-magic.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-06-magic.png"
+new file mode 100644
+index 0000000..99523ab
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-06-magic.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-07-journal.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-07-journal.png"
+new file mode 100644
+index 0000000..b46a0dd
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-07-journal.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-08-help.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-08-help.png"
+new file mode 100644
+index 0000000..988695d
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-08-help.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-09-settings.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-09-settings.png"
+new file mode 100644
+index 0000000..67c1f08
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-desktop-09-settings.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-01-title.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-01-title.png"
+new file mode 100644
+index 0000000..e40b2ae
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-01-title.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-02-creation.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-02-creation.png"
+new file mode 100644
+index 0000000..7262ea0
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-02-creation.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-03-town.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-03-town.png"
+new file mode 100644
+index 0000000..0a19b92
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-03-town.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-04-run-menu.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-04-run-menu.png"
+new file mode 100644
+index 0000000..febe5c4
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-04-run-menu.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-05-pack.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-05-pack.png"
+new file mode 100644
+index 0000000..b1008f1
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-05-pack.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-06-magic.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-06-magic.png"
+new file mode 100644
+index 0000000..bb5f5fc
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-06-magic.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-07-journal.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-07-journal.png"
+new file mode 100644
+index 0000000..217d783
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-07-journal.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-08-help.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-08-help.png"
+new file mode 100644
+index 0000000..db95141
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-08-help.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-09-settings.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-09-settings.png"
+new file mode 100644
+index 0000000..ce1d97c
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\after\\after-mobile-09-settings.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-01-title.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-01-title.png"
+new file mode 100644
+index 0000000..a08f533
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-01-title.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-02-creation.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-02-creation.png"
+new file mode 100644
+index 0000000..318ed97
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-02-creation.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-03-town.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-03-town.png"
+new file mode 100644
+index 0000000..95cc1c2
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-03-town.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-04-run-menu.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-04-run-menu.png"
+new file mode 100644
+index 0000000..5ddac51
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-04-run-menu.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-05-pack.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-05-pack.png"
+new file mode 100644
+index 0000000..bea01be
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-05-pack.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-06-magic.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-06-magic.png"
+new file mode 100644
+index 0000000..5586274
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-06-magic.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-07-journal.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-07-journal.png"
+new file mode 100644
+index 0000000..542727f
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-07-journal.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-08-help.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-08-help.png"
+new file mode 100644
+index 0000000..e2d1eba
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-08-help.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-09-settings.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-09-settings.png"
+new file mode 100644
+index 0000000..3425ee0
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-desktop-09-settings.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-01-title.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-01-title.png"
+new file mode 100644
+index 0000000..4459f25
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-01-title.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-02-creation.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-02-creation.png"
+new file mode 100644
+index 0000000..7262ea0
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-02-creation.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-03-town.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-03-town.png"
+new file mode 100644
+index 0000000..08f47e7
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-03-town.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-04-run-menu.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-04-run-menu.png"
+new file mode 100644
+index 0000000..c1f4bbd
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-04-run-menu.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-05-pack.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-05-pack.png"
+new file mode 100644
+index 0000000..ed0174b
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-05-pack.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-06-magic.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-06-magic.png"
+new file mode 100644
+index 0000000..ec7b984
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-06-magic.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-07-journal.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-07-journal.png"
+new file mode 100644
+index 0000000..2202fd4
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-07-journal.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-08-help.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-08-help.png"
+new file mode 100644
+index 0000000..67c8f12
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-08-help.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-09-settings.png" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-09-settings.png"
+new file mode 100644
+index 0000000..3d0e1c9
+Binary files /dev/null and "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\screenshots\\before\\before-mobile-09-settings.png" differ
+diff --git "a/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\teaching-notes.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\teaching-notes.md"
+new file mode 100644
+index 0000000..72535a5
+--- /dev/null
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-01-ui-discovery-brief\\teaching-notes.md"
+@@ -0,0 +1,17 @@
++# Teaching Notes
++
++This prompt is strong because it refuses the common trap of separating analysis from action too early. Analysis alone can produce a persuasive brief, but it does not prove that the team has identified the right leverage point. A small visible shipment tests that claim immediately.
++
++Why this pairing matters:
++
++- Discovery creates the decision frame. It defines the jobs, player types, tradeoffs, and success criteria.
++- A tiny shipment turns those principles into something falsifiable. If the UI looks clearer in the live game, the principles are probably pointing in the right direction.
++- The cost stays low. Because the changes are only naming and microcopy, the team learns something meaningful without committing to a risky redesign.
++
++In practice, this approach produces better prompts for later steps:
++
++- The brief explains what the menu system must do.
++- The shipment shows which principles already improved the product.
++- The screenshots create before and after evidence that can guide the next structural change.
++
++That is a better foundation than either extreme: redesigning blindly or documenting endlessly without shipping anything.

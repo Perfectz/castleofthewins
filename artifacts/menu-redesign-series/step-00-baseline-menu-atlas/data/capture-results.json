@@ -1,0 +1,913 @@
+{
+  "generatedAt": "2026-04-07T00:28:20.938Z",
+  "captures": [
+    {
+      "filename": "mobile-01-title.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-01-title.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Title screen",
+      "howReached": "Fresh page load with no interaction.",
+      "whyCaptured": "Baseline for first-impression composition, hierarchy, and call-to-action prominence.",
+      "beforeAfter": "before",
+      "modalTitle": null,
+      "mode": "title",
+      "depth": 0,
+      "levelKind": null,
+      "advisor": "",
+      "ticker": [
+        "Create a character to begin."
+      ]
+    },
+    {
+      "filename": "mobile-02-load-empty.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-02-load-empty.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Load screen empty state",
+      "howReached": "From title screen, open the load flow with no prior save data.",
+      "whyCaptured": "Documents the first empty-state branch a player can hit before starting a run.",
+      "beforeAfter": "before",
+      "modalTitle": "Continue Run",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": null,
+      "advisor": "",
+      "ticker": [
+        "Create a character to begin."
+      ]
+    },
+    {
+      "filename": "mobile-03-creation.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-03-creation.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Character creation",
+      "howReached": "From title screen, open New Adventurer without altering the draft first.",
+      "whyCaptured": "Captures the first high-density decision screen before play begins.",
+      "beforeAfter": "before",
+      "modalTitle": "Create Adventurer",
+      "mode": "creation",
+      "depth": 0,
+      "levelKind": null,
+      "advisor": "",
+      "ticker": [
+        "Create a character to begin."
+      ]
+    },
+    {
+      "filename": "mobile-04-town.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-04-town.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Town overview",
+      "howReached": "Begin a new run from the creation screen and allow the town state to settle.",
+      "whyCaptured": "Shows the first in-world HUD state, advisor language, ticker placement, and top-level navigation load.",
+      "beforeAfter": "before",
+      "modalTitle": null,
+      "mode": "game",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "mobile-05-bank.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-05-bank.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Town service: Bank",
+      "howReached": "From town, open the bank service modal through the live runtime.",
+      "whyCaptured": "Captures persistence and progression framing inside the town loop.",
+      "beforeAfter": "before",
+      "modalTitle": "Bank",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "mobile-06-provisioner.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-06-provisioner.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Town service: Provisioner",
+      "howReached": "From town, open the general store service modal through the live runtime.",
+      "whyCaptured": "Documents the consumables and supplies shopping surface.",
+      "beforeAfter": "before",
+      "modalTitle": "Provisioner",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "mobile-07-armory.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-07-armory.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Town service: Armory",
+      "howReached": "From town, open the armory service modal through the live runtime.",
+      "whyCaptured": "Captures equipment shopping density and comparison layout.",
+      "beforeAfter": "before",
+      "modalTitle": "Armory",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "mobile-08-guild.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-08-guild.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Town service: Wizard's Guild",
+      "howReached": "From town, open the guild service modal through the live runtime.",
+      "whyCaptured": "Captures a text-heavy town service with magical inventory and training cues.",
+      "beforeAfter": "before",
+      "modalTitle": "Wizard's Guild",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "mobile-09-temple.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-09-temple.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Town service: Temple",
+      "howReached": "From town, open the temple service modal through the live runtime.",
+      "whyCaptured": "Documents the restorative service layout and spiritual support framing.",
+      "beforeAfter": "before",
+      "modalTitle": "Temple",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "mobile-10-sage.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-10-sage.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Town service: Sage's Tower",
+      "howReached": "From town, open the sage service modal through the live runtime.",
+      "whyCaptured": "Captures the identification and information-driven service screen.",
+      "beforeAfter": "before",
+      "modalTitle": "Sage's Tower",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "mobile-11-junk.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-11-junk.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Town service: Junk Shop",
+      "howReached": "From town, open the junk shop service modal through the live runtime.",
+      "whyCaptured": "Captures the lower-prestige sell loop and secondary economy surface.",
+      "beforeAfter": "before",
+      "modalTitle": "Junk Shop",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "mobile-12-dungeon-hud.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-12-dungeon-hud.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "First in-run HUD state",
+      "howReached": "From town, move directly to the down stairs and descend once into the first dungeon floor.",
+      "whyCaptured": "Establishes the baseline dungeon HUD balance before any redesign discussion.",
+      "beforeAfter": "before",
+      "modalTitle": null,
+      "mode": "game",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Seal The Shrine: 2 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "mobile-13-run-menu.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-13-run-menu.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Run menu",
+      "howReached": "From the first dungeon floor, open the utility menu modal.",
+      "whyCaptured": "Documents the primary utility stack and its action density mid-run.",
+      "beforeAfter": "before",
+      "modalTitle": "Run Menu",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Rescue The Captive: 4 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "mobile-14-pack.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-14-pack.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Inventory and equipment",
+      "howReached": "From the first dungeon floor, open the pack hub modal.",
+      "whyCaptured": "Captures the pack and equipment hub in a reachable early-run state.",
+      "beforeAfter": "before",
+      "modalTitle": "Pack & Equipment",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Seal The Shrine: 2 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "mobile-15-magic.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-15-magic.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Magic and spells",
+      "howReached": "From the first dungeon floor, add representative spells to the live run state and open the magic hub modal.",
+      "whyCaptured": "Documents the spell management surface with minimal staging so the screen is populated.",
+      "beforeAfter": "before",
+      "modalTitle": "Magic",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Move: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Purge The Nest: 2 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "mobile-16-journal.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-16-journal.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Journal",
+      "howReached": "From the first dungeon floor, open the journal hub modal.",
+      "whyCaptured": "Shows how guidance, goals, and persistent documentation are surfaced.",
+      "beforeAfter": "before",
+      "modalTitle": "Journal",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Move: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Rescue The Captive: 2 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "mobile-17-settings.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-17-settings.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Settings",
+      "howReached": "From the first dungeon floor, open the settings modal.",
+      "whyCaptured": "Captures the systems-level configuration screen in the same baseline pass.",
+      "beforeAfter": "before",
+      "modalTitle": "Settings",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Move: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Rescue The Captive: 2 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "mobile-18-help.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-18-help.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Help",
+      "howReached": "From the first dungeon floor, open the help modal.",
+      "whyCaptured": "Shows how onboarding and reference information are presented after the title screen.",
+      "beforeAfter": "before",
+      "modalTitle": "Help",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Move: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Rescue The Captive: 4 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "mobile-19-character.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-19-character.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Character sheet",
+      "howReached": "From the first dungeon floor, open the character sheet modal.",
+      "whyCaptured": "Captures the mid-run stats and progression readout separate from inventory and journal.",
+      "beforeAfter": "before",
+      "modalTitle": "Character Sheet",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Purge The Nest: 2 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "mobile-20-briefing.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-20-briefing.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Briefing",
+      "howReached": "From the first dungeon floor, open the briefing modal.",
+      "whyCaptured": "Documents the advisor and mission framing surface that sits outside the journal.",
+      "beforeAfter": "before",
+      "modalTitle": "Briefing",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Purge The Nest: 3 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "mobile-21-level-up.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-21-level-up.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Level up perk choice",
+      "howReached": "From the first dungeon floor, stage enough experience for a level up and trigger the live progression modal.",
+      "whyCaptured": "Captures a progression-only modal that does not appear in the town or utility loop.",
+      "beforeAfter": "before",
+      "modalTitle": "Level Up Perk",
+      "mode": "levelup",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Seal The Shrine: 1 guard remain in the objective room."
+      ]
+    },
+    {
+      "filename": "mobile-22-spell-study.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-22-spell-study.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Spell study",
+      "howReached": "From the first dungeon floor, stage a spell-learning choice and trigger the live progression modal.",
+      "whyCaptured": "Documents the follow-on progression surface for learning spells.",
+      "beforeAfter": "before",
+      "modalTitle": "Spell Study",
+      "mode": "levelup",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Rescue The Captive: 2 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "mobile-23-death.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-23-death.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "screenName": "Death recap",
+      "howReached": "From the first dungeon floor, force a run death through the live game flow with staging-only context.",
+      "whyCaptured": "Captures the fail-state messaging and recovery framing.",
+      "beforeAfter": "before",
+      "modalTitle": "Fallen",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Recover The Relic: 2 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "desktop-01-title.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-01-title.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Title screen",
+      "howReached": "Fresh page load with no interaction.",
+      "whyCaptured": "Baseline for first-impression composition, hierarchy, and call-to-action prominence.",
+      "beforeAfter": "before",
+      "modalTitle": null,
+      "mode": "title",
+      "depth": 0,
+      "levelKind": null,
+      "advisor": "",
+      "ticker": [
+        "Create a character to begin."
+      ]
+    },
+    {
+      "filename": "desktop-02-load-empty.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-02-load-empty.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Load screen empty state",
+      "howReached": "From title screen, open the load flow with no prior save data.",
+      "whyCaptured": "Documents the first empty-state branch a player can hit before starting a run.",
+      "beforeAfter": "before",
+      "modalTitle": "Continue Run",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": null,
+      "advisor": "",
+      "ticker": [
+        "Create a character to begin."
+      ]
+    },
+    {
+      "filename": "desktop-03-creation.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-03-creation.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Character creation",
+      "howReached": "From title screen, open New Adventurer without altering the draft first.",
+      "whyCaptured": "Captures the first high-density decision screen before play begins.",
+      "beforeAfter": "before",
+      "modalTitle": "Create Adventurer",
+      "mode": "creation",
+      "depth": 0,
+      "levelKind": null,
+      "advisor": "",
+      "ticker": [
+        "Create a character to begin."
+      ]
+    },
+    {
+      "filename": "desktop-04-town.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-04-town.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Town overview",
+      "howReached": "Begin a new run from the creation screen and allow the town state to settle.",
+      "whyCaptured": "Shows the first in-world HUD state, advisor language, ticker placement, and top-level navigation load.",
+      "beforeAfter": "before",
+      "modalTitle": null,
+      "mode": "game",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "desktop-05-bank.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-05-bank.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Town service: Bank",
+      "howReached": "From town, open the bank service modal through the live runtime.",
+      "whyCaptured": "Captures persistence and progression framing inside the town loop.",
+      "beforeAfter": "before",
+      "modalTitle": "Bank",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "desktop-06-provisioner.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-06-provisioner.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Town service: Provisioner",
+      "howReached": "From town, open the general store service modal through the live runtime.",
+      "whyCaptured": "Documents the consumables and supplies shopping surface.",
+      "beforeAfter": "before",
+      "modalTitle": "Provisioner",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "desktop-07-armory.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-07-armory.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Town service: Armory",
+      "howReached": "From town, open the armory service modal through the live runtime.",
+      "whyCaptured": "Captures equipment shopping density and comparison layout.",
+      "beforeAfter": "before",
+      "modalTitle": "Armory",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "desktop-08-guild.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-08-guild.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Town service: Wizard's Guild",
+      "howReached": "From town, open the guild service modal through the live runtime.",
+      "whyCaptured": "Captures a text-heavy town service with magical inventory and training cues.",
+      "beforeAfter": "before",
+      "modalTitle": "Wizard's Guild",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "desktop-09-temple.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-09-temple.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Town service: Temple",
+      "howReached": "From town, open the temple service modal through the live runtime.",
+      "whyCaptured": "Documents the restorative service layout and spiritual support framing.",
+      "beforeAfter": "before",
+      "modalTitle": "Temple",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "desktop-10-sage.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-10-sage.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Town service: Sage's Tower",
+      "howReached": "From town, open the sage service modal through the live runtime.",
+      "whyCaptured": "Captures the identification and information-driven service screen.",
+      "beforeAfter": "before",
+      "modalTitle": "Sage's Tower",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "desktop-11-junk.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-11-junk.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Town service: Junk Shop",
+      "howReached": "From town, open the junk shop service modal through the live runtime.",
+      "whyCaptured": "Captures the lower-prestige sell loop and secondary economy surface.",
+      "beforeAfter": "before",
+      "modalTitle": "Junk Shop",
+      "mode": "modal",
+      "depth": 0,
+      "levelKind": "town",
+      "advisor": "",
+      "ticker": [
+        "Town Door: Open one town door to see what town can do.",
+        "Town is quiet.",
+        "Open any labeled town door once. Then return to the north road."
+      ]
+    },
+    {
+      "filename": "desktop-12-dungeon-hud.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-12-dungeon-hud.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "First in-run HUD state",
+      "howReached": "From town, move directly to the down stairs and descend once into the first dungeon floor.",
+      "whyCaptured": "Establishes the baseline dungeon HUD balance before any redesign discussion.",
+      "beforeAfter": "before",
+      "modalTitle": null,
+      "mode": "game",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Rescue The Captive: 3 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "desktop-13-run-menu.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-13-run-menu.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Run menu",
+      "howReached": "From the first dungeon floor, open the utility menu modal.",
+      "whyCaptured": "Documents the primary utility stack and its action density mid-run.",
+      "beforeAfter": "before",
+      "modalTitle": "Run Menu",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Seal The Shrine: 1 guard remain in the objective room."
+      ]
+    },
+    {
+      "filename": "desktop-14-pack.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-14-pack.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Inventory and equipment",
+      "howReached": "From the first dungeon floor, open the pack hub modal.",
+      "whyCaptured": "Captures the pack and equipment hub in a reachable early-run state.",
+      "beforeAfter": "before",
+      "modalTitle": "Pack & Equipment",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Purge The Nest: 4 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "desktop-15-magic.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-15-magic.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Magic and spells",
+      "howReached": "From the first dungeon floor, add representative spells to the live run state and open the magic hub modal.",
+      "whyCaptured": "Documents the spell management surface with minimal staging so the screen is populated.",
+      "beforeAfter": "before",
+      "modalTitle": "Magic",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Purge The Nest: 2 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "desktop-16-journal.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-16-journal.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Journal",
+      "howReached": "From the first dungeon floor, open the journal hub modal.",
+      "whyCaptured": "Shows how guidance, goals, and persistent documentation are surfaced.",
+      "beforeAfter": "before",
+      "modalTitle": "Journal",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Rescue The Captive: 2 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "desktop-17-settings.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-17-settings.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Settings",
+      "howReached": "From the first dungeon floor, open the settings modal.",
+      "whyCaptured": "Captures the systems-level configuration screen in the same baseline pass.",
+      "beforeAfter": "before",
+      "modalTitle": "Settings",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Rescue The Captive: 3 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "desktop-18-help.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-18-help.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Help",
+      "howReached": "From the first dungeon floor, open the help modal.",
+      "whyCaptured": "Shows how onboarding and reference information are presented after the title screen.",
+      "beforeAfter": "before",
+      "modalTitle": "Help",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Recover The Relic: 1 guard remain in the objective room."
+      ]
+    },
+    {
+      "filename": "desktop-19-character.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-19-character.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Character sheet",
+      "howReached": "From the first dungeon floor, open the character sheet modal.",
+      "whyCaptured": "Captures the mid-run stats and progression readout separate from inventory and journal.",
+      "beforeAfter": "before",
+      "modalTitle": "Character Sheet",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Recover The Relic: 1 guard remain in the objective room."
+      ]
+    },
+    {
+      "filename": "desktop-20-briefing.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-20-briefing.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Briefing",
+      "howReached": "From the first dungeon floor, open the briefing modal.",
+      "whyCaptured": "Documents the advisor and mission framing surface that sits outside the journal.",
+      "beforeAfter": "before",
+      "modalTitle": "Briefing",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Rescue The Captive: 4 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "desktop-21-level-up.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-21-level-up.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Level up perk choice",
+      "howReached": "From the first dungeon floor, stage enough experience for a level up and trigger the live progression modal.",
+      "whyCaptured": "Captures a progression-only modal that does not appear in the town or utility loop.",
+      "beforeAfter": "before",
+      "modalTitle": "Level Up Perk",
+      "mode": "levelup",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Purge The Nest: 2 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "desktop-22-spell-study.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-22-spell-study.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Spell study",
+      "howReached": "From the first dungeon floor, stage a spell-learning choice and trigger the live progression modal.",
+      "whyCaptured": "Documents the follow-on progression surface for learning spells.",
+      "beforeAfter": "before",
+      "modalTitle": "Spell Study",
+      "mode": "levelup",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Recover The Relic: 2 guards remain in the objective room."
+      ]
+    },
+    {
+      "filename": "desktop-23-death.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-23-death.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "screenName": "Death recap",
+      "howReached": "From the first dungeon floor, force a run death through the live game flow with staging-only context.",
+      "whyCaptured": "Captures the fail-state messaging and recovery framing.",
+      "beforeAfter": "before",
+      "modalTitle": "Fallen",
+      "mode": "modal",
+      "depth": 1,
+      "levelKind": "dungeon",
+      "advisor": "",
+      "ticker": [
+        "Search: The first route segment is safe enough to read.",
+        "Quiet for now. The floor is readable, but it will not stay that way.",
+        "Purge The Nest: 3 guards remain in the objective room."
+      ]
+    }
+  ]
+}

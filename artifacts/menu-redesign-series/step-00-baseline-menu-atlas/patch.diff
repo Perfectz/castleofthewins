@@ -1,0 +1,2382 @@
+warning: in the working copy of 'artifacts/menu-redesign-series/SERIES_INDEX.md', LF will be replaced by CRLF the next time Git touches it
+diff --git a/artifacts/menu-redesign-series/SERIES_INDEX.md b/artifacts/menu-redesign-series/SERIES_INDEX.md
+new file mode 100644
+index 0000000..d468e51
+--- /dev/null
++++ b/artifacts/menu-redesign-series/SERIES_INDEX.md
+@@ -0,0 +1,10 @@
++# Menu Redesign Series
++
++## Step 00: Baseline Menu Atlas
++
++- Folder path: `artifacts/menu-redesign-series/step-00-baseline-menu-atlas/`
++- Three-sentence summary: This step establishes a visual baseline of the current menu and modal system using live Playwright captures instead of code-only reasoning. The atlas covers title, creation, town services, first dungeon HUD, utility surfaces, progression overlays, and the death recap in both mobile and desktop viewports. The after-side artifacts reorganize those raw captures into study boards so later redesign work can compare against a fixed, publication-ready reference.
++- Main artifacts created: `README.md`, `report.md`, `comparison.md`, `changes.md`, `teaching-notes.md`, `blog-ready.md`, `linked-post.md`, `screenshot-manifest.md`, `changed-files.txt`, `patch.diff`, `screenshots/before/*`, `screenshots/after/*`, `data/capture-results.json`
++- Key screenshots: `screenshots/before/mobile-04-town.png`, `screenshots/before/mobile-12-dungeon-hud.png`, `screenshots/before/mobile-13-run-menu.png`, `screenshots/before/mobile-14-pack.png`, `screenshots/before/mobile-21-level-up.png`, `screenshots/after/mobile-baseline-atlas-board.png`, `screenshots/after/mobile-hud-callout-board.png`
++- What this step proved: The current UI already has a coherent visual language, but critical information is distributed across enough surfaces that navigation and readability need deliberate redesign, especially on phone-sized screens. It also proved that a reproducible screenshot baseline can be generated from live runtime states without modifying production code.
++- What the next step should investigate: Consolidate the information architecture around HUD, ticker, advisor, journal, briefing, and utility surfaces. Test whether town services and in-run system menus should share fewer patterns or clearer role distinctions.
+warning: in the working copy of 'artifacts\menu-redesign-series\step-00-baseline-menu-atlas\blog-ready.md', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\blog-ready.md" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\blog-ready.md"
+new file mode 100644
+index 0000000..f5dc0fd
+--- /dev/null
++++ "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\blog-ready.md"
+@@ -0,0 +1,51 @@
++# Title
++
++Baseline Before Redesign: Building a Menu Atlas for a Phone-First Dungeon Crawler
++
++# Hook
++
++Before changing a UI this dense, the smartest move is not sketching a new look. It is freezing the current system in a way the whole team can study.
++
++# Short summary
++
++This step documents the current menu and modal system of a phone-first browser dungeon crawler with live Playwright evidence. The result is a baseline menu atlas: raw screenshots, annotated study boards, a manifest, and a written report that make the existing information architecture visible before redesign begins.
++
++# Draft
++
++Redesign work often starts too late in the process and too high in the abstraction stack. A team agrees that the UI feels crowded, someone says the menus are confusing, and the next move is already mockups. That approach skips a hard but valuable step: proving what the current product actually looks like across real states.
++
++For this project, that missing step was especially important. The game is a phone-first, browser-playable, single-player dungeon crawler with a lot of UI surfaces. Important information is spread across the playfield, a live feed, a map panel, a status stack, contextual actions, town-service modals, journal tabs, briefing screens, settings, and progression overlays. If you redesign that system from memory, you are almost guaranteed to simplify the wrong thing.
++
++So the first task in the series was not redesign. It was a baseline menu atlas.
++
++Using Playwright, I captured the live game in both mobile and desktop viewports. The baseline includes the title screen, an empty save-state flow, character creation, town overview, every major town service, the first dungeon HUD, the run menu, pack, magic, journal, settings, help, character sheet, briefing, progression overlays, and the death recap. The captures were taken from reachable runtime states whenever possible, with a short list of clearly documented staging-only adjustments for screens like spell study and the death recap.
++
++That distinction matters. A baseline should not pretend every screenshot came from organic play if it did not. It should tell the truth about which states were easy to reach, which ones required light staging, and which ones still need a deeper harness. In this step, objective-specific reward choice and return-summary recovery screens were left out because they were not cleanly reachable without a broader deterministic progression script. Calling that out is part of the quality of the artifact, not a weakness in it.
++
++The raw screenshots are useful, but raw evidence alone is slow to read. That is why the second half of the step focused on after-side documentation boards rather than redesign comps. The mobile and desktop atlas boards turn dozens of captures into curated contact sheets. The navigation map board shows how the system branches from title to creation, town, dungeon utility, progression, and failure. A dedicated HUD callout board makes the layer split explicit by labeling the board, minimap, status strip, live feed, movement pad, and context actions.
++
++The big takeaway from the baseline is not that the current UI is broken. In fact, it has several strengths: a coherent visual language, strong touch targets, readable stat cards, and a town-service loop that already feels structurally intentional. The real issue is information distribution. On a phone-sized screen, the player is asked to track multiple channels at once, and several surfaces with adjacent purposes live in separate routes. Journal, briefing, help, settings, and the run menu all explain overlapping parts of the game, but they do not yet form a clear hierarchy.
++
++That is exactly the kind of insight a baseline makes possible. Instead of arguing about whether the interface feels cluttered in a general sense, the team can now point to named screens, compare mobile and desktop behavior, and talk concretely about what belongs together, what should be demoted, and what needs stronger separation.
++
++Baseline work is not glamorous, but it is one of the highest-leverage steps in a redesign series. It turns subjective discomfort into a shared visual record. Once that record exists, redesign can become intentional instead of reactive.
++
++# 3 lessons
++
++- Capture first, redesign second. A baseline keeps the next step honest.
++- Separate reachable states from staged states. That distinction prevents false confidence during redesign.
++- Curated study boards are more useful than raw screenshots alone because they compress comparison time for the team.
++
++# 3 pull quotes
++
++- "Before redesign, freeze the current system so the team is arguing about reality, not memory."
++- "A baseline atlas turns UI discomfort into named, comparable evidence."
++- "The goal of step zero is not prettier screens. It is a better understanding of the screens you already have."
++
++# Suggested screenshots
++
++- `screenshots/after/mobile-baseline-atlas-board.png`
++- `screenshots/after/navigation-map-board.png`
++- `screenshots/after/mobile-hud-callout-board.png`
++- `screenshots/before/mobile-04-town.png`
++- `screenshots/before/mobile-13-run-menu.png`
+warning: in the working copy of 'artifacts\menu-redesign-series\step-00-baseline-menu-atlas\changes.md', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\changes.md" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\changes.md"
+new file mode 100644
+index 0000000..a7bc309
+--- /dev/null
++++ "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\changes.md"
+@@ -0,0 +1,15 @@
++# Changes
++
++This step is baseline-first. No production gameplay or UI code was changed to redesign the interface.
++
++Tiny non-production adjustments made only to reach screens:
++
++- Added a step-local Playwright capture script in `data/capture-menu-atlas.mjs`.
++- Added a step-local board renderer in `data/render-atlas-boards.mjs`.
++- Used the live runtime `showSaveSlotsModal()` route to expose the empty save-state screen because the title-screen load button is disabled with no saves.
++- Used live town-service openers to capture bank, provisioner, armory, guild, temple, sage, and junk-shop surfaces without manually walking each door for every viewport.
++- Seeded representative known spells for the `Magic` capture so the spells surface was populated.
++- Staged `Level Up Perk` and `Spell Study` by adjusting live runtime progression state.
++- Forced a live `Fallen` recap by setting death context and calling the game death flow.
++
++All of those adjustments were capture-only and stayed inside this artifact step.
+warning: in the working copy of 'artifacts\menu-redesign-series\step-00-baseline-menu-atlas\comparison.md', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\comparison.md" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\comparison.md"
+new file mode 100644
+index 0000000..aa33508
+--- /dev/null
++++ "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\comparison.md"
+@@ -0,0 +1,16 @@
++# Comparison
++
++The raw baseline captures are necessary, but they are not efficient to study in sequence. The after-side artifacts add structure, ordering, and annotation so a reviewer can compare the system as a whole instead of opening dozens of PNGs one by one.
++
++What the organized after artifacts add:
++
++- `screenshots/after/mobile-baseline-atlas-board.png` turns the most important phone-sized captures into a single contact sheet with stable labels and route notes.
++- `screenshots/after/desktop-baseline-atlas-board.png` creates the same study view for desktop so responsive differences are visible at a glance.
++- `screenshots/after/navigation-map-board.png` converts the baseline into a flow narrative, which helps distinguish entry, town loop, run utility, progression, and fail-state surfaces.
++- `screenshots/after/mobile-hud-callout-board.png` annotates one representative HUD frame so the relationship between board, minimap, stat stack, feed, and controls becomes explicit.
++
++Compared with the raw screenshots, the after-side artifacts reduce three kinds of friction:
++
++- Discovery friction: reviewers no longer need to remember filenames or open each state manually.
++- Interpretation friction: the boards make naming, grouping, and route context visible.
++- Publishing friction: the boards can be dropped into docs, discussions, and blog drafts without additional layout work.
+warning: in the working copy of 'artifacts\menu-redesign-series\step-00-baseline-menu-atlas\data\after-board-outputs.json', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\data\\after-board-outputs.json" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\data\\after-board-outputs.json"
+new file mode 100644
+index 0000000..8ed3cc5
+--- /dev/null
++++ "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\data\\after-board-outputs.json"
+@@ -0,0 +1,8 @@
++{
++  "outputs": [
++    "screenshots/after/mobile-baseline-atlas-board.png",
++    "screenshots/after/desktop-baseline-atlas-board.png",
++    "screenshots/after/navigation-map-board.png",
++    "screenshots/after/mobile-hud-callout-board.png"
++  ]
++}
+warning: in the working copy of 'artifacts\menu-redesign-series\step-00-baseline-menu-atlas\data\capture-menu-atlas.mjs', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\data\\capture-menu-atlas.mjs" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\data\\capture-menu-atlas.mjs"
+new file mode 100644
+index 0000000..32d7b02
+--- /dev/null
++++ "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\data\\capture-menu-atlas.mjs"
+@@ -0,0 +1,344 @@
++import { mkdir, readFile, writeFile } from "node:fs/promises";
++import http from "node:http";
++import path from "node:path";
++import { chromium } from "playwright";
++
++const ROOT = process.cwd();
++const STEP_ROOT = path.join(ROOT, "artifacts", "menu-redesign-series", "step-00-baseline-menu-atlas");
++const BEFORE_DIR = path.join(STEP_ROOT, "screenshots", "before");
++const DATA_DIR = path.join(STEP_ROOT, "data");
++const PORT = 4310;
++
++const MIME_TYPES = {
++  ".css": "text/css; charset=utf-8",
++  ".html": "text/html; charset=utf-8",
++  ".jpeg": "image/jpeg",
++  ".jpg": "image/jpeg",
++  ".js": "text/javascript; charset=utf-8",
++  ".json": "application/json; charset=utf-8",
++  ".mjs": "text/javascript; charset=utf-8",
++  ".png": "image/png",
++  ".svg": "image/svg+xml; charset=utf-8",
++  ".webmanifest": "application/manifest+json; charset=utf-8"
++};
++
++const VIEWPORTS = [
++  { key: "mobile", width: 430, height: 932, deviceScaleFactor: 2 },
++  { key: "desktop", width: 1440, height: 1200, deviceScaleFactor: 1 }
++];
++
++const SCREENS = [
++  ["title", "Title screen", "Fresh page load with no interaction.", "Baseline for first-impression composition, hierarchy, and call-to-action prominence."],
++  ["load-empty", "Load screen empty state", "From title screen, open the load flow with no prior save data.", "Documents the first empty-state branch a player can hit before starting a run."],
++  ["creation", "Character creation", "From title screen, open New Adventurer without altering the draft first.", "Captures the first high-density decision screen before play begins."],
++  ["town", "Town overview", "Begin a new run from the creation screen and allow the town state to settle.", "Shows the first in-world HUD state, advisor language, ticker placement, and top-level navigation load."],
++  ["bank", "Town service: Bank", "From town, open the bank service modal through the live runtime.", "Captures persistence and progression framing inside the town loop."],
++  ["provisioner", "Town service: Provisioner", "From town, open the general store service modal through the live runtime.", "Documents the consumables and supplies shopping surface."],
++  ["armory", "Town service: Armory", "From town, open the armory service modal through the live runtime.", "Captures equipment shopping density and comparison layout."],
++  ["guild", "Town service: Wizard's Guild", "From town, open the guild service modal through the live runtime.", "Captures a text-heavy town service with magical inventory and training cues."],
++  ["temple", "Town service: Temple", "From town, open the temple service modal through the live runtime.", "Documents the restorative service layout and spiritual support framing."],
++  ["sage", "Town service: Sage's Tower", "From town, open the sage service modal through the live runtime.", "Captures the identification and information-driven service screen."],
++  ["junk", "Town service: Junk Shop", "From town, open the junk shop service modal through the live runtime.", "Captures the lower-prestige sell loop and secondary economy surface."],
++  ["dungeon-hud", "First in-run HUD state", "From town, move directly to the down stairs and descend once into the first dungeon floor.", "Establishes the baseline dungeon HUD balance before any redesign discussion."],
++  ["run-menu", "Run menu", "From the first dungeon floor, open the utility menu modal.", "Documents the primary utility stack and its action density mid-run."],
++  ["pack", "Inventory and equipment", "From the first dungeon floor, open the pack hub modal.", "Captures the pack and equipment hub in a reachable early-run state."],
++  ["magic", "Magic and spells", "From the first dungeon floor, add representative spells to the live run state and open the magic hub modal.", "Documents the spell management surface with minimal staging so the screen is populated."],
++  ["journal", "Journal", "From the first dungeon floor, open the journal hub modal.", "Shows how guidance, goals, and persistent documentation are surfaced."],
++  ["settings", "Settings", "From the first dungeon floor, open the settings modal.", "Captures the systems-level configuration screen in the same baseline pass."],
++  ["help", "Help", "From the first dungeon floor, open the help modal.", "Shows how onboarding and reference information are presented after the title screen."],
++  ["character", "Character sheet", "From the first dungeon floor, open the character sheet modal.", "Captures the mid-run stats and progression readout separate from inventory and journal."],
++  ["briefing", "Briefing", "From the first dungeon floor, open the briefing modal.", "Documents the advisor and mission framing surface that sits outside the journal."],
++  ["level-up", "Level up perk choice", "From the first dungeon floor, stage enough experience for a level up and trigger the live progression modal.", "Captures a progression-only modal that does not appear in the town or utility loop."],
++  ["spell-study", "Spell study", "From the first dungeon floor, stage a spell-learning choice and trigger the live progression modal.", "Documents the follow-on progression surface for learning spells."],
++  ["death", "Death recap", "From the first dungeon floor, force a run death through the live game flow with staging-only context.", "Captures the fail-state messaging and recovery framing."]
++];
++
++function getMimeType(filePath) {
++  return MIME_TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream";
++}
++
++async function createStaticServer(rootDir) {
++  const server = http.createServer(async (request, response) => {
++    try {
++      const requestPath = new URL(request.url, "http://127.0.0.1").pathname;
++      const relativePath = requestPath === "/" ? "index.html" : decodeURIComponent(requestPath.replace(/^\/+/, ""));
++      const resolvedPath = path.resolve(rootDir, relativePath);
++      const relativeFromRoot = path.relative(rootDir, resolvedPath);
++
++      if (relativeFromRoot.startsWith("..") || path.isAbsolute(relativeFromRoot)) {
++        response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
++        response.end("Forbidden");
++        return;
++      }
++
++      const body = await readFile(resolvedPath);
++      response.writeHead(200, { "Content-Type": getMimeType(resolvedPath) });
++      response.end(body);
++    } catch (error) {
++      response.writeHead(error && error.code === "ENOENT" ? 404 : 500, { "Content-Type": "text/plain; charset=utf-8" });
++      response.end(error && error.code === "ENOENT" ? "Not found" : "Server error");
++    }
++  });
++
++  await new Promise((resolve, reject) => {
++    server.once("error", reject);
++    server.listen(PORT, "127.0.0.1", () => resolve());
++  });
++
++  return server;
++}
++
++async function loadTitle(page) {
++  await page.goto(`http://127.0.0.1:${PORT}/index.html`, { waitUntil: "networkidle" });
++  await page.waitForFunction(() => Boolean(window.castleOfTheWindsWeb));
++  await page.waitForTimeout(400);
++}
++
++async function startRun(page) {
++  await loadTitle(page);
++  await page.click('[data-action="new-game"]');
++  await page.waitForSelector('[data-action="begin-adventure"]');
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    game.selectedRace = "dwarf";
++    game.selectedClass = "fighter";
++    game.creationName = "Atlas";
++    game.creationStatBonuses = { str: 2, dex: 0, con: 4, int: 0 };
++    game.render();
++  });
++  await page.click('[data-action="begin-adventure"]');
++  await page.waitForFunction(() => {
++    const game = window.castleOfTheWindsWeb;
++    return game?.mode === "game" || game?.mode === "modal";
++  });
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    if (game.mode === "modal") {
++      game.closeModal();
++    }
++    game.render();
++  });
++  await page.waitForTimeout(400);
++}
++
++async function enterDungeon(page) {
++  await startRun(page);
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    game.placePlayerAt(game.currentLevel.stairsDown.x, game.currentLevel.stairsDown.y);
++    game.useStairs("down");
++    if (game.mode === "modal") {
++      game.closeModal();
++    }
++    game.render();
++  });
++  await page.waitForTimeout(500);
++}
++
++async function stageScreen(page, id) {
++  if (id === "title") {
++    await loadTitle(page);
++    return;
++  }
++  if (id === "load-empty") {
++    await loadTitle(page);
++    await page.evaluate(() => window.castleOfTheWindsWeb.showSaveSlotsModal());
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (id === "creation") {
++    await loadTitle(page);
++    await page.click('[data-action="new-game"]');
++    await page.waitForSelector('[data-action="begin-adventure"]');
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (["town", "bank", "provisioner", "armory", "guild", "temple", "sage", "junk"].includes(id)) {
++    await startRun(page);
++    if (id !== "town") {
++      const map = {
++        bank: "bank",
++        provisioner: "general",
++        armory: "armory",
++        guild: "guild",
++        temple: "temple",
++        sage: "sage",
++        junk: "junk"
++      };
++      await page.evaluate((serviceId) => window.castleOfTheWindsWeb.openTownService(serviceId), map[id]);
++      await page.waitForTimeout(250);
++    }
++    return;
++  }
++  await enterDungeon(page);
++  if (id === "run-menu") {
++    await page.click('[data-action="open-utility-menu"]');
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (id === "pack") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showHubModal("pack"));
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (id === "magic") {
++    await page.evaluate(() => {
++      const game = window.castleOfTheWindsWeb;
++      game.player.spellsKnown = Array.from(new Set([...(game.player.spellsKnown || []), "magicMissile", "healMinor", "identify"]));
++      game.render();
++      game.showHubModal("magic");
++    });
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (id === "journal") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showHubModal("journal"));
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (id === "settings") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showSettingsModal());
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (id === "help") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showHelpModal());
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (id === "character") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showCharacterSheet());
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (id === "briefing") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showBriefingModal());
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (id === "level-up") {
++    await page.evaluate(() => {
++      const game = window.castleOfTheWindsWeb;
++      game.player.exp = game.player.nextLevelExp;
++      game.checkLevelUp();
++    });
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (id === "spell-study") {
++    await page.evaluate(() => {
++      const game = window.castleOfTheWindsWeb;
++      game.pendingPerkChoices = 0;
++      game.pendingRewardQueue = [];
++      game.pendingSpellChoices = 1;
++      game.showNextProgressionModal();
++    });
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (id === "death") {
++    await page.evaluate(() => {
++      const game = window.castleOfTheWindsWeb;
++      game.deathContext = {
++        cause: "Atlas staging",
++        lastHitBy: "Atlas staging",
++        dangerLevel: game.currentLevel?.dangerLevel || "Low"
++      };
++      game.player.hp = 0;
++      game.handleDeath();
++    });
++    await page.waitForTimeout(250);
++  }
++}
++
++async function collectState(page) {
++  return await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    return {
++      mode: game?.mode || "",
++      depth: game?.currentDepth ?? null,
++      levelKind: game?.currentLevel?.kind || null,
++      modalTitle: document.querySelector(".modal-title")?.textContent?.trim() || null,
++      advisor: document.getElementById("advisor-strip")?.innerText?.trim() || "",
++      ticker: Array.from(document.querySelectorAll("#event-ticker .event-ticker-text"))
++        .slice(0, 3)
++        .map((entry) => entry.textContent?.trim() || "")
++        .filter(Boolean)
++    };
++  });
++}
++
++function filenameFor(viewportKey, order, id) {
++  return `${viewportKey}-${String(order).padStart(2, "0")}-${id}.png`;
++}
++
++async function captureViewport(browser, viewport) {
++  const page = await browser.newPage({
++    viewport: { width: viewport.width, height: viewport.height },
++    deviceScaleFactor: viewport.deviceScaleFactor
++  });
++
++  const rows = [];
++  try {
++    for (const [index, screen] of SCREENS.entries()) {
++      const [id, screenName, howReached, whyCaptured] = screen;
++      const order = index + 1;
++      await stageScreen(page, id);
++      const filename = filenameFor(viewport.key, order, id);
++      const fullPath = path.join(BEFORE_DIR, filename);
++      await page.screenshot({ path: fullPath, fullPage: true });
++      const state = await collectState(page);
++      rows.push({
++        filename,
++        path: fullPath,
++        viewport: `${viewport.width}x${viewport.height}`,
++        viewportClass: viewport.key,
++        screenName,
++        howReached,
++        whyCaptured,
++        beforeAfter: "before",
++        modalTitle: state.modalTitle,
++        mode: state.mode,
++        depth: state.depth,
++        levelKind: state.levelKind,
++        advisor: state.advisor,
++        ticker: state.ticker
++      });
++    }
++  } finally {
++    await page.close();
++  }
++  return rows;
++}
++
++async function main() {
++  await mkdir(BEFORE_DIR, { recursive: true });
++  await mkdir(DATA_DIR, { recursive: true });
++
++  const server = await createStaticServer(ROOT);
++  let browser = null;
++
++  try {
++    browser = await chromium.launch({ headless: true });
++    const captures = [];
++    for (const viewport of VIEWPORTS) {
++      captures.push(...await captureViewport(browser, viewport));
++    }
++    const payload = {
++      generatedAt: new Date().toISOString(),
++      captures
++    };
++    await writeFile(path.join(DATA_DIR, "capture-results.json"), `${JSON.stringify(payload, null, 2)}\n`, "utf8");
++    console.log(path.join(DATA_DIR, "capture-results.json"));
++  } finally {
++    if (browser) {
++      await browser.close();
++    }
++    await new Promise((resolve) => server.close(resolve));
++  }
++}
++
++main().catch((error) => {
++  console.error(error);
++  process.exit(1);
++});
+warning: in the working copy of 'artifacts\menu-redesign-series\step-00-baseline-menu-atlas\data\capture-results.json', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\data\\capture-results.json" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\data\\capture-results.json"
+new file mode 100644
+index 0000000..d105f14
+--- /dev/null
++++ "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\data\\capture-results.json"
+@@ -0,0 +1,913 @@
++{
++  "generatedAt": "2026-04-07T00:28:20.938Z",
++  "captures": [
++    {
++      "filename": "mobile-01-title.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-01-title.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Title screen",
++      "howReached": "Fresh page load with no interaction.",
++      "whyCaptured": "Baseline for first-impression composition, hierarchy, and call-to-action prominence.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "title",
++      "depth": 0,
++      "levelKind": null,
++      "advisor": "",
++      "ticker": [
++        "Create a character to begin."
++      ]
++    },
++    {
++      "filename": "mobile-02-load-empty.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-02-load-empty.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Load screen empty state",
++      "howReached": "From title screen, open the load flow with no prior save data.",
++      "whyCaptured": "Documents the first empty-state branch a player can hit before starting a run.",
++      "beforeAfter": "before",
++      "modalTitle": "Continue Run",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": null,
++      "advisor": "",
++      "ticker": [
++        "Create a character to begin."
++      ]
++    },
++    {
++      "filename": "mobile-03-creation.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-03-creation.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Character creation",
++      "howReached": "From title screen, open New Adventurer without altering the draft first.",
++      "whyCaptured": "Captures the first high-density decision screen before play begins.",
++      "beforeAfter": "before",
++      "modalTitle": "Create Adventurer",
++      "mode": "creation",
++      "depth": 0,
++      "levelKind": null,
++      "advisor": "",
++      "ticker": [
++        "Create a character to begin."
++      ]
++    },
++    {
++      "filename": "mobile-04-town.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-04-town.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Town overview",
++      "howReached": "Begin a new run from the creation screen and allow the town state to settle.",
++      "whyCaptured": "Shows the first in-world HUD state, advisor language, ticker placement, and top-level navigation load.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "mobile-05-bank.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-05-bank.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Town service: Bank",
++      "howReached": "From town, open the bank service modal through the live runtime.",
++      "whyCaptured": "Captures persistence and progression framing inside the town loop.",
++      "beforeAfter": "before",
++      "modalTitle": "Bank",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "mobile-06-provisioner.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-06-provisioner.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Town service: Provisioner",
++      "howReached": "From town, open the general store service modal through the live runtime.",
++      "whyCaptured": "Documents the consumables and supplies shopping surface.",
++      "beforeAfter": "before",
++      "modalTitle": "Provisioner",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "mobile-07-armory.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-07-armory.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Town service: Armory",
++      "howReached": "From town, open the armory service modal through the live runtime.",
++      "whyCaptured": "Captures equipment shopping density and comparison layout.",
++      "beforeAfter": "before",
++      "modalTitle": "Armory",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "mobile-08-guild.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-08-guild.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Town service: Wizard's Guild",
++      "howReached": "From town, open the guild service modal through the live runtime.",
++      "whyCaptured": "Captures a text-heavy town service with magical inventory and training cues.",
++      "beforeAfter": "before",
++      "modalTitle": "Wizard's Guild",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "mobile-09-temple.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-09-temple.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Town service: Temple",
++      "howReached": "From town, open the temple service modal through the live runtime.",
++      "whyCaptured": "Documents the restorative service layout and spiritual support framing.",
++      "beforeAfter": "before",
++      "modalTitle": "Temple",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "mobile-10-sage.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-10-sage.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Town service: Sage's Tower",
++      "howReached": "From town, open the sage service modal through the live runtime.",
++      "whyCaptured": "Captures the identification and information-driven service screen.",
++      "beforeAfter": "before",
++      "modalTitle": "Sage's Tower",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "mobile-11-junk.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-11-junk.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Town service: Junk Shop",
++      "howReached": "From town, open the junk shop service modal through the live runtime.",
++      "whyCaptured": "Captures the lower-prestige sell loop and secondary economy surface.",
++      "beforeAfter": "before",
++      "modalTitle": "Junk Shop",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "mobile-12-dungeon-hud.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-12-dungeon-hud.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "First in-run HUD state",
++      "howReached": "From town, move directly to the down stairs and descend once into the first dungeon floor.",
++      "whyCaptured": "Establishes the baseline dungeon HUD balance before any redesign discussion.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Seal The Shrine: 2 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "mobile-13-run-menu.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-13-run-menu.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Run menu",
++      "howReached": "From the first dungeon floor, open the utility menu modal.",
++      "whyCaptured": "Documents the primary utility stack and its action density mid-run.",
++      "beforeAfter": "before",
++      "modalTitle": "Run Menu",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Rescue The Captive: 4 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "mobile-14-pack.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-14-pack.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Inventory and equipment",
++      "howReached": "From the first dungeon floor, open the pack hub modal.",
++      "whyCaptured": "Captures the pack and equipment hub in a reachable early-run state.",
++      "beforeAfter": "before",
++      "modalTitle": "Pack & Equipment",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Seal The Shrine: 2 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "mobile-15-magic.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-15-magic.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Magic and spells",
++      "howReached": "From the first dungeon floor, add representative spells to the live run state and open the magic hub modal.",
++      "whyCaptured": "Documents the spell management surface with minimal staging so the screen is populated.",
++      "beforeAfter": "before",
++      "modalTitle": "Magic",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Move: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Purge The Nest: 2 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "mobile-16-journal.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-16-journal.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Journal",
++      "howReached": "From the first dungeon floor, open the journal hub modal.",
++      "whyCaptured": "Shows how guidance, goals, and persistent documentation are surfaced.",
++      "beforeAfter": "before",
++      "modalTitle": "Journal",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Move: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Rescue The Captive: 2 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "mobile-17-settings.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-17-settings.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Settings",
++      "howReached": "From the first dungeon floor, open the settings modal.",
++      "whyCaptured": "Captures the systems-level configuration screen in the same baseline pass.",
++      "beforeAfter": "before",
++      "modalTitle": "Settings",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Move: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Rescue The Captive: 2 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "mobile-18-help.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-18-help.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Help",
++      "howReached": "From the first dungeon floor, open the help modal.",
++      "whyCaptured": "Shows how onboarding and reference information are presented after the title screen.",
++      "beforeAfter": "before",
++      "modalTitle": "Help",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Move: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Rescue The Captive: 4 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "mobile-19-character.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-19-character.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Character sheet",
++      "howReached": "From the first dungeon floor, open the character sheet modal.",
++      "whyCaptured": "Captures the mid-run stats and progression readout separate from inventory and journal.",
++      "beforeAfter": "before",
++      "modalTitle": "Character Sheet",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Purge The Nest: 2 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "mobile-20-briefing.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-20-briefing.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Briefing",
++      "howReached": "From the first dungeon floor, open the briefing modal.",
++      "whyCaptured": "Documents the advisor and mission framing surface that sits outside the journal.",
++      "beforeAfter": "before",
++      "modalTitle": "Briefing",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Purge The Nest: 3 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "mobile-21-level-up.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-21-level-up.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Level up perk choice",
++      "howReached": "From the first dungeon floor, stage enough experience for a level up and trigger the live progression modal.",
++      "whyCaptured": "Captures a progression-only modal that does not appear in the town or utility loop.",
++      "beforeAfter": "before",
++      "modalTitle": "Level Up Perk",
++      "mode": "levelup",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Seal The Shrine: 1 guard remain in the objective room."
++      ]
++    },
++    {
++      "filename": "mobile-22-spell-study.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-22-spell-study.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Spell study",
++      "howReached": "From the first dungeon floor, stage a spell-learning choice and trigger the live progression modal.",
++      "whyCaptured": "Documents the follow-on progression surface for learning spells.",
++      "beforeAfter": "before",
++      "modalTitle": "Spell Study",
++      "mode": "levelup",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Rescue The Captive: 2 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "mobile-23-death.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-23-death.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "screenName": "Death recap",
++      "howReached": "From the first dungeon floor, force a run death through the live game flow with staging-only context.",
++      "whyCaptured": "Captures the fail-state messaging and recovery framing.",
++      "beforeAfter": "before",
++      "modalTitle": "Fallen",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Recover The Relic: 2 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "desktop-01-title.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-01-title.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Title screen",
++      "howReached": "Fresh page load with no interaction.",
++      "whyCaptured": "Baseline for first-impression composition, hierarchy, and call-to-action prominence.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "title",
++      "depth": 0,
++      "levelKind": null,
++      "advisor": "",
++      "ticker": [
++        "Create a character to begin."
++      ]
++    },
++    {
++      "filename": "desktop-02-load-empty.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-02-load-empty.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Load screen empty state",
++      "howReached": "From title screen, open the load flow with no prior save data.",
++      "whyCaptured": "Documents the first empty-state branch a player can hit before starting a run.",
++      "beforeAfter": "before",
++      "modalTitle": "Continue Run",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": null,
++      "advisor": "",
++      "ticker": [
++        "Create a character to begin."
++      ]
++    },
++    {
++      "filename": "desktop-03-creation.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-03-creation.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Character creation",
++      "howReached": "From title screen, open New Adventurer without altering the draft first.",
++      "whyCaptured": "Captures the first high-density decision screen before play begins.",
++      "beforeAfter": "before",
++      "modalTitle": "Create Adventurer",
++      "mode": "creation",
++      "depth": 0,
++      "levelKind": null,
++      "advisor": "",
++      "ticker": [
++        "Create a character to begin."
++      ]
++    },
++    {
++      "filename": "desktop-04-town.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-04-town.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Town overview",
++      "howReached": "Begin a new run from the creation screen and allow the town state to settle.",
++      "whyCaptured": "Shows the first in-world HUD state, advisor language, ticker placement, and top-level navigation load.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "desktop-05-bank.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-05-bank.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Town service: Bank",
++      "howReached": "From town, open the bank service modal through the live runtime.",
++      "whyCaptured": "Captures persistence and progression framing inside the town loop.",
++      "beforeAfter": "before",
++      "modalTitle": "Bank",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "desktop-06-provisioner.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-06-provisioner.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Town service: Provisioner",
++      "howReached": "From town, open the general store service modal through the live runtime.",
++      "whyCaptured": "Documents the consumables and supplies shopping surface.",
++      "beforeAfter": "before",
++      "modalTitle": "Provisioner",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "desktop-07-armory.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-07-armory.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Town service: Armory",
++      "howReached": "From town, open the armory service modal through the live runtime.",
++      "whyCaptured": "Captures equipment shopping density and comparison layout.",
++      "beforeAfter": "before",
++      "modalTitle": "Armory",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "desktop-08-guild.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-08-guild.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Town service: Wizard's Guild",
++      "howReached": "From town, open the guild service modal through the live runtime.",
++      "whyCaptured": "Captures a text-heavy town service with magical inventory and training cues.",
++      "beforeAfter": "before",
++      "modalTitle": "Wizard's Guild",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "desktop-09-temple.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-09-temple.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Town service: Temple",
++      "howReached": "From town, open the temple service modal through the live runtime.",
++      "whyCaptured": "Documents the restorative service layout and spiritual support framing.",
++      "beforeAfter": "before",
++      "modalTitle": "Temple",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "desktop-10-sage.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-10-sage.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Town service: Sage's Tower",
++      "howReached": "From town, open the sage service modal through the live runtime.",
++      "whyCaptured": "Captures the identification and information-driven service screen.",
++      "beforeAfter": "before",
++      "modalTitle": "Sage's Tower",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "desktop-11-junk.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-11-junk.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Town service: Junk Shop",
++      "howReached": "From town, open the junk shop service modal through the live runtime.",
++      "whyCaptured": "Captures the lower-prestige sell loop and secondary economy surface.",
++      "beforeAfter": "before",
++      "modalTitle": "Junk Shop",
++      "mode": "modal",
++      "depth": 0,
++      "levelKind": "town",
++      "advisor": "",
++      "ticker": [
++        "Town Door: Open one town door to see what town can do.",
++        "Town is quiet.",
++        "Open any labeled town door once. Then return to the north road."
++      ]
++    },
++    {
++      "filename": "desktop-12-dungeon-hud.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-12-dungeon-hud.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "First in-run HUD state",
++      "howReached": "From town, move directly to the down stairs and descend once into the first dungeon floor.",
++      "whyCaptured": "Establishes the baseline dungeon HUD balance before any redesign discussion.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Rescue The Captive: 3 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "desktop-13-run-menu.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-13-run-menu.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Run menu",
++      "howReached": "From the first dungeon floor, open the utility menu modal.",
++      "whyCaptured": "Documents the primary utility stack and its action density mid-run.",
++      "beforeAfter": "before",
++      "modalTitle": "Run Menu",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Seal The Shrine: 1 guard remain in the objective room."
++      ]
++    },
++    {
++      "filename": "desktop-14-pack.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-14-pack.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Inventory and equipment",
++      "howReached": "From the first dungeon floor, open the pack hub modal.",
++      "whyCaptured": "Captures the pack and equipment hub in a reachable early-run state.",
++      "beforeAfter": "before",
++      "modalTitle": "Pack & Equipment",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Purge The Nest: 4 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "desktop-15-magic.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-15-magic.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Magic and spells",
++      "howReached": "From the first dungeon floor, add representative spells to the live run state and open the magic hub modal.",
++      "whyCaptured": "Documents the spell management surface with minimal staging so the screen is populated.",
++      "beforeAfter": "before",
++      "modalTitle": "Magic",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Purge The Nest: 2 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "desktop-16-journal.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-16-journal.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Journal",
++      "howReached": "From the first dungeon floor, open the journal hub modal.",
++      "whyCaptured": "Shows how guidance, goals, and persistent documentation are surfaced.",
++      "beforeAfter": "before",
++      "modalTitle": "Journal",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Rescue The Captive: 2 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "desktop-17-settings.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-17-settings.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Settings",
++      "howReached": "From the first dungeon floor, open the settings modal.",
++      "whyCaptured": "Captures the systems-level configuration screen in the same baseline pass.",
++      "beforeAfter": "before",
++      "modalTitle": "Settings",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Rescue The Captive: 3 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "desktop-18-help.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-18-help.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Help",
++      "howReached": "From the first dungeon floor, open the help modal.",
++      "whyCaptured": "Shows how onboarding and reference information are presented after the title screen.",
++      "beforeAfter": "before",
++      "modalTitle": "Help",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Recover The Relic: 1 guard remain in the objective room."
++      ]
++    },
++    {
++      "filename": "desktop-19-character.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-19-character.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Character sheet",
++      "howReached": "From the first dungeon floor, open the character sheet modal.",
++      "whyCaptured": "Captures the mid-run stats and progression readout separate from inventory and journal.",
++      "beforeAfter": "before",
++      "modalTitle": "Character Sheet",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Recover The Relic: 1 guard remain in the objective room."
++      ]
++    },
++    {
++      "filename": "desktop-20-briefing.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-20-briefing.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Briefing",
++      "howReached": "From the first dungeon floor, open the briefing modal.",
++      "whyCaptured": "Documents the advisor and mission framing surface that sits outside the journal.",
++      "beforeAfter": "before",
++      "modalTitle": "Briefing",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Rescue The Captive: 4 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "desktop-21-level-up.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-21-level-up.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Level up perk choice",
++      "howReached": "From the first dungeon floor, stage enough experience for a level up and trigger the live progression modal.",
++      "whyCaptured": "Captures a progression-only modal that does not appear in the town or utility loop.",
++      "beforeAfter": "before",
++      "modalTitle": "Level Up Perk",
++      "mode": "levelup",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Purge The Nest: 2 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "desktop-22-spell-study.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-22-spell-study.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Spell study",
++      "howReached": "From the first dungeon floor, stage a spell-learning choice and trigger the live progression modal.",
++      "whyCaptured": "Documents the follow-on progression surface for learning spells.",
++      "beforeAfter": "before",
++      "modalTitle": "Spell Study",
++      "mode": "levelup",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Recover The Relic: 2 guards remain in the objective room."
++      ]
++    },
++    {
++      "filename": "desktop-23-death.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-23-death.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "screenName": "Death recap",
++      "howReached": "From the first dungeon floor, force a run death through the live game flow with staging-only context.",
++      "whyCaptured": "Captures the fail-state messaging and recovery framing.",
++      "beforeAfter": "before",
++      "modalTitle": "Fallen",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon",
++      "advisor": "",
++      "ticker": [
++        "Search: The first route segment is safe enough to read.",
++        "Quiet for now. The floor is readable, but it will not stay that way.",
++        "Purge The Nest: 3 guards remain in the objective room."
++      ]
++    }
++  ]
++}
+warning: in the working copy of 'artifacts\menu-redesign-series\step-00-baseline-menu-atlas\data\render-atlas-boards.mjs', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\data\\render-atlas-boards.mjs" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\data\\render-atlas-boards.mjs"
+new file mode 100644
+index 0000000..2ca7ddc
+--- /dev/null
++++ "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\data\\render-atlas-boards.mjs"
+@@ -0,0 +1,491 @@
++import { readFile, writeFile } from "node:fs/promises";
++import http from "node:http";
++import path from "node:path";
++import { chromium } from "playwright";
++
++const ROOT = process.cwd();
++const STEP_ROOT = path.join(ROOT, "artifacts", "menu-redesign-series", "step-00-baseline-menu-atlas");
++const DATA_DIR = path.join(STEP_ROOT, "data");
++const AFTER_DIR = path.join(STEP_ROOT, "screenshots", "after");
++const PORT = 4311;
++
++const MIME_TYPES = {
++  ".css": "text/css; charset=utf-8",
++  ".html": "text/html; charset=utf-8",
++  ".jpeg": "image/jpeg",
++  ".jpg": "image/jpeg",
++  ".js": "text/javascript; charset=utf-8",
++  ".json": "application/json; charset=utf-8",
++  ".mjs": "text/javascript; charset=utf-8",
++  ".png": "image/png",
++  ".svg": "image/svg+xml; charset=utf-8",
++  ".webmanifest": "application/manifest+json; charset=utf-8"
++};
++
++function escapeHtml(value = "") {
++  return String(value)
++    .replaceAll("&", "&amp;")
++    .replaceAll("<", "&lt;")
++    .replaceAll(">", "&gt;")
++    .replaceAll('"', "&quot;");
++}
++
++function getMimeType(filePath) {
++  return MIME_TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream";
++}
++
++async function createStaticServer(rootDir) {
++  const server = http.createServer(async (request, response) => {
++    try {
++      const requestPath = new URL(request.url, "http://127.0.0.1").pathname;
++      const relativePath = requestPath === "/" ? "index.html" : decodeURIComponent(requestPath.replace(/^\/+/, ""));
++      const resolvedPath = path.resolve(rootDir, relativePath);
++      const relativeFromRoot = path.relative(rootDir, resolvedPath);
++
++      if (relativeFromRoot.startsWith("..") || path.isAbsolute(relativeFromRoot)) {
++        response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
++        response.end("Forbidden");
++        return;
++      }
++
++      const body = await readFile(resolvedPath);
++      response.writeHead(200, { "Content-Type": getMimeType(resolvedPath) });
++      response.end(body);
++    } catch (error) {
++      response.writeHead(error && error.code === "ENOENT" ? 404 : 500, { "Content-Type": "text/plain; charset=utf-8" });
++      response.end(error && error.code === "ENOENT" ? "Not found" : "Server error");
++    }
++  });
++
++  await new Promise((resolve, reject) => {
++    server.once("error", reject);
++    server.listen(PORT, "127.0.0.1", () => resolve());
++  });
++
++  return server;
++}
++
++function css() {
++  return `
++    :root {
++      --bg: #f3ecdf;
++      --ink: #221a14;
++      --muted: #685b50;
++      --card: #fff9f0;
++      --line: #d8c5af;
++      --accent: #9b542d;
++      --shadow: rgba(67, 39, 20, 0.14);
++      --head: Georgia, "Times New Roman", serif;
++      --body: "Segoe UI", Arial, sans-serif;
++    }
++    * { box-sizing: border-box; }
++    body {
++      margin: 0;
++      color: var(--ink);
++      font-family: var(--body);
++      background:
++        radial-gradient(circle at top left, rgba(223, 191, 154, 0.45), transparent 32%),
++        linear-gradient(180deg, #f8f2ea 0%, #ece0cf 100%);
++    }
++    .page {
++      width: 2200px;
++      min-height: 1500px;
++      padding: 56px;
++    }
++    .page.long {
++      min-height: 2100px;
++    }
++    .header {
++      display: grid;
++      grid-template-columns: 1.3fr 0.7fr;
++      gap: 24px;
++      margin-bottom: 28px;
++    }
++    .hero, .meta-card, .card, .flow-card {
++      background: rgba(255, 249, 240, 0.92);
++      border: 1px solid var(--line);
++      border-radius: 26px;
++      box-shadow: 0 18px 34px var(--shadow);
++    }
++    .hero {
++      padding: 30px 32px;
++    }
++    .kicker {
++      font-size: 14px;
++      letter-spacing: 0.12em;
++      text-transform: uppercase;
++      color: var(--accent);
++      font-weight: 700;
++      margin-bottom: 12px;
++    }
++    h1, h2, h3 {
++      font-family: var(--head);
++      margin: 0;
++    }
++    h1 {
++      font-size: 44px;
++      line-height: 1.05;
++      margin-bottom: 12px;
++    }
++    .lede {
++      margin: 0;
++      font-size: 21px;
++      line-height: 1.4;
++      color: var(--muted);
++    }
++    .meta {
++      display: grid;
++      gap: 14px;
++    }
++    .meta-card {
++      padding: 20px 22px;
++    }
++    .meta-card strong {
++      display: block;
++      font-size: 12px;
++      letter-spacing: 0.12em;
++      text-transform: uppercase;
++      color: var(--accent);
++      margin-bottom: 8px;
++    }
++    .meta-card p {
++      margin: 0;
++      font-size: 18px;
++      line-height: 1.45;
++    }
++    .grid {
++      display: grid;
++      grid-template-columns: repeat(4, minmax(0, 1fr));
++      gap: 20px;
++    }
++    .card {
++      overflow: hidden;
++    }
++    .card img {
++      display: block;
++      width: 100%;
++      height: auto;
++      background: #d5c7b2;
++    }
++    .card-body {
++      padding: 16px 18px 18px;
++    }
++    .eyebrow {
++      font-size: 12px;
++      letter-spacing: 0.12em;
++      text-transform: uppercase;
++      color: var(--accent);
++      margin-bottom: 7px;
++      font-weight: 700;
++    }
++    .card h3, .flow-card h3 {
++      font-size: 24px;
++      margin-bottom: 8px;
++    }
++    .card p, .flow-card p {
++      margin: 0;
++      font-size: 16px;
++      line-height: 1.45;
++      color: var(--muted);
++    }
++    .flow {
++      display: grid;
++      grid-template-columns: repeat(5, minmax(0, 1fr));
++      gap: 18px;
++      margin-top: 16px;
++    }
++    .flow-card {
++      padding: 18px;
++      min-height: 320px;
++      position: relative;
++    }
++    .flow-card::after {
++      content: "?";
++      position: absolute;
++      right: -15px;
++      top: 40px;
++      font-size: 40px;
++      color: var(--accent);
++    }
++    .flow-card:last-child::after {
++      content: "";
++    }
++    .flow-card img {
++      width: 100%;
++      display: block;
++      margin-top: 12px;
++      border-radius: 16px;
++      border: 1px solid var(--line);
++    }
++    .callout-stage {
++      position: relative;
++      width: 1600px;
++      margin: 0 auto;
++      padding-top: 12px;
++    }
++    .callout-stage img {
++      display: block;
++      width: 100%;
++      border-radius: 30px;
++      border: 1px solid var(--line);
++      box-shadow: 0 22px 42px var(--shadow);
++    }
++    .callout {
++      position: absolute;
++      max-width: 250px;
++      background: rgba(255, 249, 240, 0.98);
++      border: 2px solid var(--accent);
++      border-radius: 18px;
++      padding: 14px 16px;
++      box-shadow: 0 12px 24px rgba(92, 50, 27, 0.18);
++      font-size: 17px;
++      line-height: 1.35;
++    }
++    .callout strong {
++      display: block;
++      font-size: 13px;
++      letter-spacing: 0.1em;
++      text-transform: uppercase;
++      color: var(--accent);
++      margin-bottom: 6px;
++    }
++    .callout::after {
++      content: "";
++      position: absolute;
++      width: 2px;
++      background: var(--accent);
++      transform-origin: top left;
++    }
++    .callout.menu { top: 120px; left: 16px; }
++    .callout.menu::after { left: 214px; top: 80px; height: 120px; transform: rotate(68deg); }
++    .callout.hud { top: 56px; right: 16px; }
++    .callout.hud::after { left: 12px; top: 108px; height: 170px; transform: rotate(228deg); }
++    .callout.advisor { top: 364px; right: 70px; }
++    .callout.advisor::after { left: 10px; top: 104px; height: 150px; transform: rotate(224deg); }
++    .callout.ticker { top: 520px; left: 78px; }
++    .callout.ticker::after { left: 196px; top: 96px; height: 138px; transform: rotate(62deg); }
++    .callout.pad { bottom: 150px; left: 30px; }
++    .callout.pad::after { left: 220px; top: 92px; height: 140px; transform: rotate(42deg); }
++    .callout.actions { bottom: 188px; right: 30px; }
++    .callout.actions::after { left: 18px; top: 104px; height: 170px; transform: rotate(222deg); }
++  `;
++}
++
++function srcFor(relativePath) {
++  return `http://127.0.0.1:${PORT}/${relativePath.replaceAll("\\", "/")}`;
++}
++
++function boardPage({ title, summary, note, cards }) {
++  return `<!doctype html>
++  <html lang="en">
++    <head><meta charset="utf-8" /><title>${escapeHtml(title)}</title><style>${css()}</style></head>
++    <body>
++      <div class="page long">
++        <div class="header">
++          <section class="hero">
++            <div class="kicker">Step 00 Baseline Menu Atlas</div>
++            <h1>${escapeHtml(title)}</h1>
++            <p class="lede">${escapeHtml(summary)}</p>
++          </section>
++          <section class="meta">
++            <article class="meta-card">
++              <strong>What This Adds</strong>
++              <p>${escapeHtml(note)}</p>
++            </article>
++            <article class="meta-card">
++              <strong>Reading Order</strong>
++              <p>Left to right, top to bottom. Each card keeps the raw screenshot but adds a stable name and route note for analysis.</p>
++            </article>
++          </section>
++        </div>
++        <section class="grid">
++          ${cards.map((card) => `
++            <article class="card">
++              <img src="${escapeHtml(card.src)}" alt="${escapeHtml(card.title)}" />
++              <div class="card-body">
++                <div class="eyebrow">${escapeHtml(card.eyebrow)}</div>
++                <h3>${escapeHtml(card.title)}</h3>
++                <p>${escapeHtml(card.copy)}</p>
++              </div>
++            </article>
++          `).join("")}
++        </section>
++      </div>
++    </body>
++  </html>`;
++}
++
++function flowPage(cards) {
++  return `<!doctype html>
++  <html lang="en">
++    <head><meta charset="utf-8" /><title>Navigation Map</title><style>${css()}</style></head>
++    <body>
++      <div class="page">
++        <div class="header">
++          <section class="hero">
++            <div class="kicker">Step 00 Baseline Menu Atlas</div>
++            <h1>Baseline Navigation Map</h1>
++            <p class="lede">A visual route map from title entry to town, services, dungeon utility, and fail state, built from live Playwright captures.</p>
++          </section>
++          <section class="meta">
++            <article class="meta-card">
++              <strong>Observed Pattern</strong>
++              <p>Most informational surfaces share the same modal-sheet language. The player is asked to parse HUD, advisor, ticker, and modal content as separate but interdependent systems.</p>
++            </article>
++            <article class="meta-card">
++              <strong>Why This Matters</strong>
++              <p>Before redesign, the team needs to see where navigation is clear and where surface boundaries blur.</p>
++            </article>
++          </section>
++        </div>
++        <section class="flow">
++          ${cards.map((card) => `
++            <article class="flow-card">
++              <div class="eyebrow">${escapeHtml(card.eyebrow)}</div>
++              <h3>${escapeHtml(card.title)}</h3>
++              <p>${escapeHtml(card.copy)}</p>
++              <img src="${escapeHtml(card.src)}" alt="${escapeHtml(card.title)}" />
++            </article>
++          `).join("")}
++        </section>
++      </div>
++    </body>
++  </html>`;
++}
++
++function calloutPage(imageSrc) {
++  return `<!doctype html>
++  <html lang="en">
++    <head><meta charset="utf-8" /><title>HUD Callout Board</title><style>${css()}</style></head>
++    <body>
++      <div class="page">
++        <div class="header">
++          <section class="hero">
++            <div class="kicker">Step 00 Baseline Menu Atlas</div>
++            <h1>Mobile HUD Callout Board</h1>
++            <p class="lede">One annotated frame that makes the baseline layer split explicit: board, status, guidance, feed, movement, and context actions.</p>
++          </section>
++          <section class="meta">
++            <article class="meta-card">
++              <strong>Why Annotate</strong>
++              <p>The raw screenshot is realistic. The callout board makes information pressure visible at a glance.</p>
++            </article>
++            <article class="meta-card">
++              <strong>Main Tension</strong>
++              <p>The phone layout is feature-rich and usable, but it asks the player to juggle several surfaces at the same time.</p>
++            </article>
++          </section>
++        </div>
++        <div class="callout-stage">
++          <img src="${escapeHtml(imageSrc)}" alt="Mobile dungeon HUD" />
++          <div class="callout menu"><strong>Menu Entry</strong>Persistent access to the utility stack stays visible in the upper-left corner.</div>
++          <div class="callout hud"><strong>Status Strip</strong>Health, mana, gold, and depth are readable, but dense on a narrow screen.</div>
++          <div class="callout advisor"><strong>Advisor Band</strong>Guidance is prominent and helpful, yet competes with tactical reading.</div>
++          <div class="callout ticker"><strong>Live Feed</strong>Recent events stay visible, creating a second text band near the board centerline.</div>
++          <div class="callout pad"><strong>Movement Pad</strong>The touch cluster confirms the primary device target and takes a meaningful footprint.</div>
++          <div class="callout actions"><strong>Context Actions</strong>Pack, briefing, back, and interaction affordances remain permanently available.</div>
++        </div>
++      </div>
++    </body>
++  </html>`;
++}
++
++async function screenshotPage(browser, html, outputPath, viewport) {
++  const page = await browser.newPage({ viewport });
++  try {
++    await page.setContent(html, { waitUntil: "load" });
++    await page.waitForTimeout(400);
++    await page.screenshot({ path: outputPath, fullPage: true });
++  } finally {
++    await page.close();
++  }
++}
++
++async function main() {
++  const raw = await readFile(path.join(DATA_DIR, "capture-results.json"), "utf8");
++  const report = JSON.parse(raw);
++  const mobile = report.captures.filter((entry) => entry.viewportClass === "mobile");
++  const desktop = report.captures.filter((entry) => entry.viewportClass === "desktop");
++
++  const server = await createStaticServer(ROOT);
++  let browser = null;
++
++  try {
++    browser = await chromium.launch({ headless: true });
++
++    const keyOrders = [1, 3, 4, 5, 12, 13, 14, 15, 16, 21, 22, 23];
++    const toCards = (entries, prefix) => entries
++      .filter((entry) => keyOrders.includes(Number(entry.filename.split("-")[1])))
++      .map((entry) => ({
++        src: srcFor(path.relative(ROOT, entry.path)),
++        eyebrow: `${prefix} ${entry.filename.split("-")[1]}`,
++        title: entry.screenName,
++        copy: entry.howReached
++      }));
++
++    await screenshotPage(
++      browser,
++      boardPage({
++        title: "Mobile Baseline Atlas",
++        summary: "A phone-sized contact sheet covering entry, town, service, dungeon, utility, progression, and fail-state surfaces.",
++        note: "The board cuts down comparison time by putting the most important mobile captures into one reading order.",
++        cards: toCards(mobile, "Mobile")
++      }),
++      path.join(AFTER_DIR, "mobile-baseline-atlas-board.png"),
++      { width: 2300, height: 2500 }
++    );
++
++    await screenshotPage(
++      browser,
++      boardPage({
++        title: "Desktop Baseline Atlas",
++        summary: "The same core surfaces at desktop scale, useful for comparing modal behavior and white-space shifts against the phone-first layout.",
++        note: "Desktop makes it easier to see which surfaces truly scale and which ones simply become larger sheets.",
++        cards: toCards(desktop, "Desktop")
++      }),
++      path.join(AFTER_DIR, "desktop-baseline-atlas-board.png"),
++      { width: 2300, height: 2500 }
++    );
++
++    const flowCards = [
++      ["Entry", mobile.find((entry) => entry.filename.includes("-01-title"))],
++      ["Build", mobile.find((entry) => entry.filename.includes("-03-creation"))],
++      ["Town Loop", mobile.find((entry) => entry.filename.includes("-04-town"))],
++      ["Run Utility", mobile.find((entry) => entry.filename.includes("-13-run-menu"))],
++      ["Fail State", mobile.find((entry) => entry.filename.includes("-23-death"))]
++    ].map(([eyebrow, entry]) => ({
++      eyebrow,
++      title: entry.screenName,
++      copy: entry.howReached,
++      src: srcFor(path.relative(ROOT, entry.path))
++    }));
++    await screenshotPage(browser, flowPage(flowCards), path.join(AFTER_DIR, "navigation-map-board.png"), { width: 2300, height: 1500 });
++
++    const hudShot = mobile.find((entry) => entry.filename.includes("-12-dungeon-hud"));
++    await screenshotPage(browser, calloutPage(srcFor(path.relative(ROOT, hudShot.path))), path.join(AFTER_DIR, "mobile-hud-callout-board.png"), { width: 2200, height: 1600 });
++
++    await writeFile(
++      path.join(DATA_DIR, "after-board-outputs.json"),
++      `${JSON.stringify({
++        outputs: [
++          "screenshots/after/mobile-baseline-atlas-board.png",
++          "screenshots/after/desktop-baseline-atlas-board.png",
++          "screenshots/after/navigation-map-board.png",
++          "screenshots/after/mobile-hud-callout-board.png"
++        ]
++      }, null, 2)}\n`,
++      "utf8"
++    );
++    console.log(path.join(DATA_DIR, "after-board-outputs.json"));
++  } finally {
++    if (browser) {
++      await browser.close();
++    }
++    await new Promise((resolve) => server.close(resolve));
++  }
++}
++
++main().catch((error) => {
++  console.error(error);
++  process.exit(1);
++});
+warning: in the working copy of 'artifacts\menu-redesign-series\step-00-baseline-menu-atlas\linked-post.md', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\linked-post.md" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\linked-post.md"
+new file mode 100644
+index 0000000..06c7a0e
+--- /dev/null
++++ "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\linked-post.md"
+@@ -0,0 +1,13 @@
++# Teaser post
++
++Step 00 in the menu redesign series is live: a baseline atlas of the current UI, captured from the running game in mobile and desktop viewports. Before any redesign comps, the team now has a publication-ready record of title flow, town services, dungeon HUD, utility surfaces, progression overlays, and fail states.
++
++# Follow-up blurb
++
++The most useful part of this step is not just the raw screenshots. It is the annotated study boards and written report that show how information is currently split across board, feed, map, stats, journal, briefing, and menus, which gives the next redesign step a much stronger starting point.
++
++# 3 headline ideas
++
++- Baseline First: Documenting a Dense Game UI Before Redesign
++- A Menu Atlas for a Phone-First Roguelike
++- Step 00: Capturing the Current UI Before We Change It
+warning: in the working copy of 'artifacts\menu-redesign-series\step-00-baseline-menu-atlas\prompt.md', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\prompt.md" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\prompt.md"
+new file mode 100644
+index 0000000..bff4daf
+--- /dev/null
++++ "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\prompt.md"
+@@ -0,0 +1,85 @@
++You are a UI documentation and visual QA agent working inside a real game repo with code access and Playwright access.
++
++Context:
++- This is a phone-first, browser-playable, single-player, turn-based dungeon crawler.
++- The game uses many modal and menu surfaces.
++- Important information appears to be split across HUD, ticker, advisor, journal, and menus.
++- The purpose of this step is to establish a visual baseline before redesign work begins.
++
++Task:
++Create a baseline menu atlas of the current game and save a publication-ready artifact trail.
++
++You must:
++1. Create or update the root folder: artifacts/menu-redesign-series/
++2. Create or update: artifacts/menu-redesign-series/SERIES_INDEX.md
++3. Create this step folder: artifacts/menu-redesign-series/step-00-baseline-menu-atlas/
++4. Inside the step folder create:
++   - prompt.md
++   - README.md
++   - report.md
++   - comparison.md
++   - changes.md
++   - teaching-notes.md
++   - blog-ready.md
++   - linked-post.md
++   - changed-files.txt
++   - screenshot-manifest.md
++   - screenshots/before/
++   - screenshots/after/
++   - data/
++   - patch.diff if git is available
++5. Save this exact prompt into prompt.md
++6. Launch the game with Playwright
++7. Capture screenshots of as many of these as possible:
++   - title screen
++   - new game / character creation
++   - town overview
++   - town service screens
++   - first in-run HUD state
++   - in-run menu
++   - inventory / pack
++   - magic / spells
++   - journal / help / settings
++   - reward / level-up / perk / choice screens if reachable
++   - death / recap / recovery screens if reachable
++   - blocked states, warnings, empty states, or confusing transitions
++8. Capture both phone-sized and desktop-sized screenshots where possible
++9. Use matching screenshot names such as:
++   - mobile-01-title.png
++   - mobile-02-creation.png
++   - mobile-03-town.png
++   - desktop-01-title.png
++   - desktop-02-creation.png
++10. For the “after” side of this step, you do not need to redesign the UI yet. Instead, create an improved documentation view of the baseline, such as:
++   - annotated screenshots
++   - labeled boards
++   - cropped callout images
++   - visual atlases that make the system easier to study
++11. Update SERIES_INDEX.md with:
++   - step number and title
++   - folder path
++   - 3-sentence summary
++   - main artifacts created
++   - key screenshots
++   - what this step proved
++   - what the next step should investigate
++
++Required file contents:
++- README.md: what this step is, why it exists, what it documents, and what comes next
++- report.md: menu atlas, navigation map, visual strengths, visual problems, mobile-readability observations, likely fragile flows
++- comparison.md: explain what the annotated/organized “after” artifacts add compared with raw baseline captures
++- changes.md: note that this step is baseline-first; list any tiny non-production adjustments made only to reach screens
++- teaching-notes.md: explain why establishing a baseline before redesign is an advanced prompting best practice
++- blog-ready.md: title, hook, short summary, 400-800 word draft, 3 lessons, 3 pull quotes, suggested screenshots
++- linked-post.md: teaser post, follow-up blurb, 3 headline ideas
++- changed-files.txt: one changed file path per line
++- screenshot-manifest.md: filename, viewport, screen name, how reached, why captured, before/after status
++
++Important rules:
++- Do not rely on code inspection alone
++- Use Playwright evidence
++- Prefer real reachable states
++- If something is not reachable, say so clearly
++- Keep the artifact folder publication-ready
++
++Finish by summarizing what you created and the exact folder path.
+warning: in the working copy of 'artifacts\menu-redesign-series\step-00-baseline-menu-atlas\README.md', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\README.md" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\README.md"
+new file mode 100644
+index 0000000..f6fbb7e
+--- /dev/null
++++ "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\README.md"
+@@ -0,0 +1,14 @@
++# Step 00: Baseline Menu Atlas
++
++This step is the evidence-gathering baseline for the menu redesign series. It exists so future UI changes can be measured against the current live product instead of against memory, assumptions, or isolated code snippets.
++
++The atlas documents the current menu system through Playwright screenshots taken from real runtime states in both mobile and desktop viewports. It covers the title flow, character creation, town overview, town services, first dungeon HUD, run menu, pack, magic, journal, settings, help, progression overlays, and death recap, plus after-side study boards that make the current structure easier to analyze.
++
++The next step should use this baseline to investigate information architecture. The main question is not visual polish yet, but where the game should merge, split, simplify, or re-rank surfaces such as the HUD, ticker, advisor, journal, briefing, and utility menu.
++
++Key references:
++
++- Raw captures: `./screenshots/before/`
++- Study boards: `./screenshots/after/`
++- Capture data: `./data/capture-results.json`
++- Manifest: `./screenshot-manifest.md`
+warning: in the working copy of 'artifacts\menu-redesign-series\step-00-baseline-menu-atlas\report.md', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\report.md" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\report.md"
+new file mode 100644
+index 0000000..971e0d9
+--- /dev/null
++++ "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\report.md"
+@@ -0,0 +1,51 @@
++# Report
++
++## Menu atlas
++
++- Entry and setup surfaces captured: `mobile-01-title.png`, `mobile-02-load-empty.png`, `mobile-03-creation.png`, plus matching desktop captures.
++- Town loop surfaces captured: `town`, `bank`, `provisioner`, `armory`, `guild`, `temple`, `sage`, and `junk` in both viewports.
++- In-run surfaces captured: `dungeon-hud`, `run-menu`, `pack`, `magic`, `journal`, `settings`, `help`, `character`, and `briefing` in both viewports.
++- Progression and fail-state surfaces captured: `level-up`, `spell-study`, and `death` in both viewports.
++- Not reached in this step: objective-specific reward choice, extraction summary, return summary, and post-death recovery beyond the `Fallen` recap. Those would need a deeper deterministic progression script to stage cleanly without broad state forcing.
++
++## Navigation map
++
++1. Title screen branches into character creation, help, and the disabled or empty save-flow.
++2. Character creation leads directly into the town overview.
++3. Town overview branches into service modals and the keep entrance.
++4. First descent leads to the dungeon HUD, which then branches to run menu, pack, magic, journal, settings, help, character sheet, and briefing.
++5. Progression overlays appear as interrupting modal sheets, and the failure branch ends in the `Fallen` recap.
++
++The visual map version of that route is saved in `screenshots/after/navigation-map-board.png`.
++
++## Visual strengths
++
++- The UI language is consistent. Most surfaces use the same dark card system, rounded containers, muted metal-and-parchment palette, and clear button affordances.
++- The phone-first intent is real, not aspirational. The movement pad, context buttons, persistent map panel, and touch-sized controls read like a product built for handheld play.
++- Status numbers are generally readable. Health, mana, load, state, and depth remain legible on both mobile and desktop.
++- The town services feel like part of one family. Even without redesign, the player can tell that bank, shops, temple, sage, and junk dealer belong to the same town loop.
++- Progression and death screens are visually distinct enough to register as state changes rather than as ordinary utility views.
++
++## Visual problems
++
++- The current system spreads meaning across too many concurrent channels. On the phone layout the player has to parse the board, map panel, stat cards, live feed, action buttons, and multiple modal layers.
++- The run menu is labeled like a general utility hub, but in practice it reads heavily as a save-slot manager. That mismatch weakens the mental model.
++- Journal, briefing, help, settings, and the run menu all present overlapping support information but live in separate routes. The surface boundaries are not obvious from the UI alone.
++- Town service screens share a strong visual shell, but they do not differentiate function strongly enough. The bank, provisioner, armory, guild, temple, sage, and junk dealer can blur together when scanned quickly.
++- Desktop mostly scales the mobile pattern rather than recomposing it. The result is usable, but not especially intentional.
++
++## Mobile-readability observations
++
++- The mobile town overview is impressive but crowded. The board, minimap, stat stack, feed, and action area require vertical scanning instead of letting one glance answer "where am I, what matters, what can I do."
++- The advisor strip appears structurally important, but in baseline captures much of the actual guidance lands in the live feed and action hints instead. That makes the information architecture feel split.
++- Modal surfaces are readable but tall. Help, journal, run menu, and progression views encourage scrolling, which adds friction when the player only wants one answer quickly.
++- The pack and journal views are clean, yet their tab structure implies a shared hub while settings and briefing sit outside that hub. The relationship is not self-evident.
++- Touch affordances are generously sized, which is good, but the persistent chrome reduces how much dungeon board the player sees at once.
++
++## Likely fragile flows
++
++- Save and load: the title entry point is disabled when no saves exist, yet the runtime can still show a `Continue Run` empty state modal. That inconsistency is exactly the kind of thing that redesign work should normalize.
++- First-time town onboarding: the player is asked to read the map, the feed, and the action hints together to understand the town-door tutorial.
++- Utility versus meta information: journal, briefing, help, and settings each answer adjacent questions, but they are scattered across different access paths.
++- Progression interruptions: `Level Up Perk` and `Spell Study` use the same modal grammar as utility surfaces, which risks flattening the emotional difference between progression and administration.
++- Failure recovery: the `Fallen` recap is clear as a dead-end surface, but this step did not reach a richer recovery chain beyond that point.
+warning: in the working copy of 'artifacts\menu-redesign-series\step-00-baseline-menu-atlas\screenshot-manifest.md', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshot-manifest.md" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshot-manifest.md"
+new file mode 100644
+index 0000000..89f7468
+--- /dev/null
++++ "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshot-manifest.md"
+@@ -0,0 +1,54 @@
++# Screenshot Manifest
++
++| Filename | Viewport | Screen name | How reached | Why captured | Before/after status |
++| --- | --- | --- | --- | --- | --- |
++| mobile-01-title.png | 430x932 | Title screen | Fresh page load with no interaction. | Baseline for first-impression composition, hierarchy, and call-to-action prominence. | before |
++| mobile-02-load-empty.png | 430x932 | Load screen empty state | From title screen, open the load flow with no prior save data. | Documents the first empty-state branch a player can hit before starting a run. | before |
++| mobile-03-creation.png | 430x932 | Character creation | From title screen, open New Adventurer without altering the draft first. | Captures the first high-density decision screen before play begins. | before |
++| mobile-04-town.png | 430x932 | Town overview | Begin a new run from the creation screen and allow the town state to settle. | Shows the first in-world HUD state, advisor language, ticker placement, and top-level navigation load. | before |
++| mobile-05-bank.png | 430x932 | Town service: Bank | From town, open the bank service modal through the live runtime. | Captures persistence and progression framing inside the town loop. | before |
++| mobile-06-provisioner.png | 430x932 | Town service: Provisioner | From town, open the general store service modal through the live runtime. | Documents the consumables and supplies shopping surface. | before |
++| mobile-07-armory.png | 430x932 | Town service: Armory | From town, open the armory service modal through the live runtime. | Captures equipment shopping density and comparison layout. | before |
++| mobile-08-guild.png | 430x932 | Town service: Wizard's Guild | From town, open the guild service modal through the live runtime. | Captures a text-heavy town service with magical inventory and training cues. | before |
++| mobile-09-temple.png | 430x932 | Town service: Temple | From town, open the temple service modal through the live runtime. | Documents the restorative service layout and spiritual support framing. | before |
++| mobile-10-sage.png | 430x932 | Town service: Sage's Tower | From town, open the sage service modal through the live runtime. | Captures the identification and information-driven service screen. | before |
++| mobile-11-junk.png | 430x932 | Town service: Junk Shop | From town, open the junk shop service modal through the live runtime. | Captures the lower-prestige sell loop and secondary economy surface. | before |
++| mobile-12-dungeon-hud.png | 430x932 | First in-run HUD state | From town, move directly to the down stairs and descend once into the first dungeon floor. | Establishes the baseline dungeon HUD balance before any redesign discussion. | before |
++| mobile-13-run-menu.png | 430x932 | Run menu | From the first dungeon floor, open the utility menu modal. | Documents the primary utility stack and its action density mid-run. | before |
++| mobile-14-pack.png | 430x932 | Inventory and equipment | From the first dungeon floor, open the pack hub modal. | Captures the pack and equipment hub in a reachable early-run state. | before |
++| mobile-15-magic.png | 430x932 | Magic and spells | From the first dungeon floor, add representative spells to the live run state and open the magic hub modal. | Documents the spell management surface with minimal staging so the screen is populated. | before |
++| mobile-16-journal.png | 430x932 | Journal | From the first dungeon floor, open the journal hub modal. | Shows how guidance, goals, and persistent documentation are surfaced. | before |
++| mobile-17-settings.png | 430x932 | Settings | From the first dungeon floor, open the settings modal. | Captures the systems-level configuration screen in the same baseline pass. | before |
++| mobile-18-help.png | 430x932 | Help | From the first dungeon floor, open the help modal. | Shows how onboarding and reference information are presented after the title screen. | before |
++| mobile-19-character.png | 430x932 | Character sheet | From the first dungeon floor, open the character sheet modal. | Captures the mid-run stats and progression readout separate from inventory and journal. | before |
++| mobile-20-briefing.png | 430x932 | Briefing | From the first dungeon floor, open the briefing modal. | Documents the advisor and mission framing surface that sits outside the journal. | before |
++| mobile-21-level-up.png | 430x932 | Level up perk choice | From the first dungeon floor, stage enough experience for a level up and trigger the live progression modal. | Captures a progression-only modal that does not appear in the town or utility loop. | before |
++| mobile-22-spell-study.png | 430x932 | Spell study | From the first dungeon floor, stage a spell-learning choice and trigger the live progression modal. | Documents the follow-on progression surface for learning spells. | before |
++| mobile-23-death.png | 430x932 | Death recap | From the first dungeon floor, force a run death through the live game flow with staging-only context. | Captures the fail-state messaging and recovery framing. | before |
++| desktop-01-title.png | 1440x1200 | Title screen | Fresh page load with no interaction. | Baseline for first-impression composition, hierarchy, and call-to-action prominence. | before |
++| desktop-02-load-empty.png | 1440x1200 | Load screen empty state | From title screen, open the load flow with no prior save data. | Documents the first empty-state branch a player can hit before starting a run. | before |
++| desktop-03-creation.png | 1440x1200 | Character creation | From title screen, open New Adventurer without altering the draft first. | Captures the first high-density decision screen before play begins. | before |
++| desktop-04-town.png | 1440x1200 | Town overview | Begin a new run from the creation screen and allow the town state to settle. | Shows the first in-world HUD state, advisor language, ticker placement, and top-level navigation load. | before |
++| desktop-05-bank.png | 1440x1200 | Town service: Bank | From town, open the bank service modal through the live runtime. | Captures persistence and progression framing inside the town loop. | before |
++| desktop-06-provisioner.png | 1440x1200 | Town service: Provisioner | From town, open the general store service modal through the live runtime. | Documents the consumables and supplies shopping surface. | before |
++| desktop-07-armory.png | 1440x1200 | Town service: Armory | From town, open the armory service modal through the live runtime. | Captures equipment shopping density and comparison layout. | before |
++| desktop-08-guild.png | 1440x1200 | Town service: Wizard's Guild | From town, open the guild service modal through the live runtime. | Captures a text-heavy town service with magical inventory and training cues. | before |
++| desktop-09-temple.png | 1440x1200 | Town service: Temple | From town, open the temple service modal through the live runtime. | Documents the restorative service layout and spiritual support framing. | before |
++| desktop-10-sage.png | 1440x1200 | Town service: Sage's Tower | From town, open the sage service modal through the live runtime. | Captures the identification and information-driven service screen. | before |
++| desktop-11-junk.png | 1440x1200 | Town service: Junk Shop | From town, open the junk shop service modal through the live runtime. | Captures the lower-prestige sell loop and secondary economy surface. | before |
++| desktop-12-dungeon-hud.png | 1440x1200 | First in-run HUD state | From town, move directly to the down stairs and descend once into the first dungeon floor. | Establishes the baseline dungeon HUD balance before any redesign discussion. | before |
++| desktop-13-run-menu.png | 1440x1200 | Run menu | From the first dungeon floor, open the utility menu modal. | Documents the primary utility stack and its action density mid-run. | before |
++| desktop-14-pack.png | 1440x1200 | Inventory and equipment | From the first dungeon floor, open the pack hub modal. | Captures the pack and equipment hub in a reachable early-run state. | before |
++| desktop-15-magic.png | 1440x1200 | Magic and spells | From the first dungeon floor, add representative spells to the live run state and open the magic hub modal. | Documents the spell management surface with minimal staging so the screen is populated. | before |
++| desktop-16-journal.png | 1440x1200 | Journal | From the first dungeon floor, open the journal hub modal. | Shows how guidance, goals, and persistent documentation are surfaced. | before |
++| desktop-17-settings.png | 1440x1200 | Settings | From the first dungeon floor, open the settings modal. | Captures the systems-level configuration screen in the same baseline pass. | before |
++| desktop-18-help.png | 1440x1200 | Help | From the first dungeon floor, open the help modal. | Shows how onboarding and reference information are presented after the title screen. | before |
++| desktop-19-character.png | 1440x1200 | Character sheet | From the first dungeon floor, open the character sheet modal. | Captures the mid-run stats and progression readout separate from inventory and journal. | before |
++| desktop-20-briefing.png | 1440x1200 | Briefing | From the first dungeon floor, open the briefing modal. | Documents the advisor and mission framing surface that sits outside the journal. | before |
++| desktop-21-level-up.png | 1440x1200 | Level up perk choice | From the first dungeon floor, stage enough experience for a level up and trigger the live progression modal. | Captures a progression-only modal that does not appear in the town or utility loop. | before |
++| desktop-22-spell-study.png | 1440x1200 | Spell study | From the first dungeon floor, stage a spell-learning choice and trigger the live progression modal. | Documents the follow-on progression surface for learning spells. | before |
++| desktop-23-death.png | 1440x1200 | Death recap | From the first dungeon floor, force a run death through the live game flow with staging-only context. | Captures the fail-state messaging and recovery framing. | before |
++| mobile-baseline-atlas-board.png | 2300x2500 | Mobile baseline atlas board | Generated from selected mobile baseline captures using the step-local board renderer. | Makes the core mobile surfaces comparable in one labeled board. | after |
++| desktop-baseline-atlas-board.png | 2300x2500 | Desktop baseline atlas board | Generated from selected desktop baseline captures using the step-local board renderer. | Makes the core desktop surfaces comparable in one labeled board. | after |
++| navigation-map-board.png | 2300x1500 | Navigation map board | Generated from title, creation, town, run menu, and death captures. | Shows the current system as a route map rather than as isolated screens. | after |
++| mobile-hud-callout-board.png | 2200x1600 | Mobile HUD callout board | Generated from the mobile dungeon HUD capture with annotation overlays. | Labels the layered HUD structure so redesign work can target the right surface boundaries. | after |
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\after\\desktop-baseline-atlas-board.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\after\\desktop-baseline-atlas-board.png"
+new file mode 100644
+index 0000000..b98a0e8
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\after\\desktop-baseline-atlas-board.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\after\\mobile-baseline-atlas-board.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\after\\mobile-baseline-atlas-board.png"
+new file mode 100644
+index 0000000..f41b797
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\after\\mobile-baseline-atlas-board.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\after\\mobile-hud-callout-board.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\after\\mobile-hud-callout-board.png"
+new file mode 100644
+index 0000000..959a48a
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\after\\mobile-hud-callout-board.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\after\\navigation-map-board.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\after\\navigation-map-board.png"
+new file mode 100644
+index 0000000..80c13f0
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\after\\navigation-map-board.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-01-title.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-01-title.png"
+new file mode 100644
+index 0000000..63ca72e
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-01-title.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-02-load-empty.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-02-load-empty.png"
+new file mode 100644
+index 0000000..372bca6
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-02-load-empty.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-03-creation.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-03-creation.png"
+new file mode 100644
+index 0000000..318ed97
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-03-creation.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-04-town.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-04-town.png"
+new file mode 100644
+index 0000000..c911ba2
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-04-town.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-05-bank.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-05-bank.png"
+new file mode 100644
+index 0000000..ce4c9b7
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-05-bank.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-06-provisioner.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-06-provisioner.png"
+new file mode 100644
+index 0000000..16fc688
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-06-provisioner.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-07-armory.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-07-armory.png"
+new file mode 100644
+index 0000000..76248ee
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-07-armory.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-08-guild.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-08-guild.png"
+new file mode 100644
+index 0000000..cff1fcd
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-08-guild.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-09-temple.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-09-temple.png"
+new file mode 100644
+index 0000000..8dd1d85
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-09-temple.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-10-sage.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-10-sage.png"
+new file mode 100644
+index 0000000..d805997
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-10-sage.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-11-junk.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-11-junk.png"
+new file mode 100644
+index 0000000..70da24b
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-11-junk.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-12-dungeon-hud.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-12-dungeon-hud.png"
+new file mode 100644
+index 0000000..f1ed0cb
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-12-dungeon-hud.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-13-run-menu.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-13-run-menu.png"
+new file mode 100644
+index 0000000..046b1f4
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-13-run-menu.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-14-pack.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-14-pack.png"
+new file mode 100644
+index 0000000..01fb36e
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-14-pack.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-15-magic.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-15-magic.png"
+new file mode 100644
+index 0000000..b3ce618
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-15-magic.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-16-journal.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-16-journal.png"
+new file mode 100644
+index 0000000..56e303d
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-16-journal.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-17-settings.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-17-settings.png"
+new file mode 100644
+index 0000000..a6f9a06
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-17-settings.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-18-help.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-18-help.png"
+new file mode 100644
+index 0000000..293bdb6
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-18-help.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-19-character.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-19-character.png"
+new file mode 100644
+index 0000000..e29d147
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-19-character.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-20-briefing.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-20-briefing.png"
+new file mode 100644
+index 0000000..4119dd8
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-20-briefing.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-21-level-up.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-21-level-up.png"
+new file mode 100644
+index 0000000..1453a19
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-21-level-up.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-22-spell-study.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-22-spell-study.png"
+new file mode 100644
+index 0000000..f61544e
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-22-spell-study.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-23-death.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-23-death.png"
+new file mode 100644
+index 0000000..52e3301
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\desktop-23-death.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-01-title.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-01-title.png"
+new file mode 100644
+index 0000000..b1bd224
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-01-title.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-02-load-empty.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-02-load-empty.png"
+new file mode 100644
+index 0000000..6a8780a
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-02-load-empty.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-03-creation.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-03-creation.png"
+new file mode 100644
+index 0000000..7262ea0
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-03-creation.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-04-town.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-04-town.png"
+new file mode 100644
+index 0000000..cc8397a
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-04-town.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-05-bank.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-05-bank.png"
+new file mode 100644
+index 0000000..18eff4f
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-05-bank.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-06-provisioner.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-06-provisioner.png"
+new file mode 100644
+index 0000000..c0421fe
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-06-provisioner.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-07-armory.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-07-armory.png"
+new file mode 100644
+index 0000000..ae8b52e
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-07-armory.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-08-guild.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-08-guild.png"
+new file mode 100644
+index 0000000..f2543ed
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-08-guild.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-09-temple.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-09-temple.png"
+new file mode 100644
+index 0000000..21b353b
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-09-temple.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-10-sage.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-10-sage.png"
+new file mode 100644
+index 0000000..ae709ee
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-10-sage.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-11-junk.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-11-junk.png"
+new file mode 100644
+index 0000000..51dff07
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-11-junk.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-12-dungeon-hud.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-12-dungeon-hud.png"
+new file mode 100644
+index 0000000..f4a565f
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-12-dungeon-hud.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-13-run-menu.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-13-run-menu.png"
+new file mode 100644
+index 0000000..ad98214
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-13-run-menu.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-14-pack.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-14-pack.png"
+new file mode 100644
+index 0000000..c86931a
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-14-pack.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-15-magic.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-15-magic.png"
+new file mode 100644
+index 0000000..863c7db
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-15-magic.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-16-journal.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-16-journal.png"
+new file mode 100644
+index 0000000..feef3d3
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-16-journal.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-17-settings.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-17-settings.png"
+new file mode 100644
+index 0000000..1347974
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-17-settings.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-18-help.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-18-help.png"
+new file mode 100644
+index 0000000..aee8d40
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-18-help.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-19-character.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-19-character.png"
+new file mode 100644
+index 0000000..41e3b12
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-19-character.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-20-briefing.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-20-briefing.png"
+new file mode 100644
+index 0000000..933ea1e
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-20-briefing.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-21-level-up.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-21-level-up.png"
+new file mode 100644
+index 0000000..77a56da
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-21-level-up.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-22-spell-study.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-22-spell-study.png"
+new file mode 100644
+index 0000000..b3587d3
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-22-spell-study.png" differ
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-23-death.png" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-23-death.png"
+new file mode 100644
+index 0000000..fd3f169
+Binary files /dev/null and "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\screenshots\\before\\mobile-23-death.png" differ
+warning: in the working copy of 'artifacts\menu-redesign-series\step-00-baseline-menu-atlas\teaching-notes.md', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\teaching-notes.md" "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\teaching-notes.md"
+new file mode 100644
+index 0000000..19cb025
+--- /dev/null
++++ "b/artifacts\\menu-redesign-series\\step-00-baseline-menu-atlas\\teaching-notes.md"
+@@ -0,0 +1,19 @@
++# Teaching Notes
++
++Establishing a baseline before redesign is an advanced prompting best practice because it keeps the work grounded in the shipped product. Without a baseline, redesign prompts tend to optimize against guesses, isolated complaints, or the model's default taste instead of the actual experience players see.
++
++Why this matters:
++
++- A baseline separates observation from invention. First you document what exists, then you decide what should change.
++- A baseline exposes the difference between reachable states and staged states. That distinction matters when the redesign later claims to simplify real player flows.
++- A baseline creates reusable evidence. The same screenshots, boards, and manifest can support design critique, implementation planning, QA, and public communication.
++
++In prompting terms, this step improves later work because it gives future redesign prompts a concrete corpus:
++
++- named surfaces
++- stable screenshot references
++- responsive comparisons
++- documented weak points
++- clear notes about what was and was not reachable
++
++That is a higher-signal starting point than "make the UI cleaner" or "redesign the menus." It constrains the next prompt with real evidence while still leaving space for strong creative direction.

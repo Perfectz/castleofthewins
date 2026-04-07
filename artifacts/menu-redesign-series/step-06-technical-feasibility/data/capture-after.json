@@ -1,0 +1,125 @@
+{
+  "generatedAt": "2026-04-07T06:50:31.001Z",
+  "captures": [
+    {
+      "filename": "after-mobile-01-run-menu-open.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-06-technical-feasibility\\screenshots\\after\\after-mobile-01-run-menu-open.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "flowName": "Adventure Menu",
+      "whyCaptured": "Utility menu focus behavior at open.",
+      "beforeAfter": "after",
+      "mode": "modal",
+      "modalSurfaceKey": "utility-menu",
+      "activeFocusKey": "utility:journal"
+    },
+    {
+      "filename": "after-mobile-02-help-from-menu.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-06-technical-feasibility\\screenshots\\after\\after-mobile-02-help-from-menu.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "flowName": "How to Play",
+      "whyCaptured": "Read-only utility surface launched from Adventure Menu.",
+      "beforeAfter": "after",
+      "mode": "modal",
+      "modalSurfaceKey": "help",
+      "activeFocusKey": "modal:close"
+    },
+    {
+      "filename": "after-mobile-03-settings-from-menu.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-06-technical-feasibility\\screenshots\\after\\after-mobile-03-settings-from-menu.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "flowName": "Device Settings",
+      "whyCaptured": "Settings surface launched from Adventure Menu.",
+      "beforeAfter": "after",
+      "mode": "modal",
+      "modalSurfaceKey": "settings",
+      "activeFocusKey": "setting-toggle:touchControlsEnabled"
+    },
+    {
+      "filename": "after-mobile-04-briefing-from-menu.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-06-technical-feasibility\\screenshots\\after\\after-mobile-04-briefing-from-menu.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "flowName": "Mission Briefing",
+      "whyCaptured": "Additional read-only utility surface proving the same launch path.",
+      "beforeAfter": "after",
+      "mode": "modal",
+      "modalSurfaceKey": "briefing",
+      "activeFocusKey": "modal:close"
+    },
+    {
+      "filename": "after-mobile-05-menu-close-focus.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-06-technical-feasibility\\screenshots\\after\\after-mobile-05-menu-close-focus.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "flowName": "Menu Close Focus",
+      "whyCaptured": "Gameplay HUD immediately after closing Adventure Menu.",
+      "beforeAfter": "after",
+      "mode": "game",
+      "modalSurfaceKey": null,
+      "activeFocusKey": "top:menu"
+    },
+    {
+      "filename": "after-desktop-01-run-menu-open.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-06-technical-feasibility\\screenshots\\after\\after-desktop-01-run-menu-open.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "flowName": "Adventure Menu",
+      "whyCaptured": "Utility menu focus behavior at open.",
+      "beforeAfter": "after",
+      "mode": "modal",
+      "modalSurfaceKey": "utility-menu",
+      "activeFocusKey": "utility:journal"
+    },
+    {
+      "filename": "after-desktop-02-help-from-menu.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-06-technical-feasibility\\screenshots\\after\\after-desktop-02-help-from-menu.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "flowName": "How to Play",
+      "whyCaptured": "Read-only utility surface launched from Adventure Menu.",
+      "beforeAfter": "after",
+      "mode": "modal",
+      "modalSurfaceKey": "help",
+      "activeFocusKey": "modal:close"
+    },
+    {
+      "filename": "after-desktop-03-settings-from-menu.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-06-technical-feasibility\\screenshots\\after\\after-desktop-03-settings-from-menu.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "flowName": "Device Settings",
+      "whyCaptured": "Settings surface launched from Adventure Menu.",
+      "beforeAfter": "after",
+      "mode": "modal",
+      "modalSurfaceKey": "settings",
+      "activeFocusKey": "setting-toggle:touchControlsEnabled"
+    },
+    {
+      "filename": "after-desktop-04-briefing-from-menu.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-06-technical-feasibility\\screenshots\\after\\after-desktop-04-briefing-from-menu.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "flowName": "Mission Briefing",
+      "whyCaptured": "Additional read-only utility surface proving the same launch path.",
+      "beforeAfter": "after",
+      "mode": "modal",
+      "modalSurfaceKey": "briefing",
+      "activeFocusKey": "modal:close"
+    },
+    {
+      "filename": "after-desktop-05-menu-close-focus.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-06-technical-feasibility\\screenshots\\after\\after-desktop-05-menu-close-focus.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "flowName": "Menu Close Focus",
+      "whyCaptured": "Gameplay HUD immediately after closing Adventure Menu.",
+      "beforeAfter": "after",
+      "mode": "game",
+      "modalSurfaceKey": null,
+      "activeFocusKey": "top:menu"
+    }
+  ]
+}

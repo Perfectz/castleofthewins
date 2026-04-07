@@ -1,0 +1,1427 @@
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\src\\game.js" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\src\\game.js"
+index 27da3b8..646ec82 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\src\\game.js"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\src\\game.js"
+@@ -11967,7 +11967,7 @@ export class Game {
+       } else if (this.currentDepth === 0) {
+         const firstTownRun = (this.player.deepestDepth || 0) === 0;
+         this.pressureStatus.textContent = firstTownRun
+-          ? (this.storyFlags.townServiceVisited ? "Go North" : "Visit Door")
++          ? (this.storyFlags.townServiceVisited ? "North Road" : "Services")
+           : "Town Calm";
+         this.pressureStatus.className = "utility-chip utility-chip-muted";
+       } else {
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\src\\features\\advisor.js" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\src\\features\\advisor.js"
+index 4bc2dc8..b8b16fc 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\src\\features\\advisor.js"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\src\\features\\advisor.js"
+@@ -114,7 +114,12 @@ function buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lo
+     advice = game.storyFlags?.townServiceVisited
+       ? "You checked a town door. Take the north road into the keep."
+       : "Step onto one labeled town door, then take the north road into the keep.";
+-    pushAction("map-focus", "Survey", "Check the north road", true);
++    pushAction(
++      "map-focus",
++      game.storyFlags?.townServiceVisited ? "Go North" : "Services",
++      game.storyFlags?.townServiceVisited ? "Enter the keep" : "Open a town door",
++      true
++    );
+     pushAction("open-briefing", "Briefing", "Hear the run goal", false);
+     pushAction("open-hub", "Journal", "Review the run goal", false, "journal");
+   } else if (game.currentDepth === 0 && townMeta) {
+@@ -222,6 +227,12 @@ function buildDockSlots(game, actions) {
+       label: "Briefing",
+       note: "Hear the keep objective"
+     });
++  } else if (firstTownRun && game.storyFlags?.townServiceVisited) {
++    pushCandidate({
++      action: "map-focus",
++      label: "Go North",
++      note: "Enter the keep"
++    });
+   }
+   if (game.player.spellsKnown.length > 0) {
+     pushCandidate({
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\index.html" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\index.html"
+index 56ac085..8e31608 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\index.html"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\index.html"
+@@ -179,9 +179,6 @@
+     <div class="modal mobile-sheet utility-menu-sheet">
+       <div class="modal-title">Adventure Menu</div>
+       <div class="modal-body utility-menu-body">
+-        <div class="text-block utility-menu-intro">
+-          Save progress, review the mission, or change device settings without losing your place on the board.
+-        </div>
+         <section class="utility-menu-panel">
+           <div class="field-label">Right Now</div>
+           <div id="utility-run-summary" class="utility-menu-summary"></div>
+@@ -195,16 +192,31 @@
+           <div id="utility-control-summary" class="utility-menu-summary"></div>
+         </section>
+         <div class="utility-menu-actions">
+-          <button class="action-button" data-action="view-map" data-focus-key="utility:map" type="button">Floor Map</button>
+-          <button id="utility-save-button" class="action-button primary" data-action="save-game" data-focus-key="utility:save" type="button">Save Slot</button>
+-          <button id="utility-load-button" class="action-button" data-action="load-game" data-focus-key="utility:load" type="button">Load Slot</button>
+-          <button class="action-button" data-action="open-briefing" data-focus-key="utility:briefing" type="button">Mission</button>
+-          <button id="utility-stats-button" class="action-button" data-action="open-character-sheet" data-focus-key="utility:stats" type="button">Character</button>
+-          <button class="action-button" data-action="open-hub" data-tab="journal" data-focus-key="utility:journal" type="button">Journal & Log</button>
+-          <button class="action-button" data-action="export-telemetry" data-focus-key="utility:trace" type="button">Export Trace</button>
+-          <button class="action-button" data-action="settings" data-focus-key="utility:settings" type="button">Settings</button>
+-          <button class="action-button" data-action="help" data-focus-key="utility:help" type="button">How to Play</button>
+-          <button class="action-button" data-action="close-modal" data-focus-key="utility:close" type="button">Return to Run</button>
++          <section class="utility-menu-group">
++            <div class="field-label">Run</div>
++            <div class="utility-menu-group-grid">
++              <button class="action-button" data-action="open-briefing" data-focus-key="utility:briefing" type="button">Mission</button>
++              <button class="action-button" data-action="open-hub" data-tab="journal" data-focus-key="utility:journal" type="button">Journal & Log</button>
++              <button id="utility-stats-button" class="action-button" data-action="open-character-sheet" data-focus-key="utility:stats" type="button">Character</button>
++            </div>
++          </section>
++          <section class="utility-menu-group">
++            <div class="field-label">Saves</div>
++            <div class="utility-menu-group-grid">
++              <button id="utility-save-button" class="action-button primary" data-action="save-game" data-focus-key="utility:save" type="button">Save Slot</button>
++              <button id="utility-load-button" class="action-button" data-action="load-game" data-focus-key="utility:load" type="button">Load Slot</button>
++            </div>
++          </section>
++          <section class="utility-menu-group">
++            <div class="field-label">System</div>
++            <div class="utility-menu-group-grid">
++              <button class="action-button" data-action="view-map" data-focus-key="utility:map" type="button">Floor Map</button>
++              <button class="action-button" data-action="settings" data-focus-key="utility:settings" type="button">Settings</button>
++              <button class="action-button" data-action="help" data-focus-key="utility:help" type="button">How to Play</button>
++              <button class="action-button" data-action="close-modal" data-focus-key="utility:close" type="button">Return to Run</button>
++            </div>
++            <button class="action-button action-button-subtle utility-trace-button" data-action="export-telemetry" data-focus-key="utility:trace" type="button">Export Trace</button>
++          </section>
+         </div>
+       </div>
+     </div>
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\styles.css" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\styles.css"
+index 718b249..f701835 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\styles.css"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\styles.css"
+@@ -2616,11 +2616,31 @@ html[data-ui-scale="large"] .mobile-app {
+ }
+ 
+ .utility-menu-actions {
++  display: grid;
++  gap: 10px;
++}
++
++.utility-menu-group {
++  display: grid;
++  gap: 8px;
++}
++
++.utility-menu-group-grid {
+   display: grid;
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+   gap: 8px;
+ }
+ 
++.action-button-subtle {
++  background: rgba(255, 255, 255, 0.04);
++  border-color: rgba(214, 198, 157, 0.12);
++  color: var(--text-dim);
++}
++
++.utility-trace-button {
++  justify-self: stretch;
++}
++
+ @media (min-width: 920px) {
+   .mobile-app {
+     max-width: 1460px;
+@@ -5687,12 +5707,6 @@ body {
+   gap: 12px;
+ }
+ 
+-.utility-menu-intro {
+-  grid-column: 1 / -1;
+-  margin: 0;
+-  color: var(--ui-text-dim);
+-}
+-
+ .utility-menu-actions {
+   grid-column: 1 / -1;
+ }
+@@ -5721,6 +5735,9 @@ body {
+     grid-template-columns: 1fr;
+   }
+ 
++  .utility-menu-group-grid {
++    grid-template-columns: 1fr;
++  }
+ 
+   .hub-window-pack .pack-inspector-panel {
+     position: static;
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\SERIES_INDEX.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\SERIES_INDEX.md"
+index 4c9e2a4..be2a324 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\SERIES_INDEX.md"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\SERIES_INDEX.md"
+@@ -18,3 +18,11 @@
+ - What this step proved: Small naming and microcopy changes can improve menu comprehension immediately, especially where one surface is carrying several adjacent jobs. It also proved that pairing discovery with a tiny shipment creates better evidence than analysis alone, because the design principles are tested in the live product right away.
+ - What should happen next: Rework the boundary between persistent HUD information and modal support surfaces, with special attention to the overlap among advisor, ticker, briefing, and journal. Explore whether reward and progression screens need a stronger visual identity than ordinary utility sheets.
+ 
++## Step 03: Usability Simulation
++
++- Folder path: `artifacts/menu-redesign-series/step-03-usability-simulation/`
++- Three-sentence summary: This step simulates likely usability findings across five player types using live mobile and desktop captures of the existing UI. Instead of adding more help text, it ships two low-risk fixes that honor a minimalist philosophy: clearer first-town intent through `Services` and `North Road`, and a cleaner `Adventure Menu` grouped into `Run`, `Saves`, and `System`. The result is better comprehension through naming and hierarchy rather than tutorial overlays.
++- Main changes: first-town chip and dock relabeling for clearer town purpose and first descent handoff, removal of the utility-menu intro sentence, grouped `Adventure Menu` action sections, and visual de-emphasis of `Export Trace`
++- Key screenshots: `screenshots/before/before-mobile-03-town.png`, `screenshots/after/after-mobile-03-town.png`, `screenshots/before/before-desktop-05-run-menu.png`, `screenshots/after/after-desktop-05-run-menu.png`, `screenshots/after/after-mobile-04-dungeon-hud.png`, `screenshots/after/after-mobile-06-pack.png`
++- What this step proved: The biggest confusion points did not require more instructional UI. Small wording and hierarchy fixes can reduce hesitation while keeping the board and support surfaces visually spare.
++- What should happen next: Investigate whether town affordances themselves should communicate service value more directly, and decide whether the next redesign step should target modal churn, journal and mission overlap, or town-to-dungeon continuity.
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\README.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\README.md"
+index e69de29..745b414 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\README.md"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\README.md"
+@@ -0,0 +1,20 @@
++# Step 03: Usability Simulation
++
++This step focuses on likely user confusion because the live UI already exposes the main pain points before a formal study is run. In a phone-first tactics game, hesitation is often visible as vague labels, overloaded modal surfaces, or a weak distinction between "what should I do now?" and "where do I go for details?"
++
++The question for this step was narrow: which confusion points are most likely to hurt first-session clarity and repeat-session speed, and what is the smallest visible shipment that can reduce them now? The answer stayed intentionally minimalist.
++
++What changed:
++
++- The first-town status chip and primary dock action now say `Services` instead of `Visit Door`.
++- After the first town-service visit, that same first-town state now promotes `North Road` and `Go North`.
++- The `Adventure Menu` no longer opens with an orientation paragraph and no longer presents its actions as one flat wall of buttons.
++- The action area is now grouped into `Run`, `Saves`, and `System`, with `Export Trace` visually de-emphasized.
++
++What this step documents:
++
++- live before/after Playwright captures for title, creation, town, first dungeon HUD, run menu, pack, magic, journal, help, and settings
++- simulated usability findings across five player lenses
++- the reasoning behind two small, low-risk UI changes
++
++What comes next: use the findings here to decide whether the next step should tighten town-to-run continuity, reduce modal churn further, or re-rank support surfaces around journal, mission, and map access.
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\report.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\report.md"
+index e69de29..9057d72 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\report.md"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\report.md"
+@@ -0,0 +1,103 @@
++# Report
++
++## Discovery summary
++
++Observed in the live UI, the biggest confusion is not a lack of information. It is a naming and hierarchy problem. Newer players can reach help, journal, mission, and town services, but the current UI sometimes makes the next action sound abstract, while experienced players still hit a flat utility menu that makes support actions harder to scan than they need to be.
++
++This step therefore optimized for brevity. The fixes do not add new teaching text, helper banners, or persistent tutorial rows. They reduce friction by making the next action more literal and the support menu more structured.
++
++## Player lens: brand new player
++
++- What they try to do: understand what town is for, find the first meaningful action, and avoid making a bad early move.
++- What they expect: a short label that tells them what to touch next, with details available elsewhere if needed.
++- Where they hesitate: `Visit Door` describes a motion, not a purpose.
++- Where they get confused: the value of town is spread across ticker, map, and support surfaces instead of being named directly in the main action area.
++- What they miss: that town is a prep phase with services, not just a path to the keep.
++- Where they feel slowed down: when the utility menu mixes run, save, and system actions with equal visual weight.
++- Where they feel confident: once labels become literal and the journal/help surfaces stay available as optional depth.
++
++## Player lens: returning casual player
++
++- What they try to do: re-enter quickly, remember their run goal, and touch the fewest screens possible.
++- What they expect: short labels, familiar grouping, and a menu that separates progress management from support screens.
++- Where they hesitate: at the utility menu, where every action previously competed in one undifferentiated grid.
++- Where they get confused: the difference between immediate run actions and lower-frequency system actions.
++- What they miss: that `Export Trace` is not a primary play action.
++- Where they feel slowed down: by scanning instead of recognizing.
++- Where they feel confident: when grouped headings let them jump straight to the right section.
++
++## Player lens: experienced tactics or roguelike player
++
++- What they try to do: parse state fast, prep efficiently, and get back to the board.
++- What they expect: terse language and low ceremony.
++- Where they hesitate: when onboarding-oriented copy competes with high-frequency controls.
++- Where they get confused: not by rules, but by weak information hierarchy.
++- What they miss: nothing critical, but time is lost to unnecessary scan cost.
++- Where they feel slowed down: in modal-heavy support surfaces that do not prioritize by frequency.
++- Where they feel confident: when the UI uses category structure instead of extra explanation.
++
++## Player lens: mobile-first player
++
++- What they try to do: keep the screen readable, avoid clutter, and preserve the board as the primary visual anchor.
++- What they expect: minimal text, minimal chrome, and labels that carry their weight.
++- Where they hesitate: when a label is too abstract to justify leaving the board.
++- Where they get confused: when support surfaces look dense before they look useful.
++- What they miss: low-priority controls hidden among high-priority ones.
++- Where they feel slowed down: by vertical scrolling inside modals and by extra copy above the controls.
++- Where they feel confident: when the important action is named clearly and the rest stays tucked into menus.
++
++## Player lens: keyboard or focus-heavy player
++
++- What they try to do: move predictably through actions without visually re-parsing the menu every time.
++- What they expect: stable order, grouped focus movement, and obvious low-priority actions.
++- Where they hesitate: when tab order walks through a flat button field with no semantic grouping.
++- Where they get confused: when save, mission, and system controls interleave.
++- What they miss: relative priority.
++- Where they feel slowed down: by having to decode order from memory instead of structure.
++- Where they feel confident: when tab order follows grouped sections. A live Playwright focus pass on the rebuilt menu progressed as `Mission`, `Journal & Log`, `Character`, `Save Slot`, `Load Slot`, `Floor Map`, `Settings`, `How to Play`.
++
++## First-session confusion
++
++- Town value was the sharpest first-session confusion point.
++- In the before capture, the town chip said `Visit Door`, which was mechanically accurate but semantically weak.
++- In the after capture, the chip says `Services` and the main dock action also says `Services`, which makes the next move legible without adding tutorial prose.
++
++## In-run decision friction
++
++- The first dungeon HUD already carries substantial context through board state, ticker, dock actions, and support menus.
++- The stronger problem here is not missing text. It is making sure optional support stays optional.
++- This step deliberately left the dungeon HUD structurally unchanged so clarity gains did not come from more on-screen explanation.
++
++## Town prep friction
++
++- Town prep is where new and returning players diverge most.
++- New players need the first action named more literally.
++- Returning players need the menu to stay out of the way once they understand the town loop.
++- The shipped changes support both by making town intent clearer without making town noisier.
++
++## Inventory and spell pain points
++
++- Pack and magic remain dense but readable support surfaces.
++- They were captured before and after as control shots because this step was not about adding more labels inside deep management screens.
++- The main finding is that these surfaces are acceptable when accessed intentionally, but they should not leak more explanatory burden into the persistent HUD.
++
++## Why the chosen fixes matter
++
++- `Services` names the purpose of the first town action instead of the physical interaction.
++- `North Road` and `Go North` tighten the handoff from town prep to first descent.
++- Grouping the `Adventure Menu` lowers scan cost without adding more words.
++- De-emphasizing `Export Trace` keeps utility power available without letting it compete with high-frequency actions.
++
++## UX non-goals for this step
++
++- No new tutorial system.
++- No new persistent hints.
++- No modal-flow rewrite.
++- No journal, help, or settings redesign.
++- No attempt to solve all modal churn in one pass.
++
++## Decisions made
++
++- Favor brevity over explanation.
++- Put optional detail in existing support surfaces, not in persistent HUD text.
++- Fix the first town action and the utility menu first because they affect both first-run clarity and repeat-session speed.
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\comparison.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\comparison.md"
+index e69de29..7872dd7 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\comparison.md"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\comparison.md"
+@@ -0,0 +1,29 @@
++# Comparison
++
++## Town
++
++- Before: the first-town chip read `Visit Door`, and the primary dock action read `Survey`. Both were technically valid, but neither named the purpose of town clearly.
++- After: the chip reads `Services` and the primary dock action also reads `Services`, with the dock note `Open a town door`.
++- Confusion reduced: a brand new player no longer has to infer that the labeled doors are the point of town.
++- Evidence: `before-mobile-03-town.png` versus `after-mobile-03-town.png`
++
++## Adventure Menu
++
++- Before: the menu opened with an orientation sentence and then a flat grid where mission, saves, map, help, telemetry, and close all carried similar weight.
++- After: the intro sentence is gone, actions are grouped into `Run`, `Saves`, and `System`, and `Export Trace` is still present but visually subordinate.
++- Confusion reduced: returning and expert players can now recognize the action zone by category instead of re-reading the full button wall.
++- Evidence: `before-desktop-05-run-menu.png` versus `after-desktop-05-run-menu.png`
++
++## Control shot: Pack
++
++- Before: pack already functioned as a focused management surface.
++- After: pack is visually stable and unchanged in structure.
++- Confusion reduced: none directly. This is the proof that the step improved navigation and naming without spilling more text or layout noise into adjacent support surfaces.
++- Evidence: `before-mobile-06-pack.png` versus `after-mobile-06-pack.png`
++
++## Control shot: First dungeon HUD
++
++- Before: the dungeon HUD already carried plenty of context through ticker, status, and dock actions.
++- After: the surface remains visually stable, which is important because this step deliberately rejected the temptation to add helper rows or persistent coaching text.
++- Confusion reduced: indirectly. The UI now depends more on cleaner labels and cleaner menu grouping, not more HUD prose.
++- Evidence: `before-mobile-04-dungeon-hud.png` versus `after-mobile-04-dungeon-hud.png`
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\changes.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\changes.md"
+index e69de29..99c45d9 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\changes.md"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\changes.md"
+@@ -0,0 +1,48 @@
++# Changes
++
++## Exact changed files
++
++- `index.html`
++- `src/features/advisor.js`
++- `src/game.js`
++- `styles.css`
++
++## What changed
++
++- First-town status wording was shortened and clarified:
++  - `Visit Door` became `Services`
++  - first-town post-service `Go North` chip wording became `North Road`
++- First-town primary dock wording was updated:
++  - pre-service primary action now reads `Services`
++  - pre-service note now reads `Open a town door`
++  - post-service first-town primary action now reads `Go North`
++  - post-service note now reads `Enter the keep`
++- The `Adventure Menu` action area was rebuilt from one flat button grid into three compact groups:
++  - `Run`
++  - `Saves`
++  - `System`
++- The step-01 orientation sentence was removed from the menu.
++- `Export Trace` remained available, but was visually de-emphasized so it no longer competes with core play actions.
++
++## Why
++
++The live UI showed two high-value confusion points: the first town action was not named by purpose, and the utility menu made unrelated actions compete at the same visual level. Both fixes improve comprehension through naming and hierarchy rather than extra explanation.
++
++## Risk
++
++- Low.
++- The work is limited to label text, button grouping, and light styling.
++- Main risk: menu grouping could affect scan rhythm or wrapping on narrow screens.
++- Runtime check: matched Playwright captures confirmed the new layout stays readable on `430x932` and `1440x1200`.
++- Focus check: a Playwright keyboard pass confirmed grouped tab order through the rebuilt menu.
++
++## Rollback
++
++- Revert `index.html`, `src/features/advisor.js`, `src/game.js`, and `styles.css`.
++- No save migration, data migration, or gameplay rollback is required.
++
++## Follow-up
++
++- Evaluate whether town itself needs stronger environmental affordance for services, not more text.
++- Test whether journal, mission, and map should eventually converge into a lighter support stack.
++- Decide whether the next redesign step should target modal churn or town-to-dungeon continuity.
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\teaching-notes.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\teaching-notes.md"
+index e69de29..df6d671 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\teaching-notes.md"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\teaching-notes.md"
+@@ -0,0 +1,7 @@
++# Teaching Notes
++
++Simulating multiple user lenses produces better prompts because it prevents redesign work from collapsing into a single imagined "average player." The average player is usually a fiction. The real UI has to serve a first-session learner, a casual returner, a systems-savvy optimizer, a phone-only player, and a player who depends on focus order and stable controls.
++
++This matters even more in a minimalist UI. When a team rejects tutorial overlays and helper text, every remaining word and grouping decision carries more weight. A vague label is no longer softened by a tip layer. A flat action wall is no longer rescued by explanatory copy above it.
++
++That is why this prompt pairs simulation with a small live shipment. The research side identifies likely hesitation and scan-cost problems. The shipped change proves whether those findings can be solved with less UI noise instead of more. This is advanced prompting because it forces evidence, restraint, and execution into the same step.
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\blog-ready.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\blog-ready.md"
+index e69de29..1fd41e5 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\blog-ready.md"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\blog-ready.md"
+@@ -0,0 +1,61 @@
++# Title
++
++Minimalist UX fixes for a modal-heavy roguelike menu
++
++# Hook
++
++The cleanest usability improvement is often not another hint. It is one better label and one better grouping choice.
++
++# Short summary
++
++This step used live Playwright captures and a five-lens usability simulation to identify the most likely confusion points in a phone-first dungeon crawler UI. Instead of adding more help text, it shipped two minimalist fixes: clearer first-town intent through `Services` and `North Road`, and a cleaner `Adventure Menu` organized into `Run`, `Saves`, and `System`. The result is a UI that says slightly less, but means more.
++
++# Draft
++
++Design teams often say they want a clean UI, then solve every usability problem by adding another sentence. Modal-heavy games are especially vulnerable to this. Each confusion point invites one more banner, one more helper line, one more onboarding paragraph, until the interface starts competing with the playfield it exists to support.
++
++For this step in the menu redesign series, I wanted to resist that habit.
++
++The game is a phone-first, single-player tactical crawler with several support surfaces: a HUD, ticker, advisor, journal, briefing flow, and a modal-heavy utility stack. Earlier baseline work showed that players can usually find what they need, but the path is not always elegant. Important context exists. It is just distributed.
++
++So the brief for step 03 was strict: no new persistent tutorial text, no extra tip rows, no forced coaching. If a player needs detail, that detail should live in a menu, journal, or help surface. The persistent UI should stay terse.
++
++Using live Playwright captures, I reviewed the highest-traffic flows on mobile and desktop: title, creation, town, first dungeon HUD, run menu, pack, magic, journal, help, and settings. Then I simulated likely usability findings across five player lenses: brand new, returning casual, experienced roguelike, mobile-first, and keyboard or focus-heavy.
++
++Two issues rose above everything else.
++
++The first was town onboarding. In the opening town state, the status chip said `Visit Door`. That is not wrong, but it is weak. It describes an action literally without naming its value. A new player still has to infer that town is a service phase and that the labeled doors are useful, not decorative.
++
++The second was the system menu. The `Adventure Menu` already had better naming from the previous step, but it still opened with an orientation sentence and a flat field of buttons. Mission, saves, help, map, settings, telemetry, and close all competed in one visual zone. Casual and expert players would both pay that scan cost repeatedly.
++
++The shipped fixes were deliberately small.
++
++First, the opening town state now says `Services`. The primary dock action also says `Services`, with the note `Open a town door`. After the first service visit, that state pivots to `North Road` and `Go North`. This makes the next action more literal without adding tutorial prose to the board.
++
++Second, the `Adventure Menu` no longer opens with explanatory text. Its actions are grouped into `Run`, `Saves`, and `System`, and `Export Trace` is still available but visually subdued. The menu becomes easier to parse because the interface finally admits that not every action belongs in the same tier.
++
++What matters here is not the size of the patch. It is the design posture behind it.
++
++Usability problems do not always require more interface. Sometimes they require the interface to stop being coy. `Services` is better than `Visit Door` because it names intent. Grouped controls are better than a flat action wall because they encode priority visually. Neither change teaches the player with extra text. Both changes make the existing system easier to navigate.
++
++That is the kind of restraint worth protecting. Especially in a tactics game, clarity is not the same thing as verbosity.
++
++# Lessons
++
++- Minimalism works only when labels carry real meaning.
++- Grouping is often a better fix than explanation.
++- Simulated usability lenses are useful when they lead to live, testable changes instead of abstract personas.
++
++# Pull quotes
++
++- "The cleanest usability improvement is often not another hint. It is one better label."
++- "A vague label is expensive in a minimalist UI because there is no tip layer left to rescue it."
++- "Grouped controls reduce confusion without asking the player to read more."
++
++# Suggested screenshots
++
++- `screenshots/before/before-mobile-03-town.png`
++- `screenshots/after/after-mobile-03-town.png`
++- `screenshots/before/before-desktop-05-run-menu.png`
++- `screenshots/after/after-desktop-05-run-menu.png`
++- `screenshots/after/after-mobile-04-dungeon-hud.png`
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\linked-post.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\linked-post.md"
+index e69de29..edf9d8a 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\linked-post.md"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\linked-post.md"
+@@ -0,0 +1,13 @@
++# Teaser
++
++Step 03 in the menu redesign series focused on likely confusion, but refused the usual fix of adding more UI text. The live patch instead made the first town action more literal and the system menu easier to scan through grouping alone.
++
++# Follow-up blurb
++
++Using Playwright evidence from mobile and desktop captures, this step simulated five player lenses and shipped two small improvements: `Services` and `North Road` for first-town clarity, plus a grouped `Adventure Menu` that separates run, saves, and system controls. It is a case study in reducing confusion with less interface, not more.
++
++# Headline ideas
++
++- Less UI noise, more meaning: minimalist fixes for a roguelike menu
++- How a tiny label change improved first-town clarity
++- Solving menu confusion with grouping instead of tutorials
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\prompt.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\prompt.md"
+index e69de29..6c399e3 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\prompt.md"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\prompt.md"
+@@ -0,0 +1,72 @@
++You are a UX research and usability-testing team working inside a real game repo with code access and Playwright access.
++
++Context:
++- This is a phone-first, single-player tactical crawler.
++- New players may struggle to understand town value, objective flow, or where important information lives.
++- Experienced players may be slowed down by modal churn and scattered context.
++- This step should simulate likely usability findings, then implement 1-2 changes targeting the worst confusion points.
++
++Task:
++Observe the actual UI, simulate likely usability findings for key player types, and then ship 1-2 visible fixes aimed at the biggest confusion points.
++
++You must:
++1. Create or update the root folder: artifacts/menu-redesign-series/
++2. Create or update: artifacts/menu-redesign-series/SERIES_INDEX.md
++3. Create this step folder: artifacts/menu-redesign-series/step-03-usability-simulation/
++4. Inside the step folder create:
++   - prompt.md
++   - README.md
++   - report.md
++   - comparison.md
++   - changes.md
++   - teaching-notes.md
++   - blog-ready.md
++   - linked-post.md
++   - changed-files.txt
++   - screenshot-manifest.md
++   - screenshots/before/
++   - screenshots/after/
++   - data/
++   - patch.diff if git is available
++5. Save this exact prompt into prompt.md
++6. Launch the game with Playwright
++7. Capture before screenshots of the highest-traffic menu states
++8. Simulate likely usability findings for:
++   - brand new player
++   - returning casual player
++   - experienced tactics/roguelike player
++   - mobile-first player
++   - keyboard/focus-heavy player
++9. For each player type analyze:
++   - what they try to do
++   - what they expect the UI to do
++   - where they hesitate
++   - where they get confused
++   - where they miss important information
++   - where they feel slowed down
++   - where they feel confident
++10. Implement 1-2 visible fixes that address the worst confusion points, such as:
++   - stronger contextual hints
++   - better explanatory text
++   - clearer action wording
++   - tighter grouping of related controls
++   - improved visibility for important status/context
++11. Capture matching after screenshots
++12. Update SERIES_INDEX.md
++
++Required file contents:
++- README.md: why this step focuses on likely user confusion
++- report.md: usability issues by player type, first-session confusion, in-run decision friction, town prep friction, inventory/spell pain points, why the chosen fixes matter
++- comparison.md: side-by-side before/after and what confusion each change reduces
++- changes.md: exact code/UI changes, risk, rollback, follow-up
++- teaching-notes.md: explain why simulating multiple user lenses produces better prompts and better design
++- blog-ready.md and linked-post.md as before
++- changed-files.txt and screenshot-manifest.md as before
++
++Important rules:
++- Ground the simulation in the actual observed UI
++- Do not invent giant features
++- Ship visible changes that reduce confusion now
++- The artifact folder should be ready for a public case study
++
++Finish by summarizing what you created and the exact folder path.
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshot-manifest.md" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshot-manifest.md"
+index e69de29..8266213 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshot-manifest.md"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshot-manifest.md"
+@@ -0,0 +1,44 @@
++﻿# Screenshot Manifest
++
++| Filename | Viewport | Flow name | Why captured | Before/after |
++| --- | --- | --- | --- | --- |
++| before-mobile-01-title.png | 430x932 | Title | Entry-point wording and first-time versus returning-run clarity. | before |
++| before-mobile-02-creation.png | 430x932 | Creation | Early commitment and onboarding framing. | before |
++| before-mobile-03-town.png | 430x932 | Town | First-town onboarding status, chip wording, and primary dock action. | before |
++| before-mobile-04-dungeon-hud.png | 430x932 | First dungeon HUD | Objective flow, tactical action wording, and persistent context. | before |
++| before-mobile-05-run-menu.png | 430x932 | In-run menu | System-menu scanability and grouping of related controls. | before |
++| before-mobile-06-pack.png | 430x932 | Pack | Control shot to confirm no extra clutter was introduced. | before |
++| before-mobile-07-magic.png | 430x932 | Magic | Control shot to confirm no extra clutter was introduced. | before |
++| before-mobile-08-journal.png | 430x932 | Journal | Support-surface naming and access path context. | before |
++| before-mobile-09-help.png | 430x932 | How to Play | Support-surface naming and accessibility of help. | before |
++| before-mobile-10-settings.png | 430x932 | Settings | Support-surface naming and control-shot stability. | before |
++| before-desktop-01-title.png | 1440x1200 | Title | Entry-point wording and first-time versus returning-run clarity. | before |
++| before-desktop-02-creation.png | 1440x1200 | Creation | Early commitment and onboarding framing. | before |
++| before-desktop-03-town.png | 1440x1200 | Town | First-town onboarding status, chip wording, and primary dock action. | before |
++| before-desktop-04-dungeon-hud.png | 1440x1200 | First dungeon HUD | Objective flow, tactical action wording, and persistent context. | before |
++| before-desktop-05-run-menu.png | 1440x1200 | In-run menu | System-menu scanability and grouping of related controls. | before |
++| before-desktop-06-pack.png | 1440x1200 | Pack | Control shot to confirm no extra clutter was introduced. | before |
++| before-desktop-07-magic.png | 1440x1200 | Magic | Control shot to confirm no extra clutter was introduced. | before |
++| before-desktop-08-journal.png | 1440x1200 | Journal | Support-surface naming and access path context. | before |
++| before-desktop-09-help.png | 1440x1200 | How to Play | Support-surface naming and accessibility of help. | before |
++| before-desktop-10-settings.png | 1440x1200 | Settings | Support-surface naming and control-shot stability. | before |
++| after-mobile-01-title.png | 430x932 | Title | Entry-point wording and first-time versus returning-run clarity. | after |
++| after-mobile-02-creation.png | 430x932 | Creation | Early commitment and onboarding framing. | after |
++| after-mobile-03-town.png | 430x932 | Town | First-town onboarding status, chip wording, and primary dock action. | after |
++| after-mobile-04-dungeon-hud.png | 430x932 | First dungeon HUD | Objective flow, tactical action wording, and persistent context. | after |
++| after-mobile-05-run-menu.png | 430x932 | In-run menu | System-menu scanability and grouping of related controls. | after |
++| after-mobile-06-pack.png | 430x932 | Pack | Control shot to confirm no extra clutter was introduced. | after |
++| after-mobile-07-magic.png | 430x932 | Magic | Control shot to confirm no extra clutter was introduced. | after |
++| after-mobile-08-journal.png | 430x932 | Journal | Support-surface naming and access path context. | after |
++| after-mobile-09-help.png | 430x932 | How to Play | Support-surface naming and accessibility of help. | after |
++| after-mobile-10-settings.png | 430x932 | Settings | Support-surface naming and control-shot stability. | after |
++| after-desktop-01-title.png | 1440x1200 | Title | Entry-point wording and first-time versus returning-run clarity. | after |
++| after-desktop-02-creation.png | 1440x1200 | Creation | Early commitment and onboarding framing. | after |
++| after-desktop-03-town.png | 1440x1200 | Town | First-town onboarding status, chip wording, and primary dock action. | after |
++| after-desktop-04-dungeon-hud.png | 1440x1200 | First dungeon HUD | Objective flow, tactical action wording, and persistent context. | after |
++| after-desktop-05-run-menu.png | 1440x1200 | In-run menu | System-menu scanability and grouping of related controls. | after |
++| after-desktop-06-pack.png | 1440x1200 | Pack | Control shot to confirm no extra clutter was introduced. | after |
++| after-desktop-07-magic.png | 1440x1200 | Magic | Control shot to confirm no extra clutter was introduced. | after |
++| after-desktop-08-journal.png | 1440x1200 | Journal | Support-surface naming and access path context. | after |
++| after-desktop-09-help.png | 1440x1200 | How to Play | Support-surface naming and accessibility of help. | after |
++| after-desktop-10-settings.png | 1440x1200 | Settings | Support-surface naming and control-shot stability. | after |
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\data\\capture-step-03.mjs" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\data\\capture-step-03.mjs"
+index e69de29..529a4c4 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\data\\capture-step-03.mjs"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\data\\capture-step-03.mjs"
+@@ -0,0 +1,249 @@
++import { mkdir, readFile, writeFile } from "node:fs/promises";
++import http from "node:http";
++import path from "node:path";
++import { chromium } from "playwright";
++
++const ROOT = process.cwd();
++const STEP_ROOT = path.join(ROOT, "artifacts", "menu-redesign-series", "step-03-usability-simulation");
++const DATA_DIR = path.join(STEP_ROOT, "data");
++const PORT = 4315;
++
++const stage = process.argv[2];
++
++if (!["before", "after"].includes(stage)) {
++  console.error("Usage: node capture-step-03.mjs <before|after>");
++  process.exit(1);
++}
++
++const OUT_DIR = path.join(STEP_ROOT, "screenshots", stage);
++
++const MIME_TYPES = {
++  ".css": "text/css; charset=utf-8",
++  ".html": "text/html; charset=utf-8",
++  ".jpeg": "image/jpeg",
++  ".jpg": "image/jpeg",
++  ".js": "text/javascript; charset=utf-8",
++  ".json": "application/json; charset=utf-8",
++  ".mjs": "text/javascript; charset=utf-8",
++  ".png": "image/png",
++  ".svg": "image/svg+xml; charset=utf-8",
++  ".webmanifest": "application/manifest+json; charset=utf-8"
++};
++
++const VIEWPORTS = [
++  { key: "mobile", width: 430, height: 932, deviceScaleFactor: 2 },
++  { key: "desktop", width: 1440, height: 1200, deviceScaleFactor: 1 }
++];
++
++const FLOWS = [
++  ["title", "Title", "Entry-point wording and first-time versus returning-run clarity."],
++  ["creation", "Creation", "Early commitment and onboarding framing."],
++  ["town", "Town", "First-town onboarding status, chip wording, and primary dock action."],
++  ["dungeon-hud", "First dungeon HUD", "Objective flow, tactical action wording, and persistent context."],
++  ["run-menu", "In-run menu", "System-menu scanability and grouping of related controls."],
++  ["pack", "Pack", "Control shot to confirm no extra clutter was introduced."],
++  ["magic", "Magic", "Control shot to confirm no extra clutter was introduced."],
++  ["journal", "Journal", "Support-surface naming and access path context."],
++  ["help", "How to Play", "Support-surface naming and accessibility of help."],
++  ["settings", "Settings", "Support-surface naming and control-shot stability."]
++];
++
++function getMimeType(filePath) {
++  return MIME_TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream";
++}
++
++async function createStaticServer(rootDir) {
++  const server = http.createServer(async (request, response) => {
++    try {
++      const requestPath = new URL(request.url, "http://127.0.0.1").pathname;
++      const relativePath = requestPath === "/" ? "index.html" : decodeURIComponent(requestPath.replace(/^\/+/, ""));
++      const resolvedPath = path.resolve(rootDir, relativePath);
++      const relativeFromRoot = path.relative(rootDir, resolvedPath);
++
++      if (relativeFromRoot.startsWith("..") || path.isAbsolute(relativeFromRoot)) {
++        response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
++        response.end("Forbidden");
++        return;
++      }
++
++      const body = await readFile(resolvedPath);
++      response.writeHead(200, { "Content-Type": getMimeType(resolvedPath) });
++      response.end(body);
++    } catch (error) {
++      response.writeHead(error && error.code === "ENOENT" ? 404 : 500, { "Content-Type": "text/plain; charset=utf-8" });
++      response.end(error && error.code === "ENOENT" ? "Not found" : "Server error");
++    }
++  });
++
++  await new Promise((resolve, reject) => {
++    server.once("error", reject);
++    server.listen(PORT, "127.0.0.1", () => resolve());
++  });
++
++  return server;
++}
++
++async function loadTitle(page) {
++  await page.goto(`http://127.0.0.1:${PORT}/index.html`, { waitUntil: "networkidle" });
++  await page.waitForFunction(() => Boolean(window.castleOfTheWindsWeb));
++  await page.waitForTimeout(400);
++}
++
++async function startRun(page) {
++  await loadTitle(page);
++  await page.click('[data-action="new-game"]');
++  await page.waitForSelector('[data-action="begin-adventure"]');
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    game.selectedRace = "dwarf";
++    game.selectedClass = "fighter";
++    game.creationName = "Morgan";
++    game.creationStatBonuses = { str: 2, dex: 0, con: 4, int: 0 };
++    game.render();
++  });
++  await page.click('[data-action="begin-adventure"]');
++  await page.waitForFunction(() => {
++    const game = window.castleOfTheWindsWeb;
++    return game?.mode === "game" || game?.mode === "modal";
++  });
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    if (game.mode === "modal") {
++      game.closeModal();
++    }
++    game.render();
++  });
++  await page.waitForTimeout(450);
++}
++
++async function enterDungeon(page) {
++  await startRun(page);
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    game.placePlayerAt(game.currentLevel.stairsDown.x, game.currentLevel.stairsDown.y);
++    game.useStairs("down");
++    if (game.mode === "modal") {
++      game.closeModal();
++    }
++    game.render();
++  });
++  await page.waitForTimeout(600);
++}
++
++async function stageFlow(page, id) {
++  if (id === "title") {
++    await loadTitle(page);
++    return;
++  }
++  if (id === "creation") {
++    await loadTitle(page);
++    await page.click('[data-action="new-game"]');
++    await page.waitForSelector('[data-action="begin-adventure"]');
++    await page.waitForTimeout(250);
++    return;
++  }
++  if (id === "town") {
++    await startRun(page);
++    return;
++  }
++
++  await enterDungeon(page);
++
++  if (id === "run-menu") {
++    await page.click('[data-action="open-utility-menu"]');
++  } else if (id === "pack") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showHubModal("pack"));
++  } else if (id === "magic") {
++    await page.evaluate(() => {
++      const game = window.castleOfTheWindsWeb;
++      game.player.spellsKnown = Array.from(new Set([...(game.player.spellsKnown || []), "magicMissile", "healMinor", "identify"]));
++      game.render();
++      game.showHubModal("magic");
++    });
++  } else if (id === "journal") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showHubModal("journal"));
++  } else if (id === "help") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showHelpModal());
++  } else if (id === "settings") {
++    await page.evaluate(() => window.castleOfTheWindsWeb.showSettingsModal());
++  }
++  await page.waitForTimeout(250);
++}
++
++async function captureState(page) {
++  return await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    return {
++      mode: game?.mode || "",
++      depth: game?.currentDepth ?? null,
++      levelKind: game?.currentLevel?.kind || null,
++      modalTitle: document.querySelector(".modal-title")?.textContent?.trim() || null
++    };
++  });
++}
++
++async function captureViewport(browser, viewport) {
++  const page = await browser.newPage({
++    viewport: { width: viewport.width, height: viewport.height },
++    deviceScaleFactor: viewport.deviceScaleFactor
++  });
++  const rows = [];
++  try {
++    for (const [order, flow] of FLOWS.entries()) {
++      const [id, flowName, whyCaptured] = flow;
++      await stageFlow(page, id);
++      const filename = `${stage}-${viewport.key}-${String(order + 1).padStart(2, "0")}-${id}.png`;
++      const fullPath = path.join(OUT_DIR, filename);
++      await page.screenshot({ path: fullPath, fullPage: true });
++      const state = await captureState(page);
++      rows.push({
++        filename,
++        path: fullPath,
++        viewport: `${viewport.width}x${viewport.height}`,
++        viewportClass: viewport.key,
++        flowName,
++        whyCaptured,
++        beforeAfter: stage,
++        modalTitle: state.modalTitle,
++        mode: state.mode,
++        depth: state.depth,
++        levelKind: state.levelKind
++      });
++    }
++  } finally {
++    await page.close();
++  }
++  return rows;
++}
++
++async function main() {
++  await mkdir(OUT_DIR, { recursive: true });
++  await mkdir(DATA_DIR, { recursive: true });
++
++  const server = await createStaticServer(ROOT);
++  let browser = null;
++
++  try {
++    browser = await chromium.launch({ headless: true });
++    const captures = [];
++    for (const viewport of VIEWPORTS) {
++      captures.push(...await captureViewport(browser, viewport));
++    }
++    await writeFile(
++      path.join(DATA_DIR, `capture-${stage}.json`),
++      `${JSON.stringify({ generatedAt: new Date().toISOString(), captures }, null, 2)}\n`,
++      "utf8"
++    );
++    console.log(path.join(DATA_DIR, `capture-${stage}.json`));
++  } finally {
++    if (browser) {
++      await browser.close();
++    }
++    await new Promise((resolve) => server.close(resolve));
++  }
++}
++
++main().catch((error) => {
++  console.error(error);
++  process.exit(1);
++});
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\data\\capture-before.json" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\data\\capture-before.json"
+index e69de29..bd86d98 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\data\\capture-before.json"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\data\\capture-before.json"
+@@ -0,0 +1,265 @@
++{
++  "generatedAt": "2026-04-07T01:08:46.586Z",
++  "captures": [
++    {
++      "filename": "before-mobile-01-title.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-mobile-01-title.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Title",
++      "whyCaptured": "Entry-point wording and first-time versus returning-run clarity.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "title",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "before-mobile-02-creation.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-mobile-02-creation.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Creation",
++      "whyCaptured": "Early commitment and onboarding framing.",
++      "beforeAfter": "before",
++      "modalTitle": "Create Adventurer",
++      "mode": "creation",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "before-mobile-03-town.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-mobile-03-town.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Town",
++      "whyCaptured": "First-town onboarding status, chip wording, and primary dock action.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 0,
++      "levelKind": "town"
++    },
++    {
++      "filename": "before-mobile-04-dungeon-hud.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-mobile-04-dungeon-hud.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "First dungeon HUD",
++      "whyCaptured": "Objective flow, tactical action wording, and persistent context.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-mobile-05-run-menu.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-mobile-05-run-menu.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "In-run menu",
++      "whyCaptured": "System-menu scanability and grouping of related controls.",
++      "beforeAfter": "before",
++      "modalTitle": "Adventure Menu",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-mobile-06-pack.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-mobile-06-pack.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Pack",
++      "whyCaptured": "Control shot to confirm no extra clutter was introduced.",
++      "beforeAfter": "before",
++      "modalTitle": "Pack & Equipment",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-mobile-07-magic.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-mobile-07-magic.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Magic",
++      "whyCaptured": "Control shot to confirm no extra clutter was introduced.",
++      "beforeAfter": "before",
++      "modalTitle": "Magic",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-mobile-08-journal.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-mobile-08-journal.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Journal",
++      "whyCaptured": "Support-surface naming and access path context.",
++      "beforeAfter": "before",
++      "modalTitle": "Run Journal",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-mobile-09-help.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-mobile-09-help.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "How to Play",
++      "whyCaptured": "Support-surface naming and accessibility of help.",
++      "beforeAfter": "before",
++      "modalTitle": "How to Play",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-mobile-10-settings.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-mobile-10-settings.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Settings",
++      "whyCaptured": "Support-surface naming and control-shot stability.",
++      "beforeAfter": "before",
++      "modalTitle": "Device Settings",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-desktop-01-title.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-desktop-01-title.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Title",
++      "whyCaptured": "Entry-point wording and first-time versus returning-run clarity.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "title",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "before-desktop-02-creation.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-desktop-02-creation.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Creation",
++      "whyCaptured": "Early commitment and onboarding framing.",
++      "beforeAfter": "before",
++      "modalTitle": "Create Adventurer",
++      "mode": "creation",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "before-desktop-03-town.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-desktop-03-town.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Town",
++      "whyCaptured": "First-town onboarding status, chip wording, and primary dock action.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 0,
++      "levelKind": "town"
++    },
++    {
++      "filename": "before-desktop-04-dungeon-hud.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-desktop-04-dungeon-hud.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "First dungeon HUD",
++      "whyCaptured": "Objective flow, tactical action wording, and persistent context.",
++      "beforeAfter": "before",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-desktop-05-run-menu.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-desktop-05-run-menu.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "In-run menu",
++      "whyCaptured": "System-menu scanability and grouping of related controls.",
++      "beforeAfter": "before",
++      "modalTitle": "Adventure Menu",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-desktop-06-pack.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-desktop-06-pack.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Pack",
++      "whyCaptured": "Control shot to confirm no extra clutter was introduced.",
++      "beforeAfter": "before",
++      "modalTitle": "Pack & Equipment",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-desktop-07-magic.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-desktop-07-magic.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Magic",
++      "whyCaptured": "Control shot to confirm no extra clutter was introduced.",
++      "beforeAfter": "before",
++      "modalTitle": "Magic",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-desktop-08-journal.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-desktop-08-journal.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Journal",
++      "whyCaptured": "Support-surface naming and access path context.",
++      "beforeAfter": "before",
++      "modalTitle": "Run Journal",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-desktop-09-help.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-desktop-09-help.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "How to Play",
++      "whyCaptured": "Support-surface naming and accessibility of help.",
++      "beforeAfter": "before",
++      "modalTitle": "How to Play",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "before-desktop-10-settings.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\before\\before-desktop-10-settings.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Settings",
++      "whyCaptured": "Support-surface naming and control-shot stability.",
++      "beforeAfter": "before",
++      "modalTitle": "Device Settings",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    }
++  ]
++}
+
+diff --git "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\data\\capture-after.json" "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\data\\capture-after.json"
+index e69de29..11e582e 100644
+--- "a/C:\\Users\\pzgam\\AppData\\Local\\Temp\\step03-patch-Kp8Z4f\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\data\\capture-after.json"
++++ "b/C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\data\\capture-after.json"
+@@ -0,0 +1,265 @@
++{
++  "generatedAt": "2026-04-07T01:13:35.439Z",
++  "captures": [
++    {
++      "filename": "after-mobile-01-title.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-mobile-01-title.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Title",
++      "whyCaptured": "Entry-point wording and first-time versus returning-run clarity.",
++      "beforeAfter": "after",
++      "modalTitle": null,
++      "mode": "title",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "after-mobile-02-creation.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-mobile-02-creation.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Creation",
++      "whyCaptured": "Early commitment and onboarding framing.",
++      "beforeAfter": "after",
++      "modalTitle": "Create Adventurer",
++      "mode": "creation",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "after-mobile-03-town.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-mobile-03-town.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Town",
++      "whyCaptured": "First-town onboarding status, chip wording, and primary dock action.",
++      "beforeAfter": "after",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 0,
++      "levelKind": "town"
++    },
++    {
++      "filename": "after-mobile-04-dungeon-hud.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-mobile-04-dungeon-hud.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "First dungeon HUD",
++      "whyCaptured": "Objective flow, tactical action wording, and persistent context.",
++      "beforeAfter": "after",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-mobile-05-run-menu.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-mobile-05-run-menu.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "In-run menu",
++      "whyCaptured": "System-menu scanability and grouping of related controls.",
++      "beforeAfter": "after",
++      "modalTitle": "Adventure Menu",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-mobile-06-pack.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-mobile-06-pack.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Pack",
++      "whyCaptured": "Control shot to confirm no extra clutter was introduced.",
++      "beforeAfter": "after",
++      "modalTitle": "Pack & Equipment",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-mobile-07-magic.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-mobile-07-magic.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Magic",
++      "whyCaptured": "Control shot to confirm no extra clutter was introduced.",
++      "beforeAfter": "after",
++      "modalTitle": "Magic",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-mobile-08-journal.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-mobile-08-journal.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Journal",
++      "whyCaptured": "Support-surface naming and access path context.",
++      "beforeAfter": "after",
++      "modalTitle": "Run Journal",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-mobile-09-help.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-mobile-09-help.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "How to Play",
++      "whyCaptured": "Support-surface naming and accessibility of help.",
++      "beforeAfter": "after",
++      "modalTitle": "How to Play",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-mobile-10-settings.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-mobile-10-settings.png",
++      "viewport": "430x932",
++      "viewportClass": "mobile",
++      "flowName": "Settings",
++      "whyCaptured": "Support-surface naming and control-shot stability.",
++      "beforeAfter": "after",
++      "modalTitle": "Device Settings",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-desktop-01-title.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-desktop-01-title.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Title",
++      "whyCaptured": "Entry-point wording and first-time versus returning-run clarity.",
++      "beforeAfter": "after",
++      "modalTitle": null,
++      "mode": "title",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "after-desktop-02-creation.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-desktop-02-creation.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Creation",
++      "whyCaptured": "Early commitment and onboarding framing.",
++      "beforeAfter": "after",
++      "modalTitle": "Create Adventurer",
++      "mode": "creation",
++      "depth": 0,
++      "levelKind": null
++    },
++    {
++      "filename": "after-desktop-03-town.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-desktop-03-town.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Town",
++      "whyCaptured": "First-town onboarding status, chip wording, and primary dock action.",
++      "beforeAfter": "after",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 0,
++      "levelKind": "town"
++    },
++    {
++      "filename": "after-desktop-04-dungeon-hud.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-desktop-04-dungeon-hud.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "First dungeon HUD",
++      "whyCaptured": "Objective flow, tactical action wording, and persistent context.",
++      "beforeAfter": "after",
++      "modalTitle": null,
++      "mode": "game",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-desktop-05-run-menu.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-desktop-05-run-menu.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "In-run menu",
++      "whyCaptured": "System-menu scanability and grouping of related controls.",
++      "beforeAfter": "after",
++      "modalTitle": "Adventure Menu",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-desktop-06-pack.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-desktop-06-pack.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Pack",
++      "whyCaptured": "Control shot to confirm no extra clutter was introduced.",
++      "beforeAfter": "after",
++      "modalTitle": "Pack & Equipment",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-desktop-07-magic.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-desktop-07-magic.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Magic",
++      "whyCaptured": "Control shot to confirm no extra clutter was introduced.",
++      "beforeAfter": "after",
++      "modalTitle": "Magic",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-desktop-08-journal.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-desktop-08-journal.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Journal",
++      "whyCaptured": "Support-surface naming and access path context.",
++      "beforeAfter": "after",
++      "modalTitle": "Run Journal",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-desktop-09-help.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-desktop-09-help.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "How to Play",
++      "whyCaptured": "Support-surface naming and accessibility of help.",
++      "beforeAfter": "after",
++      "modalTitle": "How to Play",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    },
++    {
++      "filename": "after-desktop-10-settings.png",
++      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-03-usability-simulation\\screenshots\\after\\after-desktop-10-settings.png",
++      "viewport": "1440x1200",
++      "viewportClass": "desktop",
++      "flowName": "Settings",
++      "whyCaptured": "Support-surface naming and control-shot stability.",
++      "beforeAfter": "after",
++      "modalTitle": "Device Settings",
++      "mode": "modal",
++      "depth": 1,
++      "levelKind": "dungeon"
++    }
++  ]
++}

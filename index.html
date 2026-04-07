@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0b1a15">
-  <title>Castle of the Winds Mobile</title>
+  <title>Castle of the Winds</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-192.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,14 +31,9 @@
             <canvas id="game-canvas" width="600" height="600" aria-label="Game board"></canvas>
           </div>
           <div class="board-overlays">
-            <button id="map-toggle-button" class="utility-menu-button map-chip-button" data-action="toggle-map" data-focus-key="top:map" type="button">Survey</button>
+            <button id="spell-tray-toggle-button" class="utility-menu-button map-chip-button spell-chip-button hidden" data-action="open-spell-tray" data-focus-key="top:spell-tray" type="button">Magic</button>
+            <section id="spell-tray" class="spell-tray hidden" aria-live="polite"></section>
             <div id="context-chip" class="context-chip hidden" aria-live="polite"></div>
-            <section id="map-drawer" class="map-drawer hidden">
-              <div class="map-drawer-inner">
-                <canvas id="map-canvas" width="280" height="280" aria-label="Dungeon map"></canvas>
-                <div id="map-caption" class="mini-caption"></div>
-              </div>
-            </section>
           </div>
         </section>
       </section>
@@ -46,8 +41,14 @@
 
     <section class="bottom-band panel">
       <section class="status-band">
-        <div id="advisor-strip" class="field-summary"></div>
-        <div id="threat-capsule" class="objective-band"></div>
+        <section id="map-panel" class="map-panel">
+          <div class="map-panel-head">
+            <span id="map-panel-label" class="advisor-label">Overworld Map</span>
+            <span id="map-panel-state" class="field-summary-state">No active run</span>
+          </div>
+          <canvas id="map-canvas" width="280" height="280" aria-label="Area map"></canvas>
+          <div id="map-caption" class="mini-caption"></div>
+        </section>
         <div id="player-capsule" class="stat-band"></div>
       </section>
 
@@ -76,38 +77,35 @@
   <template id="title-template">
     <div class="modal mobile-sheet title-screen">
       <div class="title-screen-grid">
-        <section class="title-screen-panel title-showcase-panel">
-          <div class="title-launcher-head">
-            <img class="title-crest" src="icons/icon-192.svg" alt="Castle of the Winds icon">
-            <div class="title-launcher-copy">
-              <div class="title-screen-kicker">Travel Codex</div>
+        <section class="title-showcase-panel">
+          <div class="title-cinematic-backdrop" aria-hidden="true">
+            <img id="title-loop-image" class="title-cinematic-media" src="" alt="" loading="eager" decoding="async" fetchpriority="high">
+          </div>
+          <div class="title-showcase-content">
+            <div class="title-launcher-copy title-launcher-copy-hero">
+              <div class="title-screen-kicker">A winter roguelike of quick descents</div>
               <h2 class="title-screen-heading">Castle of the Winds</h2>
               <div class="title-screen-copy">
-                Start in town, march north to the keep, clear the marked floor objective, and bring the Runestone home.
+                Descend the keep. Claim the Runestone. Return alive.
+              </div>
+            </div>
+            <div class="title-audio-banner">
+              <div class="title-audio-copy">
+                <div class="title-audio-label">Title Theme</div>
+                <div class="title-audio-note" data-role="title-music-note"></div>
+              </div>
+              <button id="title-music-button" class="action-button title-audio-toggle" data-action="toggle-music" data-role="title-music-toggle" data-focus-key="title:music" type="button">Mute Music</button>
+            </div>
+            <div class="title-hero-footer">
+              <div id="title-save-summary" class="title-save-summary hidden"></div>
+              <div class="modal-actions title-actions">
+                <button class="action-button primary" data-action="new-game" data-focus-key="title:new-game" type="button">Start Run</button>
+                <button id="title-load-button" class="action-button" data-action="load-game" data-focus-key="title:load" type="button">Continue Save</button>
+                <button class="action-button title-help-link" data-action="help" data-focus-key="title:help" type="button">Learn Basics</button>
               </div>
             </div>
           </div>
-          <div class="title-scene">
-            <div class="title-scene-copy">
-              <div class="title-scene-label">Field Kit</div>
-              <div class="title-scene-title">Short-session roguelike tactics</div>
-              <div class="title-scene-note">Built for quick reads, deliberate turns, and clean mobile play.</div>
-            </div>
-            <div id="title-party-lineup" class="sprite-lineup"></div>
-            <div id="title-threat-lineup" class="sprite-lineup threat-line"></div>
-          </div>
-          <div id="title-feature-list" class="title-feature-list"></div>
         </section>
-        <section class="title-screen-panel title-save-panel">
-          <div class="field-label">Recent Run</div>
-          <div class="title-save-kicker">Continue from your latest browser save.</div>
-          <div id="title-save-summary" class="title-save-summary"></div>
-        </section>
-      </div>
-      <div class="modal-actions title-actions">
-          <button class="action-button primary" data-action="new-game" data-focus-key="title:new-game" type="button">New Adventurer</button>
-          <button id="title-load-button" class="action-button" data-action="load-game" data-focus-key="title:load" type="button">Continue</button>
-          <button class="action-button" data-action="help" data-focus-key="title:help" type="button">How To Play</button>
       </div>
     </div>
   </template>
@@ -117,6 +115,13 @@
       <div class="modal-title">Create Adventurer</div>
       <div class="creation-intro text-block">
         Build a travel-ready loadout. Keep the board readable, start light, and commit to an opening style you can sustain through the first floor.
+      </div>
+      <div class="title-audio-banner creation-audio-banner">
+        <div class="title-audio-copy">
+          <div class="title-audio-label">Title Theme</div>
+          <div class="title-audio-note" data-role="title-music-note"></div>
+        </div>
+        <button class="action-button title-audio-toggle" data-action="toggle-music" data-role="title-music-toggle" data-focus-key="creation:music" type="button">Mute Music</button>
       </div>
       <div class="creation-sheet-grid">
         <section class="creation-sheet-main">
@@ -172,30 +177,47 @@
 
   <template id="utility-menu-template">
     <div class="modal mobile-sheet utility-menu-sheet">
-      <div class="modal-title">Run Menu</div>
+      <div class="modal-title">Adventure Menu</div>
       <div class="modal-body utility-menu-body">
+        <div class="utility-menu-actions">
+          <section class="utility-menu-group">
+            <div class="field-label">Run</div>
+            <div class="utility-menu-group-grid">
+              <button class="action-button" data-action="open-hub" data-tab="journal" data-journal-section="mission" data-focus-key="utility:briefing" type="button">Mission</button>
+              <button class="action-button" data-action="open-hub" data-tab="journal" data-journal-section="current" data-focus-key="utility:journal" type="button">Field Guide</button>
+              <button id="utility-stats-button" class="action-button" data-action="open-character-sheet" data-focus-key="utility:stats" type="button">Character</button>
+            </div>
+          </section>
+          <section class="utility-menu-group">
+            <div class="field-label">Saves</div>
+            <div class="utility-menu-group-grid">
+              <button id="utility-save-button" class="action-button" data-action="save-game" data-focus-key="utility:save" type="button">Save Slot</button>
+              <button id="utility-load-button" class="action-button" data-action="load-game" data-focus-key="utility:load" type="button">Load Slot</button>
+            </div>
+          </section>
+          <section class="utility-menu-group">
+            <div class="field-label">System</div>
+            <div class="utility-menu-group-grid">
+              <button class="action-button" data-action="view-map" data-focus-key="utility:map" type="button">Floor Map</button>
+              <button class="action-button" data-action="settings" data-focus-key="utility:settings" type="button">Settings</button>
+              <button class="action-button" data-action="open-hub" data-tab="journal" data-journal-section="guide" data-focus-key="utility:help" type="button">Rules</button>
+              <button class="action-button primary utility-menu-primary-action" data-action="close-modal" data-focus-key="utility:close" type="button">Return to Run</button>
+            </div>
+            <button class="action-button action-button-subtle utility-trace-button" data-action="export-telemetry" data-focus-key="utility:trace" type="button">Export Trace</button>
+          </section>
+        </div>
         <section class="utility-menu-panel">
-          <div class="field-label">Current Run</div>
+          <div class="field-label">Right Now</div>
           <div id="utility-run-summary" class="utility-menu-summary"></div>
         </section>
         <section class="utility-menu-panel">
-          <div class="field-label">Saved Run</div>
+          <div class="field-label">Resume Point</div>
           <div id="utility-save-summary" class="utility-menu-summary"></div>
         </section>
         <section class="utility-menu-panel">
-          <div class="field-label">Controls</div>
+          <div class="field-label">Device & Controls</div>
           <div id="utility-control-summary" class="utility-menu-summary"></div>
         </section>
-        <div class="utility-menu-actions">
-          <button class="action-button" data-action="view-map" data-focus-key="utility:map" type="button">Map</button>
-          <button id="utility-save-button" class="action-button primary" data-action="save-game" data-focus-key="utility:save" type="button">Save</button>
-          <button id="utility-load-button" class="action-button" data-action="load-game" data-focus-key="utility:load" type="button">Load</button>
-          <button class="action-button" data-action="open-briefing" data-focus-key="utility:briefing" type="button">Briefing</button>
-          <button class="action-button" data-action="open-hub" data-tab="journal" data-focus-key="utility:journal" type="button">Journal</button>
-          <button class="action-button" data-action="settings" data-focus-key="utility:settings" type="button">Settings</button>
-          <button class="action-button" data-action="help" data-focus-key="utility:help" type="button">Help</button>
-          <button class="action-button" data-action="close-modal" data-focus-key="utility:close" type="button">Close</button>
-        </div>
       </div>
     </div>
   </template>

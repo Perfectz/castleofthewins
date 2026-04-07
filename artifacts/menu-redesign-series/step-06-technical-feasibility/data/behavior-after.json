@@ -1,0 +1,126 @@
+{
+  "generatedAt": "2026-04-07T06:50:31.004Z",
+  "stage": "after",
+  "behavior": {
+    "mobile": {
+      "utilityOpen": {
+        "mode": "modal",
+        "modalSurfaceKey": "utility-menu",
+        "activeFocusKey": "utility:journal",
+        "activeText": "Journal & Log"
+      },
+      "menuCloseFocus": {
+        "mode": "game",
+        "modalSurfaceKey": null,
+        "activeTag": "BUTTON",
+        "activeFocusKey": "top:menu",
+        "activeText": "Menu",
+        "controllerFocusKey": "top:menu"
+      },
+      "helpModal": {
+        "modalSurfaceKey": "help",
+        "title": "How to Play",
+        "closeLabel": "Back to Menu"
+      },
+      "helpReturn": {
+        "mode": "modal",
+        "modalSurfaceKey": "utility-menu",
+        "activeFocusKey": "utility:help",
+        "activeText": "How to Play"
+      },
+      "settingsModal": {
+        "modalSurfaceKey": "settings",
+        "title": "Device Settings",
+        "closeLabel": "Back to Menu"
+      },
+      "settingsReturn": {
+        "mode": "modal",
+        "modalSurfaceKey": "utility-menu",
+        "activeFocusKey": "utility:settings",
+        "activeText": "Settings"
+      },
+      "briefingModal": {
+        "modalSurfaceKey": "briefing",
+        "title": "Mission Briefing",
+        "closeLabel": "Back to Menu"
+      },
+      "briefingReturn": {
+        "mode": "modal",
+        "modalSurfaceKey": "utility-menu",
+        "activeFocusKey": "utility:briefing",
+        "activeText": "Mission"
+      },
+      "characterModal": {
+        "modalSurfaceKey": "character-sheet",
+        "title": "Character Sheet",
+        "closeLabel": "Back to Menu"
+      },
+      "characterReturn": {
+        "mode": "modal",
+        "modalSurfaceKey": "utility-menu",
+        "activeFocusKey": "utility:stats",
+        "activeText": "Character"
+      }
+    },
+    "desktop": {
+      "utilityOpen": {
+        "mode": "modal",
+        "modalSurfaceKey": "utility-menu",
+        "activeFocusKey": "utility:journal",
+        "activeText": "Journal & Log"
+      },
+      "menuCloseFocus": {
+        "mode": "game",
+        "modalSurfaceKey": null,
+        "activeTag": "BUTTON",
+        "activeFocusKey": "top:menu",
+        "activeText": "Menu",
+        "controllerFocusKey": "top:menu"
+      },
+      "helpModal": {
+        "modalSurfaceKey": "help",
+        "title": "How to Play",
+        "closeLabel": "Back to Menu"
+      },
+      "helpReturn": {
+        "mode": "modal",
+        "modalSurfaceKey": "utility-menu",
+        "activeFocusKey": "utility:help",
+        "activeText": "How to Play"
+      },
+      "settingsModal": {
+        "modalSurfaceKey": "settings",
+        "title": "Device Settings",
+        "closeLabel": "Back to Menu"
+      },
+      "settingsReturn": {
+        "mode": "modal",
+        "modalSurfaceKey": "utility-menu",
+        "activeFocusKey": "utility:settings",
+        "activeText": "Settings"
+      },
+      "briefingModal": {
+        "modalSurfaceKey": "briefing",
+        "title": "Mission Briefing",
+        "closeLabel": "Back to Menu"
+      },
+      "briefingReturn": {
+        "mode": "modal",
+        "modalSurfaceKey": "utility-menu",
+        "activeFocusKey": "utility:briefing",
+        "activeText": "Mission"
+      },
+      "characterModal": {
+        "modalSurfaceKey": "character-sheet",
+        "title": "Character Sheet",
+        "closeLabel": "Back to Menu"
+      },
+      "characterReturn": {
+        "mode": "modal",
+        "modalSurfaceKey": "utility-menu",
+        "activeFocusKey": "utility:stats",
+        "activeText": "Character"
+      }
+    }
+  }
+}

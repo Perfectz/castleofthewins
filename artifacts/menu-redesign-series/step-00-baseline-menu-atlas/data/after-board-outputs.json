@@ -1,0 +1,8 @@
+{
+  "outputs": [
+    "screenshots/after/mobile-baseline-atlas-board.png",
+    "screenshots/after/desktop-baseline-atlas-board.png",
+    "screenshots/after/navigation-map-board.png",
+    "screenshots/after/mobile-hud-callout-board.png"
+  ]
+}

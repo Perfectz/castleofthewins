@@ -1,0 +1,65 @@
+{
+  "generatedAt": "2026-04-07T07:37:41.275Z",
+  "captures": [
+    {
+      "filename": "before-mobile-01-run-menu.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-08-executive-roadmap-and-final-pass\\screenshots\\before\\before-mobile-01-run-menu.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "flowName": "Adventure Menu",
+      "whyCaptured": "Capstone polish candidate on the support entry labels.",
+      "beforeAfter": "before",
+      "mode": "modal",
+      "modalSurfaceKey": "utility-menu",
+      "activeHubTab": "pack",
+      "activeJournalSection": "current",
+      "title": "Adventure Menu",
+      "helpButtonLabel": "Guide"
+    },
+    {
+      "filename": "before-mobile-02-rules-flow.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-08-executive-roadmap-and-final-pass\\screenshots\\before\\before-mobile-02-rules-flow.png",
+      "viewport": "430x932",
+      "viewportClass": "mobile",
+      "flowName": "Rules Reference",
+      "whyCaptured": "The support deep-link that risks overlap with Field Guide naming.",
+      "beforeAfter": "before",
+      "mode": "modal",
+      "modalSurfaceKey": "hub:journal",
+      "activeHubTab": "journal",
+      "activeJournalSection": "guide",
+      "title": "Field Guide",
+      "helpButtonLabel": null
+    },
+    {
+      "filename": "before-desktop-01-run-menu.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-08-executive-roadmap-and-final-pass\\screenshots\\before\\before-desktop-01-run-menu.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "flowName": "Adventure Menu",
+      "whyCaptured": "Capstone polish candidate on the support entry labels.",
+      "beforeAfter": "before",
+      "mode": "modal",
+      "modalSurfaceKey": "utility-menu",
+      "activeHubTab": "pack",
+      "activeJournalSection": "current",
+      "title": "Adventure Menu",
+      "helpButtonLabel": "Guide"
+    },
+    {
+      "filename": "before-desktop-02-rules-flow.png",
+      "path": "C:\\Users\\pzgam\\Desktop\\castleofthewinds\\artifacts\\menu-redesign-series\\step-08-executive-roadmap-and-final-pass\\screenshots\\before\\before-desktop-02-rules-flow.png",
+      "viewport": "1440x1200",
+      "viewportClass": "desktop",
+      "flowName": "Rules Reference",
+      "whyCaptured": "The support deep-link that risks overlap with Field Guide naming.",
+      "beforeAfter": "before",
+      "mode": "modal",
+      "modalSurfaceKey": "hub:journal",
+      "activeHubTab": "journal",
+      "activeJournalSection": "guide",
+      "title": "Field Guide",
+      "helpButtonLabel": null
+    }
+  ]
+}
