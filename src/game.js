@@ -12233,7 +12233,9 @@ export class Game {
 
   formatSaveStamp(isoString) { return formatSavedRunStamp(isoString); }
 
-  resetCreationDraft() { resetCreationState(this); }
+  resetCreationDraft() {
+    resetCreationState(this);
+  }
 
   captureCreationDraft() { captureCreationDraftState(this); }
 

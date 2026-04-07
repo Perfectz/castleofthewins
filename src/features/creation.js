@@ -1,6 +1,6 @@
 import { CLASSES, RACES } from "../data/content.js";
 import { CHARACTER_SHEET_PATH, PIXEL_ASSET_ROOT, TITLE_SCREEN_ASSETS } from "../data/assets.js";
-import { getCarryCapacity, getClass, getRace } from "../core/entities.js";
+import { getClass, getRace } from "../core/entities.js";
 import { choiceCard, escapeHtml } from "../core/utils.js";
 
 export const CREATION_STAT_KEYS = ["str", "dex", "con", "int"];
@@ -334,38 +334,31 @@ export function showCreationModal(game, options = {}) {
   const classChoice = fragment.getElementById("class-choice");
   const statPoints = fragment.getElementById("creation-stat-points");
   const statAllocation = fragment.getElementById("creation-stat-allocation");
-  const preview = fragment.getElementById("creation-preview");
 
   nameInput.value = game.creationName;
   RACES.forEach((race) => {
     const art = buildChoiceArtMarkup("race", race);
-    const element = choiceCard(race, "race", race.id === game.selectedRace, art);
+    const element = choiceCard(race, "race", race.id === game.selectedRace, {
+      ...art,
+      className: "choice-card-compact",
+      noteText: race.summary
+    });
     element.dataset.focusKey = `creation:race:${race.id}`;
     raceChoice.appendChild(element);
   });
   CLASSES.forEach((role) => {
     const art = buildChoiceArtMarkup("class", role);
-    const element = choiceCard(role, "class", role.id === game.selectedClass, art);
+    const element = choiceCard(role, "class", role.id === game.selectedClass, {
+      ...art,
+      className: "choice-card-compact",
+      noteText: role.summary
+    });
     element.dataset.focusKey = `creation:class:${role.id}`;
     classChoice.appendChild(element);
   });
 
-  const race = getRace(game.selectedRace);
-  const role = getClass(game.selectedClass);
   const stats = game.getCreationStats();
-  const persistencePreview = typeof game.getCreationPersistencePreview === "function"
-    ? game.getCreationPersistencePreview(role.id)
-    : {
-        activeContract: null,
-        mastery: { summary: "No mastery track." },
-        startingBonuses: []
-      };
-  const contractModel = typeof game.getContractViewModel === "function" ? game.getContractViewModel() : null;
-  const recommendedContract = contractModel?.all?.find((contract) => contract.id === contractModel.recommendedId) || null;
   const pointsRemaining = game.getCreationPointsRemaining();
-  const previewHp = game.getMaxHpForStats(stats, 1, role.name, 0, race.hp + role.bonuses.hp);
-  const previewMana = game.getMaxManaForStats(stats, role.name, 0, race.mana + role.bonuses.mana);
-  const [damageLow, damageHigh] = game.getDamageRangeForStats(stats, 2);
 
   statPoints.innerHTML = `Training points remaining: <strong>${pointsRemaining}</strong>`;
   statAllocation.innerHTML = CREATION_STAT_KEYS.map((stat) => `
@@ -384,43 +377,6 @@ export function showCreationModal(game, options = {}) {
       </div>
     </div>
   `).join("");
-
-  preview.innerHTML = `
-    ${buildAdventurerIdentityMarkup({
-      name: game.creationName || "Morgan",
-      raceId: race.id,
-      classId: role.id,
-      eyebrow: "Pack Preview",
-      summary: `${race.summary} ${role.summary}`,
-      detail: `${getRaceArt(race.id).title} ancestry with ${getClassArt(role.id).title.toLowerCase()} discipline.`
-    })}
-    <div class="stat-grid">
-      <div class="stat-line"><span>Strength</span><strong>${stats.str}</strong></div>
-      <div class="stat-line"><span>Dexterity</span><strong>${stats.dex}</strong></div>
-      <div class="stat-line"><span>Constitution</span><strong>${stats.con}</strong></div>
-      <div class="stat-line"><span>Intelligence</span><strong>${stats.int}</strong></div>
-      <div class="stat-line"><span>Hit Points</span><strong>${previewHp}</strong></div>
-      <div class="stat-line"><span>Mana</span><strong>${previewMana}</strong></div>
-      <div class="stat-line"><span>Attack</span><strong>${game.getAttackValueForStats(stats, 2)}</strong></div>
-      <div class="stat-line"><span>Damage</span><strong>${damageLow}-${damageHigh}</strong></div>
-      <div class="stat-line"><span>Evade</span><strong>${game.getEvadeValueForStats(stats)}</strong></div>
-      <div class="stat-line"><span>Armor</span><strong>${game.getArmorValueForStats(stats)}</strong></div>
-      <div class="stat-line"><span>Search</span><strong>${game.getSearchRadiusForStats(stats)} tiles</strong></div>
-      <div class="stat-line"><span>Carry</span><strong>${getCarryCapacity({ stats })}</strong></div>
-    </div>
-    <div class="section-block">
-      <div class="field-label">Town Persistence</div>
-      <div class="text-block">
-        ${escapeHtml(persistencePreview.activeContract ? `Active contract: ${persistencePreview.activeContract.name}. Town Persistence, opt-in, next run only.` : "No contract armed. Contracts stay opt-in at the bank and apply to the next run only.")}<br><br>
-        ${escapeHtml(recommendedContract ? `Recommended next run: ${recommendedContract.name}. ${recommendedContract.recommendationReason || recommendedContract.description}` : "No contract recommendation available yet.")}<br><br>
-        ${escapeHtml(`Mastery: ${persistencePreview.mastery.summary}`)}<br><br>
-        ${escapeHtml(persistencePreview.startingBonuses.length > 0
-          ? `Starting bonuses on this run: ${persistencePreview.startingBonuses.join(", ")}.`
-          : "Starting bonuses on this run: none yet.")}
-      </div>
-      ${recommendedContract?.unlocked ? `<div class="modal-actions"><button class="menu-button" data-action="contract-arm-recommended" data-focus-key="creation:contract:recommended" type="button">${recommendedContract.active ? "Recommended Armed" : `Arm ${escapeHtml(recommendedContract.name)}`}</button></div>` : ""}
-    </div>
-  `;
 
   game.modalRoot.innerHTML = "";
   game.modalRoot.appendChild(fragment);

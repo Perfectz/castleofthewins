@@ -67,15 +67,17 @@ export function shadeColor(hex, amount) {
 export function choiceCard(entry, type, selected, options = {}) {
   const artHtml = options.artHtml || "";
   const metaHtml = options.metaHtml || "";
+  const noteText = options.noteText || entry.summary || "";
+  const className = options.className || "";
   const button = document.createElement("button");
   button.type = "button";
-  button.className = `choice-card${selected ? " selected" : ""}`;
+  button.className = `choice-card${className ? ` ${className}` : ""}${selected ? " selected" : ""}`;
   button.dataset[type] = entry.id;
   button.innerHTML = `
     ${artHtml ? `<div class="choice-card-art">${artHtml}</div>` : ""}
     <div class="choice-card-body">
       <div class="choice-title">${escapeHtml(entry.name)}</div>
-      <div class="choice-note">${escapeHtml(entry.summary)}</div>
+      ${noteText ? `<div class="choice-note">${escapeHtml(noteText)}</div>` : ""}
       ${metaHtml ? `<div class="choice-card-meta">${metaHtml}</div>` : ""}
     </div>
   `;
