@@ -1,10 +1,34 @@
 import { rollTreasure, weightedMonster } from "../core/entities.js";
 import { actorAt, getTile, hasLineOfSight, inBounds, isVisible, summonMonsterNear } from "../core/world.js";
-import { distance, nowTime, randInt, removeFromArray, roll } from "../core/utils.js";
+import { clamp, distance, nowTime, randInt, removeFromArray, roll } from "../core/utils.js";
 import { buildDeathRecapMarkup, noteDeathContext, recordChronicleEvent } from "./chronicle.js";
 import { getBuildAttackBonus, getBuildDamageBonus, onMonsterKilled, queuePerkChoice } from "./builds.js";
 
 const UNDEAD_IDS = new Set(["skeleton", "wraith", "cryptlord"]);
+const BASE_MOVE_THRESHOLD = 100;
+
+function getMonsterMoveSpeed(monster) {
+  let speed = typeof monster.moveSpeed === "number" ? monster.moveSpeed : BASE_MOVE_THRESHOLD;
+  if ((monster.slowed || 0) > 0) {
+    speed *= 0.5;
+  }
+  return clamp(Math.round(speed), 40, 120);
+}
+
+function bankMonsterMovement(monster) {
+  monster.moveMeter = Math.min(
+    BASE_MOVE_THRESHOLD * 2,
+    (typeof monster.moveMeter === "number" ? monster.moveMeter : BASE_MOVE_THRESHOLD) + getMonsterMoveSpeed(monster)
+  );
+}
+
+function canMonsterSpendMovement(monster) {
+  if ((monster.moveMeter || 0) < BASE_MOVE_THRESHOLD) {
+    return false;
+  }
+  monster.moveMeter -= BASE_MOVE_THRESHOLD;
+  return true;
+}
 
 function isUndead(actor) {
   return Boolean(actor && UNDEAD_IDS.has(actor.id));
@@ -347,6 +371,10 @@ export function killMonster(game, monster) {
       label: monster.name,
       depth: game.currentDepth
     });
+    game.recordTelemetry?.("elite_kill", {
+      label: monster.name,
+      depth: game.currentDepth
+    });
   }
   game.player.exp += monster.exp;
   game.log(`${monster.name} dies.`, "good");
@@ -401,6 +429,7 @@ export function handleDeath(game) {
 export function processMonsters(game) {
   const level = game.currentLevel;
   level.actors.forEach((monster) => {
+    bankMonsterMovement(monster);
     if ((monster.tempBuffTurns || 0) > 0) {
       monster.tempBuffTurns -= 1;
       if (monster.tempBuffTurns <= 0) {
@@ -409,6 +438,9 @@ export function processMonsters(game) {
     }
     if ((monster.bannerCooldown || 0) > 0) {
       monster.bannerCooldown -= 1;
+    }
+    if ((monster.slowed || 0) > 0) {
+      monster.slowed -= 1;
     }
     if (monster.sleeping) {
       const wakes = distance(game.player, monster) <= 3 || (isVisible(level, monster.x, monster.y) && Math.random() < 0.55);
@@ -424,12 +456,6 @@ export function processMonsters(game) {
       game.emitReadout("Held", monster.x, monster.y, "#cbbfff", 220);
       return;
     }
-    if (monster.slowed) {
-      monster.slowed -= 1;
-      if (game.turn % 2 === 0) {
-        return;
-      }
-    }
     const dx = game.player.x - monster.x;
     const dy = game.player.y - monster.y;
     const distanceToPlayer = Math.max(Math.abs(dx), Math.abs(dy));
@@ -442,7 +468,9 @@ export function processMonsters(game) {
     }
 
     if (monster.chargeWindup) {
-      applyCharge(game, monster);
+      if (canMonsterSpendMovement(monster)) {
+        applyCharge(game, monster);
+      }
       return;
     }
 
@@ -556,7 +584,7 @@ export function processMonsters(game) {
     if (monster.alerted > 0) {
       if (monster.behaviorKit === "stalker" && canSeePlayer && distanceToPlayer <= 3) {
         const retreat = findRetreatStep(game, monster);
-        if (retreat) {
+        if (retreat && canMonsterSpendMovement(monster)) {
           monster.x = retreat.x;
           monster.y = retreat.y;
           return;
@@ -564,7 +592,7 @@ export function processMonsters(game) {
       }
       if (monster.tactic === "skirmish" && distanceToPlayer <= 4) {
         const retreat = findRetreatStep(game, monster);
-        if (retreat) {
+        if (retreat && canMonsterSpendMovement(monster)) {
           monster.x = retreat.x;
           monster.y = retreat.y;
           return;
@@ -595,7 +623,7 @@ export function processMonsters(game) {
       game.attack(monster, game.player);
       return;
     }
-    if (canMonsterMoveTo(game, monster, nx, ny)) {
+    if (canMonsterMoveTo(game, monster, nx, ny) && canMonsterSpendMovement(monster)) {
       monster.x = nx;
       monster.y = ny;
     }

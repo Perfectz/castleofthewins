@@ -2,6 +2,7 @@ import { ITEM_DEFS, RUMOR_DEFS, SHOPS, TOWN_REACTION_DEFS, TOWN_UNLOCK_DEFS } fr
 import { getItemValue } from "../core/entities.js";
 import { shuffle } from "../core/utils.js";
 import { getDepthTheme } from "./encounters.js";
+import { getDurableTownUnlocks, unlockDurableTownProject } from "./meta-progression.js";
 
 export const TOWN_CYCLE_TURNS = 120;
 
@@ -75,7 +76,7 @@ const SHOP_TIER_STOCK = {
 };
 
 function unlocked(game, unlockId) {
-  return Boolean(game.townUnlocks?.[unlockId]);
+  return Boolean(game.durableTownUnlocks?.[unlockId] || game.townUnlocks?.[unlockId]);
 }
 
 function getPhaseConfig(phase) {
@@ -204,6 +205,9 @@ function hasFeaturedStock(featuredStock) {
 }
 
 export function ensureTownMetaState(game) {
+  const durableTownUnlocks = typeof game.getDurableTownUnlocks === "function"
+    ? game.getDurableTownUnlocks()
+    : getDurableTownUnlocks(game);
   game.townUnlocks = {
     supply_cache: false,
     guild_license: false,
@@ -211,7 +215,8 @@ export function ensureTownMetaState(game) {
     archive_maps: false,
     ghost_bargains: false,
     deep_contracts: false,
-    ...(game.townUnlocks || {})
+    ...(game.townUnlocks || {}),
+    ...(durableTownUnlocks || {})
   };
   game.rumorTable = Array.isArray(game.rumorTable) ? game.rumorTable : [];
   game.shopTiers = {
@@ -349,7 +354,10 @@ export function getShopBuyPrice(game, item, shopId = "") {
 export function getShopSellPrice(game, item, shopId = "") {
   const basePrice = shopId === "junk" ? 25 : Math.round(getItemValue(item) * 0.55);
   const state = getTownCycleState(game);
-  return Math.max(1, Math.round(basePrice * state.phaseModifiers.sellMultiplier));
+  const contractMultiplier = typeof game.getTownSellBonusMultiplier === "function"
+    ? game.getTownSellBonusMultiplier()
+    : 1;
+  return Math.max(1, Math.round(basePrice * state.phaseModifiers.sellMultiplier * contractMultiplier));
 }
 
 export function getSagePrice(game, basePrice = 60) {
@@ -372,7 +380,7 @@ export function getUnlockCost(unlockId) {
 export function getAvailableTownUnlocks(game) {
   ensureTownMetaState(game);
   return Object.values(TOWN_UNLOCK_DEFS)
-    .filter((unlockDef) => !game.townUnlocks[unlockDef.id])
+    .filter((unlockDef) => !unlocked(game, unlockDef.id))
     .map((unlockDef) => ({
       ...unlockDef,
       cost: getUnlockCost(unlockDef.id)
@@ -382,7 +390,7 @@ export function getAvailableTownUnlocks(game) {
 export function purchaseTownUnlock(game, unlockId) {
   ensureTownMetaState(game);
   const unlockDef = TOWN_UNLOCK_DEFS[unlockId];
-  if (!unlockDef || game.townUnlocks[unlockId]) {
+  if (!unlockDef || unlocked(game, unlockId)) {
     return false;
   }
   const cost = getUnlockCost(unlockId);
@@ -391,6 +399,7 @@ export function purchaseTownUnlock(game, unlockId) {
     return false;
   }
   game.player.gold -= cost;
+  unlockDurableTownProject(game, unlockId);
   game.townUnlocks[unlockId] = true;
   ensureTownMetaState(game);
   refreshTownStocks(game);
@@ -402,7 +411,7 @@ export function purchaseTownUnlock(game, unlockId) {
   game.recordTelemetry?.("town_unlock_purchase", {
     unlockId,
     cost,
-    unlockOrder: Object.values(game.townUnlocks).filter(Boolean).length
+    unlockOrder: Object.values(game.durableTownUnlocks || game.townUnlocks).filter(Boolean).length
   });
   return true;
 }
@@ -432,8 +441,29 @@ export function getNextFloorRumor(game) {
   if (level?.floorObjective?.id === "rescue_captive" && RUMOR_DEFS.captive) {
     rumorEntries.push(RUMOR_DEFS.captive);
   }
+  if (level?.floorObjective?.id === "seal_shrine" && RUMOR_DEFS.shrine_path) {
+    rumorEntries.push(RUMOR_DEFS.shrine_path);
+  }
+  if (level?.floorObjective?.id === "secure_supplies" && RUMOR_DEFS.supplies) {
+    rumorEntries.push(RUMOR_DEFS.supplies);
+  }
+  if (level?.floorObjective?.id === "recover_waystone" && RUMOR_DEFS.waystone) {
+    rumorEntries.push(RUMOR_DEFS.waystone);
+  }
+  if (level?.floorObjective?.id === "secure_ledger" && RUMOR_DEFS.ledger) {
+    rumorEntries.push(RUMOR_DEFS.ledger);
+  }
+  if (level?.floorObjective?.id === "purify_well" && RUMOR_DEFS.purify_well) {
+    rumorEntries.push(RUMOR_DEFS.purify_well);
+  }
+  if (level?.floorObjective?.id === "break_beacon" && RUMOR_DEFS.beacon) {
+    rumorEntries.push(RUMOR_DEFS.beacon);
+  }
+  if (level?.floorObjective?.id === "light_watchfire" && RUMOR_DEFS.watchfire) {
+    rumorEntries.push(RUMOR_DEFS.watchfire);
+  }
   if (cycle.phase === "Dawn") {
-    return rumorEntries.find((entry) => ["relic_hunt", "nest", "captive", theme?.id].includes(entry.id)) || rumorEntries[0] || null;
+    return rumorEntries.find((entry) => ["relic_hunt", "nest", "captive", "supplies", "waystone", "ledger", "shrine_path", "watchfire", theme?.id].includes(entry.id)) || rumorEntries[0] || null;
   }
   if (cycle.phase === "Dusk" || cycle.phase === "Night") {
     return rumorEntries[0] || null;
@@ -496,25 +526,93 @@ export function getTownMetaSummary(game) {
   const rumorTokens = game.player?.runCurrencies?.rumorTokens || 0;
   const bankGold = Math.floor(game.player?.bankGold || 0);
   const onHand = Math.floor(game.player?.gold || 0);
+  const rumorPrice = getRumorPrice(game);
+  const nextRunIntent = typeof game.getNextRunIntent === "function" ? game.getNextRunIntent() : null;
+  const nextRunFocus = nextRunIntent?.progressText || (typeof game.getNextRunFocusLines === "function" ? game.getNextRunFocusLines().find(Boolean) || "" : "");
+  const contractModel = typeof game.getContractViewModel === "function" ? game.getContractViewModel() : null;
+  const recommendedContract = contractModel?.all?.find((contract) => contract.id === contractModel.recommendedId) || null;
+  const canArmRecommendedContract = Boolean(recommendedContract?.unlocked && !recommendedContract?.active);
+  const canBuyRumor = rumorTokens > 0 || onHand >= rumorPrice;
   const nextUnlockText = nextUnlock
     ? onHand >= nextUnlock.cost
       ? `Fund ${nextUnlock.name}`
       : `Save for ${nextUnlock.name} (${nextUnlock.cost} gp)`
     : "All current projects funded";
   const intelText = intel.nextRumor?.text || "No clear rumor posted for the next floor.";
-  const recommendedAction = rumorTokens > 0
-    ? "Spend a rumor token at the bank for fresh intel."
-    : nextUnlock && onHand >= nextUnlock.cost
-      ? `Fund ${nextUnlock.name} now to improve this adventurer's next descents.`
-      : bankGold > 0
-        ? "Use banked gold for safety, intel, or your next town project before descending."
-        : "Check the bank for next-floor intel and support for this adventurer.";
+  let recommendedActionId = "bank";
+  let recommendedActionLabel = "Review Bank Plan";
+  let recommendedAction = "Check the bank for next-floor intel and support for this adventurer.";
+  let recommendedReason = "Town persistence turns a clean return into the next run's edge.";
+
+  if (nextRunIntent?.cta?.actionId?.startsWith("town_unlock:") && nextUnlock && onHand >= nextUnlock.cost) {
+    recommendedActionId = nextRunIntent.cta.actionId;
+    recommendedActionLabel = nextRunIntent.cta.label;
+    recommendedAction = nextRunIntent.cta.text;
+    recommendedReason = nextRunIntent.cta.progressText;
+  } else if (nextRunIntent?.cta?.actionId === "contract_recommended" && canArmRecommendedContract) {
+    recommendedActionId = nextRunIntent.cta.actionId;
+    recommendedActionLabel = nextRunIntent.cta.label;
+    recommendedAction = nextRunIntent.cta.text;
+    recommendedReason = nextRunIntent.cta.progressText;
+  } else if (nextRunIntent?.cta?.actionId === "town_rumor" && canBuyRumor) {
+    recommendedActionId = nextRunIntent.cta.actionId;
+    recommendedActionLabel = nextRunIntent.cta.label;
+    recommendedAction = nextRunIntent.cta.text;
+    recommendedReason = nextRunIntent.cta.progressText;
+  } else if (game.storyFlags?.postReturnBankPrompt && canArmRecommendedContract) {
+    recommendedActionId = "contract_recommended";
+    recommendedActionLabel = `Arm ${recommendedContract.name}`;
+    recommendedAction = `Arm ${recommendedContract.name} before the next run.`;
+    recommendedReason = recommendedContract.recommendationReason || recommendedContract.description;
+  } else if (game.storyFlags?.postReturnBankPrompt && canBuyRumor) {
+    recommendedActionId = "town_rumor";
+    recommendedActionLabel = rumorTokens > 0 ? "Spend Rumor Token" : "Buy Intel";
+    recommendedAction = rumorTokens > 0
+      ? "Spend a rumor token on next-floor intel while the last return is still fresh."
+      : "Buy next-floor intel before heading north again.";
+    recommendedReason = intelText;
+  } else if (canArmRecommendedContract) {
+    recommendedActionId = "contract_recommended";
+    recommendedActionLabel = `Arm ${recommendedContract.name}`;
+    recommendedAction = `Arm ${recommendedContract.name} for the next run.`;
+    recommendedReason = recommendedContract.recommendationReason || recommendedContract.description;
+  } else if (rumorTokens > 0) {
+    recommendedActionId = "town_rumor";
+    recommendedActionLabel = "Spend Rumor Token";
+    recommendedAction = "Spend a rumor token at the bank for fresh intel.";
+    recommendedReason = intelText;
+  } else if (nextUnlock && onHand >= nextUnlock.cost) {
+    recommendedActionId = `town_unlock:${nextUnlock.id}`;
+    recommendedActionLabel = `Fund ${nextUnlock.name}`;
+    recommendedAction = `Fund ${nextUnlock.name} now to improve this adventurer's next descents.`;
+    recommendedReason = nextUnlock.description;
+  } else if (canBuyRumor) {
+    recommendedActionId = "town_rumor";
+    recommendedActionLabel = "Buy Intel";
+    recommendedAction = "Buy intel before heading north again.";
+    recommendedReason = intelText;
+  } else if (bankGold > 0 && onHand < 100) {
+    recommendedActionId = "bank_withdraw";
+    recommendedActionLabel = "Withdraw 100";
+    recommendedAction = "Use banked gold for safety, intel, or your next town project before descending.";
+    recommendedReason = "Liquid gold lets this adventurer convert value before the next descent.";
+  } else if (onHand > 0) {
+    recommendedActionId = "bank_deposit";
+    recommendedActionLabel = "Deposit 100";
+    recommendedAction = "Bank spare gold if you want a safer next descent.";
+    recommendedReason = "Account gold survives the trip back north better than loose coin.";
+  }
   return {
     bankGold,
     rumorTokens,
     nextUnlock,
     nextRumor: intel.nextRumor || null,
+    nextRunIntent,
+    recommendedActionId,
+    recommendedActionLabel,
     recommendedAction,
-    summary: `Secured ${bankGold} gp | Rumor tokens ${rumorTokens} | ${nextUnlockText} | Next-floor intel: ${intelText}`
+    recommendedReason: nextRunFocus ? `${recommendedReason} ${nextRunFocus}` : recommendedReason,
+    recommendedContractId: recommendedContract?.id || "",
+    summary: `Secured ${bankGold} gp | Rumor tokens ${rumorTokens} | ${nextUnlockText} | Next-floor intel: ${intelText} | Next: ${recommendedActionLabel}${nextRunFocus ? ` | ${nextRunFocus}` : ""}`
   };
 }

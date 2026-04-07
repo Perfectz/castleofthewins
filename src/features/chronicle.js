@@ -93,6 +93,12 @@ export function buildDeathRecapMarkup(game) {
   const masterySummary = typeof game.getClassMasterySummary === "function"
     ? game.getClassMasterySummary(game.player?.classId)
     : "No mastery track.";
+  const carryForward = typeof game.getTownCarryForwardSummary === "function"
+    ? game.getTownCarryForwardSummary()
+    : "Town improvements carried forward: none yet.";
+  const nextRunMarkup = typeof game.getNextRunFocusMarkup === "function"
+    ? game.getNextRunFocusMarkup({ label: "Why Run Again" })
+    : "";
 
   return `
     <div class="section-block text-block">
@@ -114,8 +120,10 @@ export function buildDeathRecapMarkup(game) {
       <div class="text-block">
         ${escapeHtml(`Mastery: ${masterySummary}`)}<br><br>
         ${escapeHtml(activeContract ? `Active contract: ${activeContract.name}` : "Active contract: none armed")}<br><br>
-        ${escapeHtml(persistentChanges.length > 0 ? persistentChanges.join(", ") : "No permanent unlock changed during this run.")}
+        ${escapeHtml(persistentChanges.length > 0 ? persistentChanges.join(", ") : "No permanent unlock changed during this run.")}<br><br>
+        ${escapeHtml(carryForward)}
       </div>
     </div>
+    ${nextRunMarkup}
   `;
 }

@@ -430,7 +430,21 @@ function addSetPiece(level, depth) {
   if (!level.rooms || level.rooms.length < 4) {
     return;
   }
-  const room = choice(level.rooms.slice(2, -1));
+  const reservedRoomIndexes = new Set(level.reservedRoomIndexes || []);
+  if (typeof level.exitRoomIndex === "number") {
+    reservedRoomIndexes.add(level.exitRoomIndex);
+  }
+  if (typeof level.floorObjective?.roomIndex === "number") {
+    reservedRoomIndexes.add(level.floorObjective.roomIndex);
+  }
+  if (typeof level.floorOptional?.roomIndex === "number") {
+    reservedRoomIndexes.add(level.floorOptional.roomIndex);
+  }
+  const candidateRooms = level.rooms.filter((room, index) => index >= 2 && index < level.rooms.length - 1 && !reservedRoomIndexes.has(index));
+  const room = choice(candidateRooms.length > 0 ? candidateRooms : level.rooms.slice(2, -1));
+  if (!room) {
+    return;
+  }
   const theme = choice(["treasury", "chapel", "crossfire", "prison", "gauntlet"]);
   const center = centerOf(room);
   const byId = (id) => MONSTER_DEFS.find((monster) => monster.id === id);
@@ -520,6 +534,12 @@ function addSecretVault(level, depth) {
   if (typeof level.exitRoomIndex === "number") {
     reservedRoomIndexes.add(level.exitRoomIndex);
   }
+  if (typeof level.floorObjective?.roomIndex === "number") {
+    reservedRoomIndexes.add(level.floorObjective.roomIndex);
+  }
+  if (typeof level.floorOptional?.roomIndex === "number") {
+    reservedRoomIndexes.add(level.floorOptional.roomIndex);
+  }
   const eligibleRooms = level.rooms.filter((room, index) => index > 0 && !reservedRoomIndexes.has(index));
   const room = choice(eligibleRooms.length > 0 ? eligibleRooms : level.rooms.slice(1, -1));
   if (!room) {
@@ -568,6 +588,16 @@ function findInitialTargetCursor(game, range) {
 const PIXEL_ASSET_ROOT = "./assets/vendor/pixel-dungeon-pack/2D Pixel Dungeon Asset Pack";
 const CHARACTER_SHEET_PATH = `${PIXEL_ASSET_ROOT}/character and tileset/Dungeon_Character.png`;
 const TILESET_SHEET_PATH = `${PIXEL_ASSET_ROOT}/character and tileset/Dungeon_Tileset.png`;
+const TITLE_SCREEN_ASSETS = {
+  loop: "./assets/ui/title/title-loop.gif",
+  still: "./assets/ui/title/title-still.png",
+  music: "./assets/audio/title-theme.mp3"
+};
+
+const AMBIENT_MUSIC_ASSETS = {
+  town: "./assets/audio/town-theme.mp3",
+  dungeon: "./assets/audio/dungeon-theme.mp3"
+};
 
 function atlasFrame(src, x, y, width = 16, height = 16, sheetWidth = 0, sheetHeight = 0) {
   return {
@@ -583,6 +613,20 @@ function atlasFrame(src, x, y, width = 16, height = 16, sheetWidth = 0, sheetHei
 
 function gridFrame(src, col, row, tile = 16, sheetWidth = 0, sheetHeight = 0) {
   return atlasFrame(src, col * tile, row * tile, tile, tile, sheetWidth, sheetHeight);
+}
+
+function glyphVisual(glyph, extra = {}) {
+  return {
+    glyph,
+    ...extra
+  };
+}
+
+function frameVisual(frames, extra = {}) {
+  return {
+    frames,
+    ...extra
+  };
 }
 
 const TOWN_TERRAIN_ASSETS = {
@@ -612,7 +656,7 @@ const TOWN_BUILDING_ASSETS = {
   guild: "./assets/buildings/town/guild.png",
   temple: "./assets/buildings/town/temple.png",
   bank: "./assets/buildings/town/bank.png",
-  sage: "./assets/buildings/town/house.png"
+  sage: "./assets/buildings/town/sage.png"
 };
 
 const TILESET_VISUALS = {
@@ -678,12 +722,6 @@ const TILESET_VISUALS = {
     gridFrame(TILESET_SHEET_PATH, 0, 9, 16, 160, 160),
     gridFrame(TILESET_SHEET_PATH, 1, 9, 16, 160, 160)
   ],
-  prisonerCell: [
-    gridFrame(TILESET_SHEET_PATH, 9, 3, 16, 160, 160)
-  ],
-  keys: [
-    gridFrame(TILESET_SHEET_PATH, 8, 8, 16, 160, 160)
-  ],
   coin: [
     gridFrame(TILESET_SHEET_PATH, 6, 8, 16, 160, 160)
   ],
@@ -693,35 +731,17 @@ const TILESET_VISUALS = {
   potionRed: [
     gridFrame(TILESET_SHEET_PATH, 9, 8, 16, 160, 160)
   ],
-  flask: [
-    gridFrame(TILESET_SHEET_PATH, 8, 8, 16, 160, 160)
-  ],
   wand: [
     gridFrame(TILESET_SHEET_PATH, 8, 6, 16, 160, 160)
   ],
   sword: [
     gridFrame(TILESET_SHEET_PATH, 5, 6, 16, 160, 160)
   ],
-  shield: [
-    gridFrame(TILESET_SHEET_PATH, 4, 7, 16, 160, 160)
-  ],
   armor: [
     gridFrame(TILESET_SHEET_PATH, 5, 8, 16, 160, 160)
   ],
-  spellbook: [
-    gridFrame(TILESET_SHEET_PATH, 4, 8, 16, 160, 160)
-  ],
-  relic: [
-    gridFrame(TILESET_SHEET_PATH, 7, 7, 16, 160, 160)
-  ],
   flag: [
     gridFrame(TILESET_SHEET_PATH, 7, 7, 16, 160, 160)
-  ],
-  skull: [
-    gridFrame(TILESET_SHEET_PATH, 7, 7, 16, 160, 160)
-  ],
-  shrine: [
-    gridFrame(TILESET_SHEET_PATH, 4, 9, 16, 160, 160)
   ],
   arrowTrap: [
     gridFrame(TILESET_SHEET_PATH, 2, 9, 16, 160, 160)
@@ -732,25 +752,56 @@ const TILESET_VISUALS = {
 };
 
 const BOARD_PROP_VISUALS = {
-  townSign: { frames: TILESET_VISUALS.flag, lift: 0.24, light: false },
-  roadBeacon: { frames: TILESET_VISUALS.torch, lift: 0.32, light: true },
-  roomTorch: { frames: TILESET_VISUALS.wallTorch, lift: 0.34, light: true },
-  shrineTorch: { frames: TILESET_VISUALS.wallTorch, lift: 0.34, light: true, tint: "#d7b0ff" },
-  rescueBanner: { frames: TILESET_VISUALS.keys, lift: 0.16, light: false, tint: "#ffb997" },
-  prisonerCell: { frames: TILESET_VISUALS.prisonerCell, lift: 0.1, light: false },
-  broodNest: { frames: TILESET_VISUALS.skull, lift: 0.08, light: false, tint: "#b98a5b" },
-  shrineSeal: { frames: TILESET_VISUALS.shrine, lift: 0.12, light: true, tint: "#d3b2ff" },
-  relicPedestal: { frames: TILESET_VISUALS.relic, lift: 0.16, light: true, tint: "#b7f0ff" },
-  cacheClosed: { frames: TILESET_VISUALS.cacheClosed, lift: 0.12, light: false },
-  cacheOpen: { frames: TILESET_VISUALS.cacheOpen, lift: 0.12, light: false },
-  vaultChest: { frames: TILESET_VISUALS.chestClosed, lift: 0.14, light: false },
-  openedChest: { frames: TILESET_VISUALS.chestOpen, lift: 0.14, light: false },
-  bloodAltar: { frames: TILESET_VISUALS.altar, lift: 0.08, light: true, tint: "#ff9576" },
-  ghostMerchant: { frames: TILESET_VISUALS.coin, lift: 0.08, light: true, tint: "#d7c6ff" },
-  loreBook: { frames: TILESET_VISUALS.spellbook, lift: 0.1, light: false, tint: "#f2d9a1" },
-  inscribedStone: { frames: TILESET_VISUALS.shrine, lift: 0.08, light: true, tint: "#d7d4cf" },
-  arrowTrap: { frames: TILESET_VISUALS.arrowTrap, lift: 0.08, light: false },
-  summonTrap: { frames: TILESET_VISUALS.summonTrap, lift: 0.08, light: true, tint: "#c8a1ff" }
+  townSign: frameVisual(TILESET_VISUALS.flag, { usage: "town", lift: 0.24, light: false }),
+  roadBeacon: frameVisual(TILESET_VISUALS.torch, { usage: "ambient", lift: 0.32, light: true }),
+  roomTorch: frameVisual(TILESET_VISUALS.wallTorch, { usage: "ambient", lift: 0.34, light: true }),
+  shrineTorch: frameVisual(TILESET_VISUALS.wallTorch, { usage: "ambient", lift: 0.34, light: true, tint: "#d7b0ff" }),
+  rescueBanner: glyphVisual("rescueBanner", { usage: "landmark", lift: 0.18, light: false, tint: "#ffb997" }),
+  prisonerCell: glyphVisual("prisonerCell", { usage: "landmark", scale: 0.74, lift: 0.08, light: false, tint: "#aeb6c2" }),
+  broodNest: glyphVisual("broodNest", { usage: "landmark", scale: 0.72, lift: 0.08, light: false, tint: "#b98a5b" }),
+  shrineSeal: glyphVisual("shrineSeal", { usage: "landmark", scale: 0.72, lift: 0.12, light: true, tint: "#d3b2ff" }),
+  relicPedestal: glyphVisual("relicPedestal", { usage: "landmark", scale: 0.74, lift: 0.16, light: true, tint: "#b7f0ff" }),
+  cacheClosed: frameVisual(TILESET_VISUALS.cacheClosed, { usage: "landmark", lift: 0.12, light: false }),
+  cacheOpen: frameVisual(TILESET_VISUALS.cacheOpen, { usage: "landmark", lift: 0.12, light: false }),
+  vaultChest: frameVisual(TILESET_VISUALS.chestClosed, { usage: "landmark", lift: 0.14, light: false }),
+  openedChest: frameVisual(TILESET_VISUALS.chestOpen, { usage: "landmark", lift: 0.14, light: false }),
+  bloodAltar: frameVisual(TILESET_VISUALS.altar, { usage: "landmark", lift: 0.08, light: true, tint: "#ff9576" }),
+  ghostMerchant: frameVisual(TILESET_VISUALS.coin, { usage: "landmark", lift: 0.08, light: true, tint: "#d7c6ff" }),
+  loreBook: glyphVisual("loreBook", { usage: "landmark", scale: 0.7, lift: 0.1, light: false, tint: "#f2d9a1" }),
+  inscribedStone: glyphVisual("inscribedStone", { usage: "landmark", scale: 0.72, lift: 0.08, light: true, tint: "#d7d4cf" }),
+  arrowTrap: frameVisual(TILESET_VISUALS.arrowTrap, { usage: "hazard", lift: 0.08, light: false }),
+  summonTrap: frameVisual(TILESET_VISUALS.summonTrap, { usage: "hazard", lift: 0.08, light: true, tint: "#c8a1ff" }),
+  barricade: glyphVisual("barricade", { usage: "landmark", scale: 0.76, lift: 0.08, light: false, tint: "#be9a72" }),
+  archiveStack: glyphVisual("archiveStack", { usage: "landmark", scale: 0.72, lift: 0.1, light: false, tint: "#dfc391" }),
+  beaconFocus: glyphVisual("beaconFocus", { usage: "landmark", scale: 0.74, lift: 0.12, light: true, tint: "#f2c06f" }),
+  well: glyphVisual("well", { usage: "landmark", scale: 0.78, lift: 0.06, light: true, tint: "#9ddff2" }),
+  routeMark: glyphVisual("routeMark", { usage: "breadcrumb", scale: 0.5, lift: 0.02, light: false, tint: "#cfc8bb" }),
+  routePennant: glyphVisual("routePennant", { usage: "breadcrumb", scale: 0.5, lift: 0.02, light: false, tint: "#ffb997" }),
+  routeTorch: glyphVisual("routeTorch", { usage: "breadcrumb", scale: 0.5, lift: 0.04, light: true, tint: "#ffcb8b" }),
+  routeRune: glyphVisual("routeRune", { usage: "breadcrumb", scale: 0.5, lift: 0.02, light: false, tint: "#d8d1c4" }),
+  routeLamp: glyphVisual("routeLamp", { usage: "breadcrumb", scale: 0.5, lift: 0.04, light: true, tint: "#d7b0ff" }),
+  routeBeacon: glyphVisual("routeBeacon", { usage: "breadcrumb", scale: 0.52, lift: 0.04, light: true, tint: "#f2c06f" }),
+  routeSupply: glyphVisual("routeSupply", { usage: "breadcrumb", scale: 0.5, lift: 0.02, light: false, tint: "#cfa774" }),
+  routeCairn: glyphVisual("routeCairn", { usage: "breadcrumb", scale: 0.52, lift: 0.02, light: false, tint: "#d7d4cf" }),
+  routeWater: glyphVisual("routeWater", { usage: "breadcrumb", scale: 0.5, lift: 0.02, light: true, tint: "#9ddff2" }),
+  routeSeal: glyphVisual("routeSeal", { usage: "breadcrumb", scale: 0.54, lift: 0.02, light: false, tint: "#d3b2ff" }),
+  routeJournal: glyphVisual("routeJournal", { usage: "breadcrumb", scale: 0.5, lift: 0.02, light: false, tint: "#d7c3a0" }),
+  routeRitual: glyphVisual("routeRitual", { usage: "breadcrumb", scale: 0.54, lift: 0.02, light: true, tint: "#c8a1ff" }),
+  routeBarricade: glyphVisual("routeBarricade", { usage: "breadcrumb", scale: 0.54, lift: 0.02, light: false, tint: "#b58c64" }),
+  routeTracks: glyphVisual("routeTracks", { usage: "breadcrumb", scale: 0.5, lift: 0.02, light: false, tint: "#c8c1b3" })
+};
+
+const ITEM_VISUALS = {
+  coin: frameVisual(TILESET_VISUALS.coin),
+  potionBlue: frameVisual(TILESET_VISUALS.potionBlue),
+  potionRed: frameVisual(TILESET_VISUALS.potionRed),
+  wand: frameVisual(TILESET_VISUALS.wand),
+  sword: frameVisual(TILESET_VISUALS.sword),
+  armor: frameVisual(TILESET_VISUALS.armor),
+  flask: glyphVisual("flaskItem", { tint: "#a9d8e6" }),
+  shield: glyphVisual("shieldItem", { tint: "#b9c4d5" }),
+  spellbook: glyphVisual("spellbookItem", { tint: "#e5d1a5" }),
+  relic: glyphVisual("relicItem", { tint: "#b7f0ff" })
 };
 
 const ACTOR_VISUALS = {
@@ -816,6 +867,16 @@ function getTileVisual(kind, x = 0, y = 0) {
 
 function getBoardPropVisual(propId) {
   return BOARD_PROP_VISUALS[propId] || null;
+}
+
+function getItemVisual(visualId) {
+  if (ITEM_VISUALS[visualId]) {
+    return ITEM_VISUALS[visualId];
+  }
+  if (TILESET_VISUALS[visualId]) {
+    return frameVisual(TILESET_VISUALS[visualId]);
+  }
+  return null;
 }
 
 function getActorVisual(visualId) {
@@ -889,10 +950,15 @@ const SPELLS = {
     cost: 3,
     range: 8,
     effectColor: "#d6c1ff",
+    previewColor: "#d8c4ff",
+    projectileStyle: "arcane",
+    targetingMode: "single",
+    roleLabel: "opener",
     description: "Unerring arcane dart for moderate damage.",
     target: "monster",
     cast(game, caster, target) {
-      const damage = roll(2, 4) + Math.floor(caster.stats.int / 3) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "magic") : 0);
+      const casterStats = game.getActorStats ? game.getActorStats(caster) : caster.stats;
+      const damage = roll(2, 4) + Math.floor(casterStats.int / 3) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "magic") : 0);
       game.log(`A crackling bolt strikes ${target.name} for ${damage} damage.`, "good");
       game.damageActor(caster, target, damage, "magic");
       return true;
@@ -909,7 +975,8 @@ const SPELLS = {
     description: "Restores a small amount of vitality.",
     target: "self",
     cast(game, caster) {
-      const healed = clamp(roll(2, 5) + Math.floor(caster.stats.int / 4), 4, caster.maxHp);
+      const casterStats = game.getActorStats ? game.getActorStats(caster) : caster.stats;
+      const healed = clamp(roll(2, 5) + Math.floor(casterStats.int / 4), 4, caster.maxHp);
       const before = caster.hp;
       caster.hp = Math.min(caster.maxHp, caster.hp + healed);
       game.log(`${caster.name} recovers ${caster.hp - before} hit points.`, "good");
@@ -926,10 +993,15 @@ const SPELLS = {
     cost: 6,
     range: 7,
     effectColor: "#9ad7ff",
+    previewColor: "#b6e6ff",
+    projectileStyle: "frost",
+    targetingMode: "single",
+    roleLabel: "control",
     description: "Cold damage with a chance to slow the foe.",
     target: "monster",
     cast(game, caster, target) {
-      const damage = roll(2, 6) + Math.floor(caster.stats.int / 2) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "cold") : 0);
+      const casterStats = game.getActorStats ? game.getActorStats(caster) : caster.stats;
+      const damage = roll(2, 6) + Math.floor(casterStats.int / 2) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "cold") : 0);
       game.log(`Blue-white frost lashes ${target.name}.`, "good");
       game.damageActor(caster, target, damage, "cold");
       if (target.hp > 0 && Math.random() < 0.35) {
@@ -941,7 +1013,7 @@ const SPELLS = {
   },
   fireball: {
     id: "fireball",
-    name: "Fireball",
+    name: "Ball of Fire",
     school: "elemental",
     tier: 4,
     classAffinity: "wizard",
@@ -949,12 +1021,37 @@ const SPELLS = {
     cost: 9,
     range: 7,
     effectColor: "#ffb16f",
-    description: "High damage blast against a single foe.",
+    previewColor: "#ffc48e",
+    projectileStyle: "fire",
+    targetingMode: "blast",
+    allowFloorTarget: true,
+    blastRadius: 1,
+    roleLabel: "burst",
+    description: "A floor-targeted fire blast that engulfs a small cluster of enemies.",
     target: "monster",
     cast(game, caster, target) {
-      const damage = roll(3, 6) + Math.floor(caster.stats.int / 2) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "fire") : 0);
-      game.log(`The fireball bursts over ${target.name}.`, "good");
-      game.damageActor(caster, target, damage, "fire");
+      const preview = game.resolveSpellTargetPreview ? game.resolveSpellTargetPreview(this, target) : null;
+      const affected = Array.isArray(preview?.actors) ? preview.actors : [];
+      if (affected.length <= 0) {
+        game.log("The flames fail to catch anything worth the cast.", "warning");
+        return false;
+      }
+      const casterStats = game.getActorStats ? game.getActorStats(caster) : caster.stats;
+      const center = preview?.center || target;
+      if (center && game.emitSpellBurst) {
+        game.emitSpellBurst(center.x, center.y, this.effectColor || "#ffb16f", this.blastRadius || 1, "fire");
+      }
+      game.log(`The ball of fire bursts across ${affected.length} foe${affected.length === 1 ? "" : "s"}.`, "good");
+      affected.forEach((enemy, index) => {
+        const damage = roll(3, 6) + Math.floor(casterStats.int / 2) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(enemy, "fire") : 0);
+        if (index > 0 && center && game.playProjectile) {
+          game.playProjectile(center, enemy, this.effectColor || "#ffb16f", {
+            style: "fire",
+            duration: 150
+          });
+        }
+        game.damageActor(caster, enemy, damage, "fire");
+      });
       return true;
     }
   },
@@ -1076,10 +1173,15 @@ const SPELLS = {
     cost: 7,
     range: 8,
     effectColor: "#ffe27a",
+    previewColor: "#fff0a8",
+    projectileStyle: "lightning",
+    targetingMode: "single",
+    roleLabel: "finisher",
     description: "High-voltage strike that rips through a single visible foe.",
     target: "monster",
     cast(game, caster, target) {
-      const damage = roll(3, 5) + Math.floor(caster.stats.int / 2) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "magic") : 0);
+      const casterStats = game.getActorStats ? game.getActorStats(caster) : caster.stats;
+      const damage = roll(3, 5) + Math.floor(casterStats.int / 2) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "magic") : 0);
       game.log(`Lightning cracks across ${target.name}.`, "good");
       game.damageActor(caster, target, damage, "magic");
       return true;
@@ -1115,7 +1217,8 @@ const SPELLS = {
     description: "Restores a substantial amount of vitality.",
     target: "self",
     cast(game, caster) {
-      const healed = clamp(roll(4, 5) + Math.floor(caster.stats.int / 3), 8, caster.maxHp);
+      const casterStats = game.getActorStats ? game.getActorStats(caster) : caster.stats;
+      const healed = clamp(roll(4, 5) + Math.floor(casterStats.int / 3), 8, caster.maxHp);
       const before = caster.hp;
       caster.hp = Math.min(caster.maxHp, caster.hp + healed);
       game.log(`${caster.name} recovers ${caster.hp - before} hit points.`, "good");
@@ -1293,11 +1396,22 @@ const ITEM_DEFS = {
   scoutCloak: { id: "scoutCloak", name: "Scout Cloak", kind: "armor", slot: "cloak", armor: 0, dexBonus: 1, searchBonus: 2, lightBonus: 1, value: 74, rarity: 3, weight: 1, visualId: "armor" },
   spellfocusRing: { id: "spellfocusRing", name: "Ring of Focus", kind: "armor", slot: "ring", armor: 0, manaBonus: 4, wardBonus: 1, value: 88, rarity: 2, weight: 0, visualId: "relic" },
   ironRing: { id: "ironRing", name: "Iron Ring", kind: "armor", slot: "ring", armor: 1, guardBonus: 1, value: 54, rarity: 2, weight: 0, visualId: "relic" },
+  ringOfMight: { id: "ringOfMight", name: "Ring of Might", kind: "armor", slot: "ring", armor: 0, strBonus: 1, value: 84, rarity: 2, weight: 0, visualId: "relic" },
+  ringOfGrace: { id: "ringOfGrace", name: "Ring of Grace", kind: "armor", slot: "ring", armor: 0, dexBonus: 1, value: 86, rarity: 2, weight: 0, visualId: "relic" },
+  ringOfVigor: { id: "ringOfVigor", name: "Ring of Vigor", kind: "armor", slot: "ring", armor: 0, conBonus: 1, value: 96, rarity: 3, weight: 0, visualId: "relic" },
+  ringOfInsight: { id: "ringOfInsight", name: "Ring of Insight", kind: "armor", slot: "ring", armor: 0, intBonus: 1, value: 96, rarity: 3, weight: 0, visualId: "relic" },
   goldCharm: { id: "goldCharm", name: "Charm of Fortune", kind: "armor", slot: "amulet", armor: 0, goldBonus: 0.15, searchBonus: 1, value: 94, rarity: 3, weight: 0, visualId: "relic" },
   torchCharm: { id: "torchCharm", name: "Charm of Light", kind: "armor", slot: "amulet", armor: 0, lightBonus: 1, value: 70, rarity: 2, weight: 0, visualId: "relic" },
   emberCharm: { id: "emberCharm", name: "Ember Charm", kind: "armor", slot: "amulet", armor: 0, fireResist: 2, value: 92, rarity: 3, weight: 0, visualId: "relic" },
   frostCharm: { id: "frostCharm", name: "Frost Charm", kind: "armor", slot: "amulet", armor: 0, coldResist: 2, value: 92, rarity: 3, weight: 0, visualId: "relic" },
   wardingAmulet: { id: "wardingAmulet", name: "Warding Amulet", kind: "armor", slot: "amulet", armor: 0, manaBonus: 1, wardBonus: 2, value: 122, rarity: 4, weight: 0, visualId: "relic" },
+  giantTorque: { id: "giantTorque", name: "Giant Torque", kind: "armor", slot: "amulet", armor: 0, strBonus: 2, value: 126, rarity: 4, weight: 0, visualId: "relic" },
+  windlaceAmulet: { id: "windlaceAmulet", name: "Windlace Amulet", kind: "armor", slot: "amulet", armor: 0, dexBonus: 2, value: 128, rarity: 4, weight: 0, visualId: "relic" },
+  heartstoneAmulet: { id: "heartstoneAmulet", name: "Heartstone Amulet", kind: "armor", slot: "amulet", armor: 0, conBonus: 2, value: 138, rarity: 4, weight: 0, visualId: "relic" },
+  sageCharm: { id: "sageCharm", name: "Sage Charm", kind: "armor", slot: "amulet", armor: 0, intBonus: 2, value: 138, rarity: 4, weight: 0, visualId: "relic" },
+  loadbearerMail: { id: "loadbearerMail", name: "Loadbearer Mail", kind: "armor", slot: "body", armor: 4, strBonus: 1, guardBonus: 1, value: 92, rarity: 3, weight: 7, visualId: "armor" },
+  scholarCowl: { id: "scholarCowl", name: "Scholar Cowl", kind: "armor", slot: "head", armor: 1, intBonus: 1, wardBonus: 1, value: 62, rarity: 3, weight: 1, visualId: "armor" },
+  veteranMantle: { id: "veteranMantle", name: "Veteran Mantle", kind: "armor", slot: "cloak", armor: 1, conBonus: 1, guardBonus: 1, value: 78, rarity: 3, weight: 1, visualId: "armor" },
   healingPotion: { id: "healingPotion", name: "Potion of Healing", kind: "consumable", effect: "heal", value: 28, rarity: 1, weight: 1, visualId: "potionRed" },
   manaPotion: { id: "manaPotion", name: "Potion of Mana", kind: "consumable", effect: "mana", value: 34, rarity: 1, weight: 1, visualId: "potionBlue" },
   identifyScroll: { id: "identifyScroll", name: "Scroll of Identify", kind: "consumable", effect: "identify", value: 36, rarity: 2, weight: 0, visualId: "spellbook" },
@@ -1431,7 +1545,7 @@ const ROOM_EVENT_DEFS = {
     roomHint: "Furniture and shields choke the doorway into a fortified hold.",
     pressureText: "The holdout is coordinating the floor's defenders.",
     rewardText: "Breaking the hold leaves behind disciplined war gear.",
-    propId: "roomTorch",
+    propId: "barricade",
     reward: { type: "treasure", quality: "guarded" }
   },
   cursed_library: {
@@ -1443,7 +1557,7 @@ const ROOM_EVENT_DEFS = {
     roomHint: "Spell ash and chained books cover the room.",
     pressureText: "The library is loud with ward-breaks and old curses.",
     rewardText: "You salvage a spellbook and a page of useful warding notes.",
-    propId: "roomTorch",
+    propId: "archiveStack",
     reward: { type: "spellbook" }
   },
   route_cache: {
@@ -1519,28 +1633,28 @@ const TEMPLE_SERVICES = [
 ];
 
 const MONSTER_DEFS = [
-  { id: "rat", name: "Giant Rat", depth: 1, hp: 6, attack: 3, defense: 7, damage: [1, 4], exp: 12, gold: [2, 10], color: "#8e8e75", sprite: "rat", visualId: "rat", tactic: "pack" },
-  { id: "kobold", name: "Kobold", depth: 1, hp: 8, attack: 4, defense: 8, damage: [1, 5], exp: 15, gold: [4, 12], color: "#b19061", sprite: "kobold", visualId: "kobold", tactic: "pack" },
-  { id: "slinger", name: "Kobold Slinger", depth: 1, hp: 7, attack: 5, defense: 8, damage: [1, 4], exp: 18, gold: [4, 12], color: "#b89066", sprite: "kobold", visualId: "kobold", tactic: "skirmish", ranged: { range: 5, damage: [1, 4], color: "#e0c7a2" } },
-  { id: "goblin", name: "Goblin", depth: 2, hp: 12, attack: 5, defense: 9, damage: [1, 6], exp: 24, gold: [5, 18], color: "#6e9d4f", sprite: "goblin", visualId: "goblin", tactic: "pack" },
-  { id: "archer", name: "Goblin Archer", depth: 2, hp: 11, attack: 6, defense: 9, damage: [1, 6], exp: 28, gold: [6, 20], color: "#8caf56", sprite: "goblin", visualId: "goblin", tactic: "skirmish", ranged: { range: 6, damage: [1, 5], color: "#c2a56a" } },
-  { id: "wolf", name: "Dire Wolf", depth: 2, hp: 14, attack: 6, defense: 10, damage: [2, 4], exp: 28, gold: [0, 0], color: "#a7a7a7", sprite: "wolf", visualId: "wolf", abilities: ["charge"], tactic: "charge" },
-  { id: "skeleton", name: "Skeleton", depth: 2, hp: 18, attack: 7, defense: 11, damage: [2, 5], exp: 40, gold: [8, 22], color: "#d9d9ca", sprite: "skeleton", visualId: "skeleton", tactic: "line" },
-  { id: "orc", name: "Orc", depth: 3, hp: 22, attack: 8, defense: 11, damage: [2, 6], exp: 46, gold: [10, 28], color: "#709243", sprite: "orc", visualId: "orc", tactic: "press" },
-  { id: "pikeguard", name: "Pike Guard", depth: 3, hp: 24, attack: 9, defense: 12, damage: [2, 6], exp: 52, gold: [12, 30], color: "#8f7b58", sprite: "orc", visualId: "orc", tactic: "line" },
-  { id: "slime", name: "Ochre Jelly", depth: 4, hp: 26, attack: 8, defense: 10, damage: [2, 6], exp: 52, gold: [0, 0], color: "#c8a73c", sprite: "slime", visualId: "slime", tactic: "press" },
-  { id: "boneArcher", name: "Bone Archer", depth: 4, hp: 20, attack: 8, defense: 12, damage: [2, 5], exp: 60, gold: [12, 34], color: "#d9d9ca", sprite: "skeleton", visualId: "skeleton", tactic: "skirmish", ranged: { range: 6, damage: [2, 5], color: "#d9c18a" } },
-  { id: "cultAdept", name: "Cult Adept", depth: 4, hp: 24, attack: 9, defense: 12, damage: [2, 5], exp: 64, gold: [12, 38], color: "#7566a6", sprite: "mage", visualId: "mage", spells: ["slowMonster", "magicMissile"], abilities: ["slow"], tactic: "control" },
-  { id: "troll", name: "Troll", depth: 4, hp: 36, attack: 10, defense: 12, damage: [2, 8], exp: 80, gold: [16, 40], color: "#5f7b3f", sprite: "troll", visualId: "troll", abilities: ["charge"], tactic: "charge" },
-  { id: "wraith", name: "Wraith", depth: 5, hp: 30, attack: 11, defense: 14, damage: [3, 6], exp: 98, gold: [18, 54], color: "#b4a7df", sprite: "wraith", visualId: "wraith", abilities: ["phase", "drain"], tactic: "phase" },
-  { id: "graveHound", name: "Grave Hound", depth: 5, hp: 30, attack: 11, defense: 13, damage: [2, 7], exp: 94, gold: [8, 24], color: "#9ca39f", sprite: "wolf", visualId: "wolf", abilities: ["charge", "drain"], tactic: "charge" },
-  { id: "ogre", name: "Ogre", depth: 5, hp: 44, attack: 12, defense: 13, damage: [3, 7], exp: 106, gold: [20, 68], color: "#ab7c50", sprite: "ogre", visualId: "ogre", abilities: ["charge"], tactic: "charge" },
-  { id: "shaman", name: "Orc Shaman", depth: 5, hp: 28, attack: 11, defense: 13, damage: [2, 6], exp: 110, gold: [18, 58], color: "#4a8f8f", sprite: "mage", visualId: "mage", spells: ["slowMonster", "holdMonster"], abilities: ["slow", "summon"], tactic: "control" },
-  { id: "warlock", name: "Warlock", depth: 6, hp: 34, attack: 12, defense: 15, damage: [3, 8], exp: 124, gold: [28, 80], color: "#7854b8", sprite: "mage", visualId: "mage", spells: ["magicMissile", "holdMonster", "lightningBolt"], abilities: ["teleport", "summon"], tactic: "control" },
-  { id: "wyrm", name: "Cave Wyrm", depth: 7, hp: 60, attack: 14, defense: 16, damage: [4, 8], exp: 180, gold: [30, 96], color: "#be5b33", sprite: "dragon", visualId: "dragon", tactic: "skirmish", ranged: { range: 5, damage: [3, 7], color: "#f08c4f" } },
-  { id: "gatekeeper", name: "Gatekeeper Hroth", depth: 3, hp: 34, attack: 10, defense: 13, damage: [2, 7], exp: 140, gold: [30, 60], color: "#b37f54", sprite: "orc", visualId: "orc", unique: true, elite: true, spells: ["holdMonster"], abilities: ["charge"], tactic: "press", role: "elite" },
-  { id: "cryptlord", name: "Veyra The Crypt Lord", depth: 5, hp: 48, attack: 12, defense: 15, damage: [3, 8], exp: 210, gold: [50, 90], color: "#a98bdd", sprite: "mage", visualId: "mage", unique: true, elite: true, spells: ["holdMonster", "slowMonster", "lightningBolt"], abilities: ["summon", "phase"], tactic: "control", role: "elite" },
-  { id: "stormWarden", name: "The Storm Warden", depth: 7, hp: 78, attack: 15, defense: 18, damage: [4, 9], exp: 320, gold: [0, 0], color: "#d6c08a", sprite: "dragon", visualId: "dragon", unique: true, elite: true, spells: ["lightningBolt", "frostBolt", "holdMonster"], abilities: ["charge"], tactic: "skirmish", role: "elite", ranged: { range: 6, damage: [4, 7], color: "#ffd676" } }
+  { id: "rat", name: "Giant Rat", depth: 1, hp: 6, attack: 3, defense: 7, damage: [1, 4], exp: 12, gold: [2, 10], color: "#8e8e75", sprite: "rat", visualId: "rat", tactic: "pack", moveSpeed: 100 },
+  { id: "kobold", name: "Kobold", depth: 1, hp: 8, attack: 4, defense: 8, damage: [1, 5], exp: 15, gold: [4, 12], color: "#b19061", sprite: "kobold", visualId: "kobold", tactic: "pack", moveSpeed: 94 },
+  { id: "slinger", name: "Kobold Slinger", depth: 1, hp: 7, attack: 5, defense: 8, damage: [1, 4], exp: 18, gold: [4, 12], color: "#b89066", sprite: "kobold", visualId: "kobold", tactic: "skirmish", moveSpeed: 78, ranged: { range: 5, damage: [1, 4], color: "#e0c7a2" } },
+  { id: "goblin", name: "Goblin", depth: 2, hp: 12, attack: 5, defense: 9, damage: [1, 6], exp: 24, gold: [5, 18], color: "#6e9d4f", sprite: "goblin", visualId: "goblin", tactic: "pack", moveSpeed: 96 },
+  { id: "archer", name: "Goblin Archer", depth: 2, hp: 11, attack: 6, defense: 9, damage: [1, 6], exp: 28, gold: [6, 20], color: "#8caf56", sprite: "goblin", visualId: "goblin", tactic: "skirmish", moveSpeed: 80, ranged: { range: 6, damage: [1, 5], color: "#c2a56a" } },
+  { id: "wolf", name: "Dire Wolf", depth: 2, hp: 14, attack: 6, defense: 10, damage: [2, 4], exp: 28, gold: [0, 0], color: "#a7a7a7", sprite: "wolf", visualId: "wolf", abilities: ["charge"], tactic: "charge", moveSpeed: 104 },
+  { id: "skeleton", name: "Skeleton", depth: 2, hp: 18, attack: 7, defense: 11, damage: [2, 5], exp: 40, gold: [8, 22], color: "#d9d9ca", sprite: "skeleton", visualId: "skeleton", tactic: "line", moveSpeed: 84 },
+  { id: "orc", name: "Orc", depth: 3, hp: 22, attack: 8, defense: 11, damage: [2, 6], exp: 46, gold: [10, 28], color: "#709243", sprite: "orc", visualId: "orc", tactic: "press", moveSpeed: 90 },
+  { id: "pikeguard", name: "Pike Guard", depth: 3, hp: 24, attack: 9, defense: 12, damage: [2, 6], exp: 52, gold: [12, 30], color: "#8f7b58", sprite: "orc", visualId: "orc", tactic: "line", moveSpeed: 82 },
+  { id: "slime", name: "Ochre Jelly", depth: 4, hp: 26, attack: 8, defense: 10, damage: [2, 6], exp: 52, gold: [0, 0], color: "#c8a73c", sprite: "slime", visualId: "slime", tactic: "press", moveSpeed: 68 },
+  { id: "boneArcher", name: "Bone Archer", depth: 4, hp: 20, attack: 8, defense: 12, damage: [2, 5], exp: 60, gold: [12, 34], color: "#d9d9ca", sprite: "skeleton", visualId: "skeleton", tactic: "skirmish", moveSpeed: 78, ranged: { range: 6, damage: [2, 5], color: "#d9c18a" } },
+  { id: "cultAdept", name: "Cult Adept", depth: 4, hp: 24, attack: 9, defense: 12, damage: [2, 5], exp: 64, gold: [12, 38], color: "#7566a6", sprite: "mage", visualId: "mage", spells: ["slowMonster", "magicMissile"], abilities: ["slow"], tactic: "control", moveSpeed: 84 },
+  { id: "troll", name: "Troll", depth: 4, hp: 36, attack: 10, defense: 12, damage: [2, 8], exp: 80, gold: [16, 40], color: "#5f7b3f", sprite: "troll", visualId: "troll", abilities: ["charge"], tactic: "charge", moveSpeed: 84 },
+  { id: "wraith", name: "Wraith", depth: 5, hp: 30, attack: 11, defense: 14, damage: [3, 6], exp: 98, gold: [18, 54], color: "#b4a7df", sprite: "wraith", visualId: "wraith", abilities: ["phase", "drain"], tactic: "phase", moveSpeed: 94 },
+  { id: "graveHound", name: "Grave Hound", depth: 5, hp: 30, attack: 11, defense: 13, damage: [2, 7], exp: 94, gold: [8, 24], color: "#9ca39f", sprite: "wolf", visualId: "wolf", abilities: ["charge", "drain"], tactic: "charge", moveSpeed: 102 },
+  { id: "ogre", name: "Ogre", depth: 5, hp: 44, attack: 12, defense: 13, damage: [3, 7], exp: 106, gold: [20, 68], color: "#ab7c50", sprite: "ogre", visualId: "ogre", abilities: ["charge"], tactic: "charge", moveSpeed: 80 },
+  { id: "shaman", name: "Orc Shaman", depth: 5, hp: 28, attack: 11, defense: 13, damage: [2, 6], exp: 110, gold: [18, 58], color: "#4a8f8f", sprite: "mage", visualId: "mage", spells: ["slowMonster", "holdMonster"], abilities: ["slow", "summon"], tactic: "control", moveSpeed: 82 },
+  { id: "warlock", name: "Warlock", depth: 6, hp: 34, attack: 12, defense: 15, damage: [3, 8], exp: 124, gold: [28, 80], color: "#7854b8", sprite: "mage", visualId: "mage", spells: ["magicMissile", "holdMonster", "lightningBolt"], abilities: ["teleport", "summon"], tactic: "control", moveSpeed: 84 },
+  { id: "wyrm", name: "Cave Wyrm", depth: 7, hp: 60, attack: 14, defense: 16, damage: [4, 8], exp: 180, gold: [30, 96], color: "#be5b33", sprite: "dragon", visualId: "dragon", tactic: "skirmish", moveSpeed: 86, ranged: { range: 5, damage: [3, 7], color: "#f08c4f" } },
+  { id: "gatekeeper", name: "Gatekeeper Hroth", depth: 3, hp: 34, attack: 10, defense: 13, damage: [2, 7], exp: 140, gold: [30, 60], color: "#b37f54", sprite: "orc", visualId: "orc", unique: true, elite: true, spells: ["holdMonster"], abilities: ["charge"], tactic: "press", role: "elite", moveSpeed: 90 },
+  { id: "cryptlord", name: "Veyra The Crypt Lord", depth: 5, hp: 48, attack: 12, defense: 15, damage: [3, 8], exp: 210, gold: [50, 90], color: "#a98bdd", sprite: "mage", visualId: "mage", unique: true, elite: true, spells: ["holdMonster", "slowMonster", "lightningBolt"], abilities: ["summon", "phase"], tactic: "control", role: "elite", moveSpeed: 86 },
+  { id: "stormWarden", name: "The Storm Warden", depth: 7, hp: 78, attack: 15, defense: 18, damage: [4, 9], exp: 320, gold: [0, 0], color: "#d6c08a", sprite: "dragon", visualId: "dragon", unique: true, elite: true, spells: ["lightningBolt", "frostBolt", "holdMonster"], abilities: ["charge"], tactic: "skirmish", role: "elite", moveSpeed: 92, ranged: { range: 6, damage: [4, 7], color: "#ffd676" } }
 ];
 
 const SHOPS = {
@@ -1732,7 +1846,37 @@ const OBJECTIVE_DEFS = {
     summary: "Push to the marked cache, claim it, and carry the supplies back into your run.",
     completion: "pickup",
     rewardType: "boon",
+    visualId: "vaultChest"
+  },
+  recover_waystone: {
+    id: "recover_waystone",
+    label: "Recover The Waystone",
+    shortLabel: "Recover Waystone",
+    intro: "A survey waystone is still intact somewhere ahead. Recover it before the floor breaks it apart.",
+    summary: "Push to the marked chamber, claim the waystone, and turn the recovery into cleaner next-floor intel.",
+    completion: "pickup",
+    rewardType: "rumor",
     visualId: "relicPedestal"
+  },
+  secure_ledger: {
+    id: "secure_ledger",
+    label: "Recover The Ledger",
+    shortLabel: "Recover Ledger",
+    intro: "A survey ledger is still intact below. Recover it before the floor tears the route notes apart.",
+    summary: "Claim the marked archive ledger and turn it into cleaner route planning for what comes next.",
+    completion: "pickup",
+    rewardType: "rumor",
+    visualId: "archiveStack"
+  },
+  purify_well: {
+    id: "purify_well",
+    label: "Purify The Well",
+    shortLabel: "Purify Well",
+    intro: "A corrupted well is spoiling the air on this floor. Clear it and purify the water before the floor closes in.",
+    summary: "Clear the chamber, then purify the well for a full refill and a boon before the floor answers back.",
+    completion: "interact",
+    rewardType: "boon",
+    visualId: "well"
   },
   break_beacon: {
     id: "break_beacon",
@@ -1742,7 +1886,17 @@ const OBJECTIVE_DEFS = {
     summary: "Clear the beacon chamber, then smash the signal focus before it draws more patrols.",
     completion: "interact",
     rewardType: "rumor",
-    visualId: "shrineSeal"
+    visualId: "beaconFocus"
+  },
+  light_watchfire: {
+    id: "light_watchfire",
+    label: "Light The Watchfire",
+    shortLabel: "Light Watchfire",
+    intro: "A dead watchfire sits in the marked chamber. Rekindle it before the floor's route memory is lost.",
+    summary: "Clear the room, then light the watchfire to reveal more of the floor and secure a cleaner push.",
+    completion: "interact",
+    rewardType: "boon",
+    visualId: "beaconFocus"
   }
 };
 
@@ -1827,11 +1981,46 @@ const OPTIONAL_ENCOUNTER_DEFS = {
     summary: "Route notes and emergency stock in exchange for drawing fresh attention.",
     visualId: "cacheClosed"
   },
+  smuggler_cache: {
+    id: "smuggler_cache",
+    label: "Smuggler Cache",
+    summary: "Fast extract tools and hidden coin, if you are willing to announce that you found them.",
+    unlock: "supply_cache",
+    visualId: "cacheClosed"
+  },
+  oath_shrine: {
+    id: "oath_shrine",
+    label: "Oath Shrine",
+    summary: "Trade blood or mana for warded gear and sharper next-floor leverage.",
+    unlock: "temple_favors",
+    visualId: "bloodAltar"
+  },
+  pilgrim_pool: {
+    id: "pilgrim_pool",
+    label: "Pilgrim Pool",
+    summary: "Wash off curses and strain, but the glow tells the floor exactly where you are.",
+    unlock: "temple_favors",
+    visualId: "well"
+  },
   moon_well: {
     id: "moon_well",
     label: "Moon Well",
     summary: "Restore fully and reveal the floor, but the glow stirs the halls.",
-    visualId: "shrineSeal"
+    visualId: "well"
+  },
+  surveyor_stash: {
+    id: "surveyor_stash",
+    label: "Surveyor Stash",
+    summary: "A ledger case with route marks and a clean escape line, if you are willing to announce that you found it.",
+    unlock: "archive_maps",
+    visualId: "cacheClosed"
+  },
+  ember_cache: {
+    id: "ember_cache",
+    label: "Ember Cache",
+    summary: "Emergency supplies for a second push: resist stock, field gold, and a little extra heat on the floor.",
+    unlock: "guild_license",
+    visualId: "cacheClosed"
   }
 };
 
@@ -1994,7 +2183,7 @@ const TOWN_UNLOCK_DEFS = {
   supply_cache: {
     id: "supply_cache",
     name: "Supply Cache",
-    description: "Provisioner stocks one extra emergency tool each refresh."
+    description: "Provisioner stocks one extra emergency tool each refresh, and smuggler caches begin appearing below."
   },
   guild_license: {
     id: "guild_license",
@@ -2004,7 +2193,7 @@ const TOWN_UNLOCK_DEFS = {
   temple_favors: {
     id: "temple_favors",
     name: "Temple Favors",
-    description: "Temple services are cheaper and blood altars start appearing below."
+    description: "Temple services are cheaper, and blood altars, oath shrines, and pilgrim pools start appearing below."
   },
   archive_maps: {
     id: "archive_maps",
@@ -2041,6 +2230,87 @@ const CONTRACT_DEFS = {
     name: "Scholar's Road",
     summary: "Cleaner route reads for a frailer start.",
     description: "Search reveals more route at a time and objectives pay extra rumor, but you begin each run with less maximum health."
+  },
+  hunters_call: {
+    id: "hunters_call",
+    name: "Hunter's Call",
+    summary: "Elite bounty up, elite pressure up.",
+    description: "Elite kills pay extra gold and rumor, but reinforcement waves are more likely to include an elite."
+  },
+  ration_run: {
+    id: "ration_run",
+    name: "Ration Run",
+    summary: "Cleaner opening, less idle time.",
+    description: "Begin with a healing potion and mapping scroll, but waiting, resting, and searching raise pressure harder."
+  },
+  sealed_return: {
+    id: "sealed_return",
+    name: "Sealed Return",
+    summary: "Safer extract tools, harsher greed tax.",
+    description: "Begin with a Rune of Return and one rumor token, but greed raises pressure harder and you begin runs with less maximum health."
+  },
+  route_debt: {
+    id: "route_debt",
+    name: "Route Debt",
+    summary: "Sharper routes, harsher scouting tax.",
+    description: "Begin with one rumor token and larger route reveals, but you start runs with lower maximum health and searching raises pressure harder."
+  },
+  trophy_path: {
+    id: "trophy_path",
+    name: "Trophy Path",
+    summary: "Bigger elite payoff, meaner elite pressure.",
+    description: "Elite kills pay extra gold and rumor, but reinforcement waves are more likely to include elite threats."
+  },
+  greedy_burden: {
+    id: "greedy_burden",
+    name: "Greedy Burden",
+    summary: "Greed pays harder, weight punishes harder.",
+    description: "Greed rooms pay more and town buyers pay better after return, but burden penalties worsen during the run and greed raises pressure harder."
+  },
+  last_light: {
+    id: "last_light",
+    name: "Last Light",
+    summary: "Emergency opener, no room to idle.",
+    description: "Begin with emergency stock, but waiting, resting, and searching all accelerate pressure harder than usual."
+  }
+};
+
+const COMMENDATION_DEFS = {
+  clean_extract: {
+    id: "clean_extract",
+    name: "Clean Extract",
+    summary: "Archive badge for returning without taking a greed room.",
+    rewardLabel: "Archive badge"
+  },
+  greed_specialist: {
+    id: "greed_specialist",
+    name: "Greed Specialist",
+    summary: "Unlocks Greedy Burden after a greed-heavy extract.",
+    rewardLabel: "Unlocks contract: Greedy Burden"
+  },
+  elite_hunter: {
+    id: "elite_hunter",
+    name: "Elite Hunter",
+    summary: "Unlocks Trophy Path after an elite-heavy run.",
+    rewardLabel: "Unlocks contract: Trophy Path"
+  },
+  route_reader: {
+    id: "route_reader",
+    name: "Route Reader",
+    summary: "Unlocks Route Debt after a route-heavy extract.",
+    rewardLabel: "Unlocks contract: Route Debt"
+  },
+  curse_survivor: {
+    id: "curse_survivor",
+    name: "Curse Survivor",
+    summary: "Archive badge for extracting while carrying a curse or constitution strain.",
+    rewardLabel: "Archive badge"
+  },
+  class_loyalist: {
+    id: "class_loyalist",
+    name: "Class Loyalist",
+    summary: "Loyal class streaks earn a small prep edge on future runs.",
+    rewardLabel: "Prep bonus: +1 rumor token on matching class starts"
   }
 };
 
@@ -2062,6 +2332,20 @@ const CLASS_MASTERY_DEFS = {
         name: "Shield Drill",
         description: "Start future Fighter runs with a padded cap.",
         itemIds: ["paddedCap"]
+      },
+      {
+        rank: 3,
+        trigger: "objective",
+        name: "Iron March",
+        description: "Start future Fighter runs with warded greaves.",
+        itemIds: ["wardedGreaves"]
+      },
+      {
+        rank: 4,
+        trigger: "extract",
+        name: "Siege Lessons",
+        description: "Start future Fighter runs already knowing Shield.",
+        spellIds: ["shield"]
       }
     ]
   },
@@ -2082,6 +2366,20 @@ const CLASS_MASTERY_DEFS = {
         name: "Street Contacts",
         description: "Start future Rogue runs with one rumor token.",
         rumorTokens: 1
+      },
+      {
+        rank: 3,
+        trigger: "objective",
+        name: "Forward Kit",
+        description: "Start future Rogue runs with pathfinder sandals.",
+        itemIds: ["pathfinderSandals"]
+      },
+      {
+        rank: 4,
+        trigger: "extract",
+        name: "Clean Exit",
+        description: "Start future Rogue runs with a teleport scroll.",
+        itemIds: ["teleportScroll"]
       }
     ]
   },
@@ -2102,6 +2400,20 @@ const CLASS_MASTERY_DEFS = {
         name: "Prepared Study",
         description: "Start future Wizard runs already knowing Identify.",
         spellIds: ["identify"]
+      },
+      {
+        rank: 3,
+        trigger: "objective",
+        name: "Warding Primer",
+        description: "Start future Wizard runs with a Spellbook of Shield.",
+        itemIds: ["spellbookShield"]
+      },
+      {
+        rank: 4,
+        trigger: "extract",
+        name: "Far Sight",
+        description: "Start future Wizard runs already knowing Clairvoyance.",
+        spellIds: ["clairvoyance"]
       }
     ]
   }
@@ -2148,9 +2460,29 @@ const RUMOR_DEFS = {
     id: "supplies",
     text: "A sealed field cache lies below. Whoever reaches it first will fight better for the rest of the floor."
   },
+  waystone: {
+    id: "waystone",
+    text: "A survey waystone still survives below. Recover it and the next floor will read cleaner."
+  },
+  ledger: {
+    id: "ledger",
+    text: "An old route ledger still survives below. Recover it and the next descent will read cleaner."
+  },
+  shrine_path: {
+    id: "shrine_path",
+    text: "A ruined shrine is pulsing below. Clear the room first, then seal it before pressure breaks the line."
+  },
+  purify_well: {
+    id: "purify_well",
+    text: "A corrupted well is spoiling one floor. Purify it fast if you want a clean refill before greed."
+  },
   beacon: {
     id: "beacon",
     text: "A warning beacon is waking patrols deeper in the keep. Break it fast if it appears."
+  },
+  watchfire: {
+    id: "watchfire",
+    text: "A dead watchfire sits below. Light it and the floor will read more clearly for a few clean turns."
   }
 };
 
@@ -2418,6 +2750,8 @@ function createMonster(template, x, y) {
     alerted: 0,
     sleeping: Math.random() < 0.4,
     held: 0,
+    slowed: 0,
+    moveMeter: 100,
     chargeWindup: null,
     intent: null
   };
@@ -2541,8 +2875,17 @@ function applyLootAffix(item, affixId) {
   if (stats.manaBonus) {
     item.manaBonus = (item.manaBonus || 0) + stats.manaBonus;
   }
+  if (stats.strBonus) {
+    item.strBonus = (item.strBonus || 0) + stats.strBonus;
+  }
   if (stats.dexBonus) {
     item.dexBonus = (item.dexBonus || 0) + stats.dexBonus;
+  }
+  if (stats.conBonus) {
+    item.conBonus = (item.conBonus || 0) + stats.conBonus;
+  }
+  if (stats.intBonus) {
+    item.intBonus = (item.intBonus || 0) + stats.intBonus;
   }
   if (stats.searchBonus) {
     item.searchBonus = (item.searchBonus || 0) + stats.searchBonus;
@@ -2647,6 +2990,18 @@ function describeItem(item) {
     if (getItemManaBonus(item)) {
       details.push(`+${getItemManaBonus(item)} mana`);
     }
+    if (getItemStrBonus(item)) {
+      details.push(`+${getItemStrBonus(item)} strength`);
+    }
+    if (getItemDexBonus(item)) {
+      details.push(`+${getItemDexBonus(item)} dexterity`);
+    }
+    if (getItemConBonus(item)) {
+      details.push(`+${getItemConBonus(item)} constitution`);
+    }
+    if (getItemIntBonus(item)) {
+      details.push(`+${getItemIntBonus(item)} intelligence`);
+    }
     if (getItemWardBonus(item)) {
       details.push(`ward ${getItemWardBonus(item)}`);
     }
@@ -2675,8 +3030,17 @@ function describeItem(item) {
     if (getItemManaBonus(item)) {
       details.push(`+${getItemManaBonus(item)} mana`);
     }
+    if (getItemStrBonus(item)) {
+      details.push(`+${getItemStrBonus(item)} strength`);
+    }
     if (getItemDexBonus(item)) {
       details.push(`+${getItemDexBonus(item)} dexterity`);
+    }
+    if (getItemConBonus(item)) {
+      details.push(`+${getItemConBonus(item)} constitution`);
+    }
+    if (getItemIntBonus(item)) {
+      details.push(`+${getItemIntBonus(item)} intelligence`);
     }
     if (getItemLightBonus(item)) {
       details.push(`+${getItemLightBonus(item)} sight`);
@@ -2768,11 +3132,29 @@ function getItemCritBonus(item) {
 }
 
 function getItemManaBonus(item) {
+  if (!item) {
+    return 0;
+  }
   return (item.manaBonus || 0) + ((item.kind === "armor" && item.enchantment > 0 && item.slot === "ring") ? item.enchantment : 0);
 }
 
+function getItemStrBonus(item) {
+  return item ? (item.strBonus || 0) : 0;
+}
+
 function getItemDexBonus(item) {
+  if (!item) {
+    return 0;
+  }
   return (item.dexBonus || 0) + ((item.kind === "armor" && item.enchantment > 0 && item.slot === "feet") ? 1 : 0);
+}
+
+function getItemConBonus(item) {
+  return item ? (item.conBonus || 0) : 0;
+}
+
+function getItemIntBonus(item) {
+  return item ? (item.intBonus || 0) : 0;
 }
 
 function getItemLightBonus(item) {
@@ -2816,6 +3198,11 @@ function getItemValue(item) {
   value += getItemCritBonus(item) * 14;
   value += getItemGuardBonus(item) * 16;
   value += getItemWardBonus(item) * 18;
+  value += getItemManaBonus(item) * 14;
+  value += getItemStrBonus(item) * 16;
+  value += getItemDexBonus(item) * 16;
+  value += getItemConBonus(item) * 18;
+  value += getItemIntBonus(item) * 18;
   value += getItemSearchBonus(item) * 10;
   value += getItemFireResist(item) * 12;
   value += getItemColdResist(item) * 12;
@@ -2898,7 +3285,8 @@ function getCarryWeight(player) {
 }
 
 function getCarryCapacity(player) {
-  return player.stats.str * 3 + 12;
+  const strength = player?.effectiveStats?.str ?? player?.stats?.str ?? 0;
+  return strength * 3 + 12;
 }
 
 function encumbranceTone(player) {
@@ -2972,6 +3360,37 @@ function miniMapColor(tile, visible) {
   }
 }
 
+function createEmptyEquipment() {
+  return {
+    weapon: null,
+    offhand: null,
+    head: null,
+    body: null,
+    cloak: null,
+    feet: null,
+    ring1: null,
+    ring2: null,
+    ring3: null,
+    ring4: null,
+    amulet1: null,
+    amulet2: null
+  };
+}
+
+function normalizeEquipment(equipment = {}) {
+  const normalized = {
+    ...createEmptyEquipment(),
+    ...(equipment || {})
+  };
+  if (!normalized.ring1 && equipment?.ring) {
+    normalized.ring1 = equipment.ring;
+  }
+  if (!normalized.amulet1 && equipment?.amulet) {
+    normalized.amulet1 = equipment.amulet;
+  }
+  return Object.fromEntries(Object.entries(createEmptyEquipment()).map(([slot]) => [slot, normalized[slot] || null]));
+}
+
 function getExploredPercent(level) {
   if (!level || !level.explored || level.explored.length === 0) {
     return 0;
@@ -2984,6 +3403,8 @@ function normalizePlayer(player) {
   const normalized = structuredCloneCompat(player);
   normalized.constitutionLoss = normalized.constitutionLoss || 0;
   normalized.deepestDepth = normalized.deepestDepth || normalized.currentDepth || 0;
+  normalized.moveSpeed = normalized.moveSpeed || 100;
+  normalized.moveTurnBudget = normalized.moveTurnBudget || 0;
   normalized.slowed = normalized.slowed || 0;
   normalized.tempGuard = normalized.tempGuard || 0;
   normalized.held = normalized.held || 0;
@@ -2995,6 +3416,15 @@ function normalizePlayer(player) {
   normalized.perks = Array.isArray(normalized.perks) ? normalized.perks : [];
   normalized.relics = Array.isArray(normalized.relics) ? normalized.relics : [];
   normalized.knownRumors = Array.isArray(normalized.knownRumors) ? normalized.knownRumors : [];
+  normalized.spellsKnown = Array.isArray(normalized.spellsKnown)
+    ? [...new Set(normalized.spellsKnown.filter((spellId) => Boolean(SPELLS[spellId])))]
+    : [];
+  normalized.spellTrayIds = Array.isArray(normalized.spellTrayIds)
+    ? [...new Set(normalized.spellTrayIds.filter((spellId) => normalized.spellsKnown.includes(spellId)))]
+    : normalized.spellsKnown.slice(0, 8);
+  if (normalized.spellTrayIds.length === 0 && normalized.spellsKnown.length > 0) {
+    normalized.spellTrayIds = normalized.spellsKnown.slice(0, 8);
+  }
   normalized.runCurrencies = {
     rumorTokens: 0,
     hunterMark: 0,
@@ -3021,6 +3451,7 @@ function normalizePlayer(player) {
   normalized.quest.npcSceneFlags = normalized.quest.npcSceneFlags || {};
   normalized.quest.returnSting = normalized.quest.returnSting || null;
   normalized.inventory = (normalized.inventory || []).map(normalizeItem);
+  normalized.equipment = normalizeEquipment(normalized.equipment);
   Object.keys(normalized.equipment || {}).forEach((slot) => {
     if (normalized.equipment[slot]) {
       normalized.equipment[slot] = normalizeItem(normalized.equipment[slot]);
@@ -3053,6 +3484,8 @@ function normalizeLevels(levels) {
       alerted: actor.alerted || 0,
       mana: actor.mana || 0,
       held: actor.held || 0,
+      slowed: actor.slowed || 0,
+      moveMeter: typeof actor.moveMeter === "number" ? actor.moveMeter : 100,
       chargeWindup: actor.chargeWindup || null,
       intent: null,
       maxHp: actor.maxHp || actor.hp || 1,
@@ -3185,7 +3618,240 @@ function applyCommandResult(game, result) {
 
 // src/features/persistence.js
 
-const SAVE_FORMAT_VERSION = 7;
+const SAVE_FORMAT_VERSION = 9;
+const SAVE_SLOT_COUNT = 3;
+
+function getSaveSlotKey(slotId) {
+  return `${SAVE_KEY}:slot:${slotId}`;
+}
+
+function getOrderedSlotIds() {
+  return Array.from({ length: SAVE_SLOT_COUNT }, (_, index) => index + 1);
+}
+
+function parseStoredSnapshot(raw) {
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function buildSaveMeta(snapshot, slotId = null) {
+  if (!snapshot || typeof snapshot !== "object") {
+    return null;
+  }
+  const meta = snapshot.meta || {};
+  const player = snapshot.player || {};
+  return {
+    slotId,
+    name: meta.name || player.name || "Unknown",
+    level: meta.level || player.level || "?",
+    depth: meta.depth || snapshot.currentDepth || "?",
+    savedAt: meta.savedAt || "",
+    classId: meta.classId || player.classId || "",
+    className: meta.className || player.className || "",
+    raceId: meta.raceId || player.raceId || "",
+    raceName: meta.raceName || player.race || ""
+  };
+}
+
+function getLegacySnapshot() {
+  return parseStoredSnapshot(typeof localStorage !== "undefined" ? localStorage.getItem(SAVE_KEY) : null);
+}
+
+function getStoredSlotEntries() {
+  const entries = getOrderedSlotIds().map((slotId) => {
+    const snapshot = parseStoredSnapshot(typeof localStorage !== "undefined" ? localStorage.getItem(getSaveSlotKey(slotId)) : null);
+    return {
+      slotId,
+      snapshot,
+      meta: buildSaveMeta(snapshot, slotId)
+    };
+  });
+  const hasSlotSnapshot = entries.some((entry) => Boolean(entry.snapshot));
+  if (!hasSlotSnapshot) {
+    const legacySnapshot = getLegacySnapshot();
+    if (legacySnapshot) {
+      entries[0] = {
+        slotId: 1,
+        snapshot: legacySnapshot,
+        meta: buildSaveMeta(legacySnapshot, 1)
+      };
+    }
+  }
+  return entries;
+}
+
+function getLatestSlotEntry(entries = getStoredSlotEntries()) {
+  return entries
+    .filter((entry) => Boolean(entry.meta))
+    .sort((left, right) => {
+      const leftTime = left.meta?.savedAt ? new Date(left.meta.savedAt).getTime() : 0;
+      const rightTime = right.meta?.savedAt ? new Date(right.meta.savedAt).getTime() : 0;
+      if (rightTime !== leftTime) {
+        return rightTime - leftTime;
+      }
+      return left.slotId - right.slotId;
+    })[0] || null;
+}
+
+function getPreferredSaveSlotId(activeSlotId = null) {
+  const entries = getStoredSlotEntries();
+  if (activeSlotId && entries.some((entry) => entry.slotId === activeSlotId)) {
+    return activeSlotId;
+  }
+  const firstEmpty = entries.find((entry) => !entry.meta);
+  if (firstEmpty) {
+    return firstEmpty.slotId;
+  }
+  const oldestFilled = entries
+    .filter((entry) => Boolean(entry.meta))
+    .sort((left, right) => {
+      const leftTime = left.meta?.savedAt ? new Date(left.meta.savedAt).getTime() : 0;
+      const rightTime = right.meta?.savedAt ? new Date(right.meta.savedAt).getTime() : 0;
+      if (leftTime !== rightTime) {
+        return leftTime - rightTime;
+      }
+      return left.slotId - right.slotId;
+    })[0];
+  return oldestFilled?.slotId || 1;
+}
+
+function getSnapshotForSlot(slotId = null) {
+  const entries = getStoredSlotEntries();
+  if (slotId) {
+    const target = entries.find((entry) => entry.slotId === slotId);
+    return target?.snapshot ? { slotId, snapshot: target.snapshot } : null;
+  }
+  const latest = getLatestSlotEntry(entries);
+  return latest?.snapshot ? { slotId: latest.slotId, snapshot: latest.snapshot } : null;
+}
+
+function packBooleanArray(values = []) {
+  let packed = "";
+  for (let index = 0; index < values.length; index += 4) {
+    let nibble = 0;
+    if (values[index]) {
+      nibble |= 8;
+    }
+    if (values[index + 1]) {
+      nibble |= 4;
+    }
+    if (values[index + 2]) {
+      nibble |= 2;
+    }
+    if (values[index + 3]) {
+      nibble |= 1;
+    }
+    packed += nibble.toString(16);
+  }
+  return packed;
+}
+
+function unpackBooleanArray(packed = "", length = 0) {
+  const values = [];
+  for (let index = 0; index < packed.length; index += 1) {
+    const nibble = Number.parseInt(packed[index], 16) || 0;
+    values.push(Boolean(nibble & 8));
+    values.push(Boolean(nibble & 4));
+    values.push(Boolean(nibble & 2));
+    values.push(Boolean(nibble & 1));
+  }
+  return values.slice(0, length);
+}
+
+function serializeTiles(tiles = []) {
+  const palette = [];
+  const paletteIndex = new Map();
+  const refs = [];
+  tiles.forEach((tile) => {
+    const key = JSON.stringify(tile || {});
+    let index = paletteIndex.get(key);
+    if (typeof index !== "number") {
+      index = palette.length;
+      palette.push(key);
+      paletteIndex.set(key, index);
+    }
+    refs.push(index);
+  });
+  return { palette, refs };
+}
+
+function deserializeTiles(palette = [], refs = []) {
+  const parsedPalette = palette.map((entry) => parseStoredSnapshot(entry) || {});
+  return refs.map((index) => ({ ...(parsedPalette[index] || {}) }));
+}
+
+function serializeLevel(level) {
+  if (!level || typeof level !== "object") {
+    return level;
+  }
+  const serialized = { ...level };
+  if (Array.isArray(level.tiles)) {
+    const { palette, refs } = serializeTiles(level.tiles);
+    serialized.tilePalette = palette;
+    serialized.tileRefs = refs;
+    delete serialized.tiles;
+  }
+  if (Array.isArray(level.explored)) {
+    serialized.exploredBits = packBooleanArray(level.explored);
+    serialized.exploredLength = level.explored.length;
+    delete serialized.explored;
+  }
+  if (Array.isArray(level.visible)) {
+    serialized.visibleBits = packBooleanArray(level.visible);
+    serialized.visibleLength = level.visible.length;
+    delete serialized.visible;
+  }
+  return serialized;
+}
+
+function deserializeLevel(level) {
+  if (!level || typeof level !== "object") {
+    return level;
+  }
+  const restored = { ...level };
+  if (Array.isArray(level.tilePalette) && Array.isArray(level.tileRefs)) {
+    restored.tiles = deserializeTiles(level.tilePalette, level.tileRefs);
+    delete restored.tilePalette;
+    delete restored.tileRefs;
+  }
+  if (typeof level.exploredBits === "string") {
+    restored.explored = unpackBooleanArray(level.exploredBits, level.exploredLength || 0);
+    delete restored.exploredBits;
+    delete restored.exploredLength;
+  }
+  if (typeof level.visibleBits === "string") {
+    restored.visible = unpackBooleanArray(level.visibleBits, level.visibleLength || 0);
+    delete restored.visibleBits;
+    delete restored.visibleLength;
+  }
+  return restored;
+}
+
+function serializeSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== "object") {
+    return snapshot;
+  }
+  return {
+    ...snapshot,
+    levels: Array.isArray(snapshot.levels) ? snapshot.levels.map((level) => serializeLevel(level)) : []
+  };
+}
+
+function deserializeSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== "object") {
+    return snapshot;
+  }
+  return {
+    ...snapshot,
+    levels: Array.isArray(snapshot.levels) ? snapshot.levels.map((level) => deserializeLevel(level)) : []
+  };
+}
 
 function resetDungeonMapState(levels = []) {
   levels.forEach((level) => {
@@ -3207,28 +3873,19 @@ function resetDungeonMapState(levels = []) {
   });
 }
 
-function getSavedRunMeta() {
-  const raw = typeof localStorage !== "undefined" ? localStorage.getItem(SAVE_KEY) : null;
-  if (!raw) {
-    return null;
+function getAllSavedRunMeta() {
+  return getStoredSlotEntries().map((entry) => ({
+    slotId: entry.slotId,
+    meta: entry.meta ? { ...entry.meta } : null
+  }));
+}
+
+function getSavedRunMeta(slotId = null) {
+  const entries = getStoredSlotEntries();
+  if (slotId) {
+    return entries.find((entry) => entry.slotId === slotId)?.meta || null;
   }
-  try {
-    const parsed = JSON.parse(raw);
-    const meta = parsed.meta || {};
-    const player = parsed.player || {};
-    return {
-      name: meta.name || player.name || "Unknown",
-      level: meta.level || player.level || "?",
-      depth: meta.depth || parsed.currentDepth || "?",
-      savedAt: meta.savedAt || "",
-      classId: meta.classId || player.classId || "",
-      className: meta.className || player.className || "",
-      raceId: meta.raceId || player.raceId || "",
-      raceName: meta.raceName || player.race || ""
-    };
-  } catch {
-    return { name: "Unknown", level: "?", depth: "?" };
-  }
+  return getLatestSlotEntry(entries)?.meta || null;
 }
 
 function formatSaveStamp(isoString) {
@@ -3240,7 +3897,7 @@ function formatSaveStamp(isoString) {
 }
 
 function syncSaveChrome(game) {
-  const meta = getSavedRunMeta();
+  const meta = getSavedRunMeta(game.activeSaveSlotId) || getSavedRunMeta();
   const width = typeof window !== "undefined" ? window.innerWidth : 999;
   if (game.saveStamp) {
     if (!meta) {
@@ -3248,22 +3905,23 @@ function syncSaveChrome(game) {
       game.saveStamp.title = "No saved run in browser storage";
     } else {
       const timeLabel = meta.savedAt ? formatSaveStamp(meta.savedAt) : null;
+      const slotPrefix = meta.slotId ? `S${meta.slotId} ` : "";
       const compact = width <= 640;
       const veryCompact = width <= 520;
       game.saveStamp.textContent = veryCompact
         ? timeLabel
-          ? `Lv.${meta.level} D${meta.depth} - ${timeLabel.replace("Saved ", "")}`
-          : `Lv.${meta.level} D${meta.depth}`
+          ? `${slotPrefix}Lv.${meta.level} D${meta.depth} - ${timeLabel.replace("Saved ", "")}`
+          : `${slotPrefix}Lv.${meta.level} D${meta.depth}`
         : compact
           ? timeLabel
-            ? `${meta.name} Lv.${meta.level} D${meta.depth} - ${timeLabel.replace("Saved ", "")}`
-            : `${meta.name} Lv.${meta.level} D${meta.depth}`
+            ? `${slotPrefix}${meta.name} Lv.${meta.level} D${meta.depth} - ${timeLabel.replace("Saved ", "")}`
+            : `${slotPrefix}${meta.name} Lv.${meta.level} D${meta.depth}`
         : timeLabel
-          ? `${meta.name} Lv.${meta.level} Depth ${meta.depth} - ${timeLabel}`
-          : `${meta.name} Lv.${meta.level} Depth ${meta.depth}`;
+          ? `${slotPrefix}${meta.name} Lv.${meta.level} Depth ${meta.depth} - ${timeLabel}`
+          : `${slotPrefix}${meta.name} Lv.${meta.level} Depth ${meta.depth}`;
       game.saveStamp.title = timeLabel
-        ? `Latest save: ${meta.name}, level ${meta.level}, depth ${meta.depth}. ${timeLabel}.`
-        : `Latest save: ${meta.name}, level ${meta.level}, depth ${meta.depth}.`;
+        ? `Save slot ${meta.slotId || "?"}: ${meta.name}, level ${meta.level}, depth ${meta.depth}. ${timeLabel}.`
+        : `Save slot ${meta.slotId || "?"}: ${meta.name}, level ${meta.level}, depth ${meta.depth}.`;
     }
   }
   if (game.quickSaveButton) {
@@ -3365,31 +4023,36 @@ function saveGame(game, options = {}) {
   if (!game.player) {
     return;
   }
-  const { silent = false } = options;
+  const { silent = false, slotId = null } = options;
   recordTelemetry(game, "save_game", {
     saveMode: silent ? "autosave" : "manual"
   });
+  const resolvedSlotId = getPreferredSaveSlotId(slotId || game.activeSaveSlotId || null);
   const snapshot = createSaveSnapshot(game);
-  localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot));
+  localStorage.setItem(getSaveSlotKey(resolvedSlotId), JSON.stringify(serializeSnapshot(snapshot)));
+  game.activeSaveSlotId = resolvedSlotId;
   if (!silent) {
-    game.log("Game saved to browser storage.", "good");
+    game.log(`Game saved to slot ${resolvedSlotId}.`, "good");
   }
   game.refreshChrome();
   game.render();
 }
 
-function loadGame(game) {
-  const raw = localStorage.getItem(SAVE_KEY);
-  if (!raw) {
+function loadGame(game, options = {}) {
+  const { slotId = null } = options;
+  const resolved = getSnapshotForSlot(slotId || game.activeSaveSlotId || null);
+  if (!resolved?.snapshot) {
     game.log("No saved game is available.", "warning");
     game.render();
     return;
   }
-  const snapshot = migrateSnapshot(JSON.parse(raw));
-  localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot));
+  const snapshot = migrateSnapshot(deserializeSnapshot(resolved.snapshot));
+  localStorage.setItem(getSaveSlotKey(resolved.slotId), JSON.stringify(serializeSnapshot(snapshot)));
   game.turn = snapshot.turn;
   game.levels = normalizeLevels(snapshot.levels);
   game.player = normalizePlayer(snapshot.player);
+  game.ensureEquipmentAliases?.(game.player);
+  game.syncPlayerSpellTray?.(game.player);
   game.currentDepth = snapshot.currentDepth;
   game.currentLevel = game.levels[game.currentDepth];
   game.settings = { ...defaultSettings(), ...(snapshot.settings || game.settings) };
@@ -3413,6 +4076,7 @@ function loadGame(game) {
   game.pendingRewardChoice = null;
   game.pendingRewardQueue = [];
   game.pendingTurnResolution = null;
+  game.activeSaveSlotId = resolved.slotId;
   game.mode = "game";
   game.pendingShop = null;
   game.pendingService = null;
@@ -3420,12 +4084,14 @@ function loadGame(game) {
     game.resetReadState();
   }
   ensureBuildState(game);
+  ensureMetaProgressionState(game);
+  mergeLegacyTownUnlocks(game, snapshot.townUnlocks || {});
   ensureTownMetaState(game);
   ensureChronicleState(game);
-  ensureMetaProgressionState(game);
   initializeTelemetry(game);
   game.recalculateDerivedStats();
   game.closeModal();
+  game.syncAdaptiveLayout?.(true);
   syncFloorState(game);
   syncDangerState(game);
   game.updateFov();
@@ -3433,7 +4099,7 @@ function loadGame(game) {
   recordTelemetry(game, "load_game", {
     saveMode: "manual"
   });
-  game.log("Saved game restored.", "good");
+  game.log(`Save slot ${resolved.slotId} restored.`, "good");
   game.refreshChrome();
   game.render();
 }
@@ -3528,73 +4194,6 @@ const CLASS_ART = {
   }
 };
 
-const TITLE_PARTY = [
-  { label: "Fighter", sprite: CLASS_ART.fighter.sprite, accent: CLASS_ART.fighter.accent },
-  { label: "Wizard", sprite: CLASS_ART.wizard.sprite, accent: CLASS_ART.wizard.accent },
-  { label: "Rogue", sprite: CLASS_ART.rogue.sprite, accent: CLASS_ART.rogue.accent }
-];
-
-const TITLE_THREATS = [
-  {
-    label: "Wisp",
-    accent: "#8cc9ff",
-    sprite: {
-      src: CHARACTER_SHEET_PATH,
-      width: 16,
-      height: 16,
-      x: 16,
-      y: 16,
-      sheetWidth: 112,
-      sheetHeight: 64
-    }
-  },
-  {
-    label: "Ghoul",
-    accent: "#b2bb94",
-    sprite: {
-      src: CHARACTER_SHEET_PATH,
-      width: 16,
-      height: 16,
-      x: 32,
-      y: 16,
-      sheetWidth: 112,
-      sheetHeight: 64
-    }
-  },
-  {
-    label: "Skeleton",
-    accent: "#d5c7a8",
-    sprite: {
-      src: CHARACTER_SHEET_PATH,
-      width: 16,
-      height: 16,
-      x: 80,
-      y: 16,
-      sheetWidth: 112,
-      sheetHeight: 64
-    }
-  }
-];
-
-const TITLE_FEATURES = [
-  {
-    kicker: "1. Start In Town",
-    copy: "Open services if you need them, then walk north on the main road to the keep stairs."
-  },
-  {
-    kicker: "2. Enter The Keep",
-    copy: "The first floor reveals a marked route segment on entry. Survey early and stay on the clean line."
-  },
-  {
-    kicker: "3. Clear The Floor",
-    copy: "Orange marks the floor objective. Resolve it before the deeper stairs unlock."
-  },
-  {
-    kicker: "4. Extract Or Greed",
-    copy: "Once the objective is done, decide whether to cash out in town or stay for one more risky reward."
-  }
-];
-
 function styleMap(entries) {
   return entries.join("; ");
 }
@@ -3615,17 +4214,6 @@ function renderPixelSprite(sprite, className = "", scale = 4) {
     );
   }
   return `<span class="pixel-sprite${className ? ` ${className}` : ""}" style="${styleMap(baseRules)}" aria-hidden="true"></span>`;
-}
-
-function renderSpriteChip(entry, tone = "warm") {
-  return `
-    <div class="sprite-chip tone-${tone}" style="${styleMap([`--chip-accent:${entry.accent}`])}">
-      <div class="sprite-chip-frame">
-        ${renderPixelSprite(entry.sprite, "sprite-chip-sprite", 3)}
-      </div>
-      <span class="sprite-chip-label">${escapeHtml(entry.label)}</span>
-    </div>
-  `;
 }
 
 function buildChoiceArtMarkup(type, entry) {
@@ -3726,10 +4314,6 @@ function buildAdventurerIdentityMarkup(options) {
   `;
 }
 
-function buildTitleLineup(entries, tone) {
-  return entries.map((entry) => renderSpriteChip(entry, tone)).join("");
-}
-
 function resetCreationDraft(game) {
   game.selectedRace = RACES[0].id;
   game.selectedClass = CLASSES[0].id;
@@ -3777,71 +4361,74 @@ function getCreationStats(game) {
 function showTitleScreen(game) {
   game.mode = "title";
   game.setModalVisibility(true);
+  game.modalSurfaceKey = "title";
   game.recordTelemetry?.("modal_opened", { surface: "title" });
   const template = document.getElementById("title-template");
   const fragment = template.content.cloneNode(true);
+  const titleLoopImage = fragment.getElementById("title-loop-image");
   const saveSummary = fragment.getElementById("title-save-summary");
   const loadButton = fragment.getElementById("title-load-button");
-  const partyLineup = fragment.getElementById("title-party-lineup");
-  const threatLineup = fragment.getElementById("title-threat-lineup");
-  const featureList = fragment.getElementById("title-feature-list");
   const savedMeta = game.getSavedRunMeta();
-  const latestSummary = typeof game.getLatestPersistenceSummary === "function" ? game.getLatestPersistenceSummary() : null;
-  const activeContract = typeof game.getActiveContract === "function" ? game.getActiveContract(false) : null;
-  const masteryClassId = savedMeta?.classId || latestSummary?.classId || game.selectedClass;
-  const masterySummary = typeof game.getClassMasterySummary === "function"
-    ? game.getClassMasterySummary(masteryClassId)
-    : "No mastery track.";
+  const savedSlots = typeof game.getAllSavedRunMeta === "function" ? game.getAllSavedRunMeta() : [];
+  const hasSavedRun = savedSlots.some((entry) => Boolean(entry.meta));
 
-  if (partyLineup) {
-    partyLineup.innerHTML = buildTitleLineup(TITLE_PARTY, "warm");
-  }
-  if (threatLineup) {
-    threatLineup.innerHTML = buildTitleLineup(TITLE_THREATS, "cool");
-  }
-  if (featureList) {
-    featureList.innerHTML = TITLE_FEATURES.map((entry) => `
-      <article class="title-feature-card">
-        <div class="title-feature-kicker">${escapeHtml(entry.kicker)}</div>
-        <div class="title-feature-copy">${escapeHtml(entry.copy)}</div>
-      </article>
-    `).join("");
+  if (titleLoopImage) {
+    const prefersReducedMotion = Boolean(game.reducedMotionQuery?.matches);
+    titleLoopImage.src = prefersReducedMotion ? TITLE_SCREEN_ASSETS.still : TITLE_SCREEN_ASSETS.loop;
+    titleLoopImage.onerror = () => {
+      titleLoopImage.onerror = null;
+      titleLoopImage.src = TITLE_SCREEN_ASSETS.still;
+    };
   }
 
-  if (savedMeta) {
-    const savedTime = savedMeta.savedAt ? game.formatSaveStamp(savedMeta.savedAt) : null;
+  if (savedMeta && saveSummary) {
+    saveSummary.classList.remove("hidden");
     saveSummary.innerHTML = `
-      <div class="title-save-label">Continue Run</div>
-      <div class="title-save-name">${escapeHtml(savedMeta.name)}</div>
-      <div class="title-save-meta">Level ${savedMeta.level} &middot; Depth ${savedMeta.depth}${savedMeta.className ? ` &middot; ${escapeHtml(savedMeta.className)}` : ""}</div>
-      ${savedTime ? `<div class="title-save-meta">${escapeHtml(savedTime)}</div>` : ""}
-      <div class="title-save-meta">${escapeHtml(activeContract ? `Town Persistence: ${activeContract.name} armed` : "Town Persistence: No contract armed")}</div>
-      <div class="title-save-meta">${escapeHtml(`Mastery: ${masterySummary}`)}</div>
-      <div class="title-save-meta">${escapeHtml(latestSummary ? `Last return: ${latestSummary.outcome} on depth ${latestSummary.extractedDepth}, ${latestSummary.returnValue} gp value.` : "Last return: none recorded yet.")}</div>
+      <button class="title-save-card" data-action="load-game" data-save-slot="${savedMeta.slotId}" data-focus-key="title:continue-card" type="button">
+        <div class="title-save-label">Continue</div>
+        <div class="title-save-name">${escapeHtml(savedMeta.name)}</div>
+        <div class="title-save-meta">Depth ${savedMeta.depth} &middot; Level ${savedMeta.level}${savedMeta.className ? ` &middot; ${escapeHtml(savedMeta.className)}` : ""}</div>
+      </button>
     `;
-  } else {
+  } else if (hasSavedRun && saveSummary) {
+    saveSummary.classList.remove("hidden");
     saveSummary.innerHTML = `
-      <div class="title-save-label">No Saved Run</div>
-      <div class="title-save-name">No saved run</div>
-      <div class="title-save-meta">Start a fresh descent and your latest browser save will appear here.</div>
-      <div class="title-save-meta">${escapeHtml(activeContract ? `Town Persistence: ${activeContract.name} armed` : "Town Persistence: No contract armed")}</div>
-      <div class="title-save-meta">${escapeHtml(`Mastery: ${masterySummary}`)}</div>
-      <div class="title-save-meta">${escapeHtml(latestSummary ? `Last return: ${latestSummary.outcome} on depth ${latestSummary.extractedDepth}, ${latestSummary.returnValue} gp value.` : "Last return: none recorded yet.")}</div>
+      <div class="title-save-label">Continue</div>
+      <div class="title-save-name">Saved Run Available</div>
+      <div class="title-save-meta">Choose a slot and return to the keep.</div>
     `;
-    loadButton.disabled = true;
+  } else if (saveSummary) {
+    saveSummary.innerHTML = "";
+    saveSummary.classList.add("hidden");
   }
+  loadButton.disabled = !hasSavedRun;
 
   game.modalRoot.innerHTML = "";
   game.modalRoot.appendChild(fragment);
   game.modalRoot.classList.remove("hidden");
   game.refreshChrome();
+  game.syncMusicToggleUi?.();
+  game.syncSurfaceMusic?.();
+  const modal = game.modalRoot.querySelector(".title-screen");
+  if (modal) {
+    modal.scrollTop = 0;
+  }
+  if (game.layoutMode === "mobile" && modal) {
+    modal.tabIndex = -1;
+    modal.focus({ preventScroll: true });
+    return;
+  }
   game.focusFirstUiElement?.();
 }
 
 function showCreationModal(game, options = {}) {
-  const { focusTarget = null } = options;
+  const {
+    focusTarget = null,
+    preserveScroll = false
+  } = options;
   game.mode = "creation";
   game.setModalVisibility(true);
+  const previousState = preserveScroll ? game.captureModalRefreshState?.("creation") : null;
   game.recordTelemetry?.("modal_opened", { surface: "creation" });
   const template = document.getElementById("creation-template");
   const fragment = template.content.cloneNode(true);
@@ -3876,6 +4463,8 @@ function showCreationModal(game, options = {}) {
         mastery: { summary: "No mastery track." },
         startingBonuses: []
       };
+  const contractModel = typeof game.getContractViewModel === "function" ? game.getContractViewModel() : null;
+  const recommendedContract = contractModel?.all?.find((contract) => contract.id === contractModel.recommendedId) || null;
   const pointsRemaining = game.getCreationPointsRemaining();
   const previewHp = game.getMaxHpForStats(stats, 1, role.name, 0, race.hp + role.bonuses.hp);
   const previewMana = game.getMaxManaForStats(stats, role.name, 0, race.mana + role.bonuses.mana);
@@ -3926,25 +4515,36 @@ function showCreationModal(game, options = {}) {
       <div class="field-label">Town Persistence</div>
       <div class="text-block">
         ${escapeHtml(persistencePreview.activeContract ? `Active contract: ${persistencePreview.activeContract.name}. Town Persistence, opt-in, next run only.` : "No contract armed. Contracts stay opt-in at the bank and apply to the next run only.")}<br><br>
+        ${escapeHtml(recommendedContract ? `Recommended next run: ${recommendedContract.name}. ${recommendedContract.recommendationReason || recommendedContract.description}` : "No contract recommendation available yet.")}<br><br>
         ${escapeHtml(`Mastery: ${persistencePreview.mastery.summary}`)}<br><br>
         ${escapeHtml(persistencePreview.startingBonuses.length > 0
           ? `Starting bonuses on this run: ${persistencePreview.startingBonuses.join(", ")}.`
           : "Starting bonuses on this run: none yet.")}
       </div>
+      ${recommendedContract?.unlocked ? `<div class="modal-actions"><button class="menu-button" data-action="contract-arm-recommended" data-focus-key="creation:contract:recommended" type="button">${recommendedContract.active ? "Recommended Armed" : `Arm ${escapeHtml(recommendedContract.name)}`}</button></div>` : ""}
     </div>
   `;
 
   game.modalRoot.innerHTML = "";
   game.modalRoot.appendChild(fragment);
   game.modalRoot.classList.remove("hidden");
+  game.modalSurfaceKey = "creation";
   game.refreshChrome();
+  game.syncMusicToggleUi?.();
+  game.syncSurfaceMusic?.();
+  game.applyControllerNavigationMetadata?.();
+  const nextModal = game.getModalElement?.();
+  if (nextModal && previousState) {
+    nextModal.scrollTop = previousState.scrollTop;
+  }
   const statButtons = game.modalRoot.querySelectorAll(".creation-stat-button");
   statButtons.forEach((button) => {
     const stat = button.dataset.stat || "str";
     const delta = button.dataset.delta === "-1" ? "down" : "up";
     button.dataset.focusKey = `creation:stat:${stat}:${delta}`;
   });
-  const focusElement = focusTarget ? game.findUiElementByFocusKey?.(focusTarget) : null;
+  const focusElement = game.resolveModalFocusTarget?.(focusTarget, previousState)
+    || (focusTarget ? game.findUiElementByFocusKey?.(focusTarget) : null);
   if (focusElement) {
     game.focusUiElement?.(focusElement);
     return;
@@ -4428,7 +5028,10 @@ function spawnReinforcementWave(game, band = "Medium") {
       : special?.extraElite
         ? 0.25
         : 0.1;
-  if (game.currentDepth >= 2 && eliteChance > 0 && Math.random() < eliteChance) {
+  const contractEliteChance = typeof game.getContractEliteWaveChanceBonus === "function"
+    ? Math.max(0, game.getContractEliteWaveChanceBonus())
+    : 0;
+  if (game.currentDepth >= 2 && eliteChance > 0 && Math.random() < Math.min(0.95, eliteChance + contractEliteChance)) {
     const elite = spawnNamedElite(game.currentLevel, game.currentDepth, room, theme, {
       roomIndex: game.currentLevel.rooms.indexOf(room),
       forceAlerted: true
@@ -4541,17 +5144,21 @@ function placeObjectiveTile(level, room, tileKind, extra = {}) {
   return position;
 }
 
-function placeObjectiveItem(level, room, objectiveId, depth) {
+function placeObjectiveItem(level, room, objectiveId, depth, options = {}) {
+  const {
+    itemName = depth >= 4 ? "Storm Sigil" : "Wind Relic",
+    rewardType = "relic"
+  } = options;
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const position = randomRoomTile(room);
     if (actorAt(level, position.x, position.y) || itemsAt(level, position.x, position.y).length > 0) {
       continue;
     }
     const item = {
-      ...createItem("goldCharm", { id: `objectiveRelic${depth}`, name: depth >= 4 ? "Storm Sigil" : "Wind Relic" }),
+      ...createItem("goldCharm", { id: `objectiveRelic${depth}`, name: itemName }),
       kind: "objective",
       objectiveId,
-      rewardType: "relic",
+      rewardType,
       x: position.x,
       y: position.y,
       value: 0,
@@ -4586,8 +5193,10 @@ function addRoomTorches(level, room, propId = "roomTorch", count = 2) {
   });
 }
 
+const LIT_MARKER_PROPS = new Set(["relicPedestal", "shrineSeal", "bloodAltar", "ghostMerchant", "well", "beaconFocus"]);
+
 function addRoomDress(level, room, objectiveId, optionalId = "") {
-  if (objectiveId === "recover_relic") {
+  if (objectiveId === "recover_relic" || objectiveId === "recover_waystone") {
     addRoomTorches(level, room, "roomTorch", 4);
     return;
   }
@@ -4606,7 +5215,7 @@ function addRoomDress(level, room, objectiveId, optionalId = "") {
     addRoomTorches(level, room, "roomTorch", 2);
     return;
   }
-  if (objectiveId === "seal_shrine") {
+  if (objectiveId === "seal_shrine" || objectiveId === "purify_well") {
     addRoomTorches(level, room, "shrineTorch", 4);
     return;
   }
@@ -4619,49 +5228,15 @@ function decorateObjectiveMarker(level, objective, room) {
   if (!objective?.marker) {
     return;
   }
-  if (objective.id === "recover_relic") {
-    addLevelProp(level, {
-      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
-      x: objective.marker.x,
-      y: objective.marker.y,
-      propId: "relicPedestal",
-      layer: "fixture",
-      light: true
-    });
-  } else if (objective.id === "secure_supplies") {
-    addLevelProp(level, {
-      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
-      x: objective.marker.x,
-      y: objective.marker.y,
-      propId: "vaultChest",
-      layer: "fixture"
-    });
-  } else if (objective.id === "rescue_captive") {
-    addLevelProp(level, {
-      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
-      x: objective.marker.x,
-      y: objective.marker.y,
-      propId: "prisonerCell",
-      layer: "fixture"
-    });
-  } else if (objective.id === "purge_nest") {
-    addLevelProp(level, {
-      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
-      x: objective.marker.x,
-      y: objective.marker.y,
-      propId: "broodNest",
-      layer: "fixture"
-    });
-  } else if (objective.id === "seal_shrine" || objective.id === "break_beacon") {
-    addLevelProp(level, {
-      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
-      x: objective.marker.x,
-      y: objective.marker.y,
-      propId: "shrineSeal",
-      layer: "fixture",
-      light: true
-    });
-  }
+  const propId = objective.visualId || "relicPedestal";
+  addLevelProp(level, {
+    id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
+    x: objective.marker.x,
+    y: objective.marker.y,
+    propId,
+    layer: "fixture",
+    light: LIT_MARKER_PROPS.has(propId)
+  });
   addRoomDress(level, room, objective.id);
 }
 
@@ -4675,7 +5250,7 @@ function decorateOptionalMarker(level, optional, room) {
     y: optional.marker.y,
     propId: optional.visualId || "vaultChest",
     layer: "fixture",
-    light: optional.id === "ghost_merchant" || optional.id === "blood_altar" || optional.id === "moon_well"
+    light: LIT_MARKER_PROPS.has(optional.visualId || "vaultChest")
   });
   addRoomDress(level, room, "", optional.id);
 }
@@ -4703,6 +5278,18 @@ function setupObjectiveState(level, depth, objectiveId, room, roomIndex) {
       }
     }
     objective.detail = "Recover the sealed cache and carry the supplies back into the run.";
+  } else if (objectiveId === "recover_waystone") {
+    objective.marker = placeObjectiveItem(level, room, objectiveId, depth, {
+      itemName: depth >= 4 ? "Storm Waystone" : "Survey Waystone",
+      rewardType: "rumor"
+    });
+    objective.detail = "Recover the waystone and cash it into cleaner route intel for what comes next.";
+  } else if (objectiveId === "secure_ledger") {
+    objective.marker = placeObjectiveItem(level, room, objectiveId, depth, {
+      itemName: depth >= 4 ? "Storm Ledger" : "Survey Ledger",
+      rewardType: "rumor"
+    });
+    objective.detail = "Recover the route ledger and turn it into cleaner pathing for the next descent.";
   } else if (objectiveId === "purge_nest") {
     objective.marker = placeObjectiveTile(level, room, "throne", {
       label: "Brood Nest",
@@ -4725,6 +5312,13 @@ function setupObjectiveState(level, depth, objectiveId, room, roomIndex) {
       objectiveAction: "seal"
     });
     objective.detail = "Seal the shrine and weather the answer from the floor.";
+  } else if (objectiveId === "purify_well") {
+    objective.marker = placeObjectiveTile(level, room, "fountain", {
+      label: "Purifying Well",
+      objectiveId,
+      objectiveAction: "purifyWell"
+    });
+    objective.detail = "Clear the room, then purify the well for a clean refill before the floor answers back.";
   } else if (objectiveId === "break_beacon") {
     objective.marker = placeObjectiveTile(level, room, "altar", {
       label: "Alarm Beacon",
@@ -4732,6 +5326,13 @@ function setupObjectiveState(level, depth, objectiveId, room, roomIndex) {
       objectiveAction: "breakBeacon"
     });
     objective.detail = "Clear the room, then smash the beacon before it pulls more patrols into the floor.";
+  } else if (objectiveId === "light_watchfire") {
+    objective.marker = placeObjectiveTile(level, room, "altar", {
+      label: "Watchfire Brazier",
+      objectiveId,
+      objectiveAction: "watchfire"
+    });
+    objective.detail = "Clear the chamber, then light the watchfire to reveal more of the floor before the keep answers back.";
   }
 
   spawnObjectiveGuard(level, depth, room, roomIndex, objectiveId);
@@ -4785,11 +5386,41 @@ function setupOptionalState(level, depth, optionalId, room, roomIndex) {
       optionalId,
       optionalAction: "scout"
     });
+  } else if (optionalId === "smuggler_cache") {
+    optional.marker = placeObjectiveTile(level, room, "throne", {
+      label: "Smuggler Cache",
+      optionalId,
+      optionalAction: "smuggler"
+    });
+  } else if (optionalId === "oath_shrine") {
+    optional.marker = placeObjectiveTile(level, room, "altar", {
+      label: "Oath Shrine",
+      optionalId,
+      optionalAction: "oath"
+    });
+  } else if (optionalId === "pilgrim_pool") {
+    optional.marker = placeObjectiveTile(level, room, "fountain", {
+      label: "Pilgrim Pool",
+      optionalId,
+      optionalAction: "pilgrimPool"
+    });
   } else if (optionalId === "moon_well") {
     optional.marker = placeObjectiveTile(level, room, "fountain", {
       label: "Moon Well",
       optionalId,
       optionalAction: "moonWell"
+    });
+  } else if (optionalId === "surveyor_stash") {
+    optional.marker = placeObjectiveTile(level, room, "throne", {
+      label: "Surveyor Stash",
+      optionalId,
+      optionalAction: "surveyor"
+    });
+  } else if (optionalId === "ember_cache") {
+    optional.marker = placeObjectiveTile(level, room, "throne", {
+      label: "Ember Cache",
+      optionalId,
+      optionalAction: "ember"
     });
   }
 
@@ -4929,11 +5560,24 @@ function resolveFloorObjective(game, reason = "completed") {
 }
 
 function handleObjectivePickup(game, item) {
-  if (!item || !["recover_relic", "secure_supplies"].includes(item.objectiveId)) {
+  if (!item || !["recover_relic", "secure_supplies", "recover_waystone", "secure_ledger"].includes(item.objectiveId)) {
     return false;
   }
+  game.markOnboarding?.("find_objective");
   resolveFloorObjective(game, "pickup");
-  game.log(item.objectiveId === "secure_supplies" ? "You secure the cache and feel the floor shift around you." : "You secure the relic and feel the floor shift around you.", "good");
+  if (item.objectiveId === "secure_supplies") {
+    game.log("You secure the cache and feel the floor shift around you.", "good");
+  } else if (item.objectiveId === "recover_waystone") {
+    game.log("You recover the waystone and the next route sharpens in your mind.", "good");
+    game.revealGuidedObjectiveRoute?.("recover_waystone");
+  } else if (item.objectiveId === "secure_ledger") {
+    game.log("You recover the ledger and sketch a cleaner route for what comes next.", "good");
+    game.grantRumorToken?.(1);
+    game.revealGuidedObjectiveRoute?.("secure_ledger");
+    game.revealGuidedObjectiveRoute?.("secure_ledger");
+  } else {
+    game.log("You secure the relic and feel the floor shift around you.", "good");
+  }
   return true;
 }
 
@@ -4951,6 +5595,14 @@ function grantOptionalReward(game, optionalId) {
   }
   if (optionalId === "scout_cache") {
     game.grantRumorToken(1);
+    return;
+  }
+  if (optionalId === "smuggler_cache" || optionalId === "pilgrim_pool") {
+    game.grantRumorToken(1);
+    return;
+  }
+  if (optionalId === "oath_shrine") {
+    game.grantBoon(choice(["hunter_mark", "aether_cache"]));
     return;
   }
   if (optionalId === "ghost_merchant" || optionalId === "vault_room" || optionalId === "moon_well") {
@@ -5029,6 +5681,38 @@ function handleOptionalInteraction(game, tile) {
       updatePropState(game.currentLevel, "cacheClosed", "cacheOpen");
       break;
     }
+    case "smuggler_cache": {
+      const gold = Math.round(randInt(28, 70) * Math.max(1, game.currentDepth) * greedGoldMultiplier);
+      game.player.gold += gold;
+      game.addItemToInventory(createItem("teleportScroll", { identified: true }));
+      game.addItemToInventory(createItem("healingPotion", { identified: true }));
+      game.log(`The smuggler cache yields ${gold} gold, a teleport scroll, and a field heal.`, "good");
+      updatePropState(game.currentLevel, "cacheClosed", "cacheOpen");
+      break;
+    }
+    case "oath_shrine": {
+      const manaCost = Math.min(game.player.mana, 3);
+      if (manaCost > 0) {
+        game.player.mana -= manaCost;
+      } else {
+        game.player.hp = Math.max(1, game.player.hp - 4);
+      }
+      game.addItemToInventory(createItem("wardingAmulet", { identified: true }));
+      game.log(manaCost > 0
+        ? "The oath shrine drinks mana and leaves behind a warded charm."
+        : "The oath shrine takes blood and leaves behind a warded charm.", "warning");
+      break;
+    }
+    case "pilgrim_pool": {
+      const curseCount = typeof game.removeCurses === "function" ? game.removeCurses() : 0;
+      game.player.constitutionLoss = Math.max(0, (game.player.constitutionLoss || 0) - 2);
+      game.player.hp = Math.min(game.player.maxHp, game.player.hp + 8);
+      game.player.mana = Math.min(game.player.maxMana, game.player.mana + 6);
+      game.log(curseCount > 0
+        ? `The pilgrim pool lifts ${curseCount} curse${curseCount === 1 ? "" : "s"} and steadies your breathing.`
+        : "The pilgrim pool steadies your breathing and clears the ache from the run.", "good");
+      break;
+    }
     case "moon_well": {
       game.player.hp = game.player.maxHp;
       game.player.mana = game.player.maxMana;
@@ -5036,6 +5720,24 @@ function handleOptionalInteraction(game, tile) {
         revealCircle(game.currentLevel, randInt(1, game.currentLevel.width - 2), randInt(1, game.currentLevel.height - 2), 2);
       }
       game.log("Moonlight floods the room, restoring you and sketching more of the floor.", "good");
+      break;
+    }
+    case "surveyor_stash": {
+      game.addItemToInventory(createItem("mappingScroll", { identified: true }));
+      game.grantRumorToken?.(1);
+      game.revealGuidedObjectiveRoute?.("surveyor_stash");
+      game.revealGuidedObjectiveRoute?.("surveyor_stash");
+      game.log("The surveyor stash yields route notes, a mapping scroll, and one clean rumor.", "good");
+      updatePropState(game.currentLevel, "cacheClosed", "cacheOpen");
+      break;
+    }
+    case "ember_cache": {
+      const gold = Math.round(randInt(24, 60) * Math.max(1, game.currentDepth) * greedGoldMultiplier);
+      game.player.gold += gold;
+      game.addItemToInventory(createItem("healingPotion", { identified: true }));
+      game.addItemToInventory(createItem("emberCharm", { identified: true }));
+      game.log(`The ember cache yields ${gold} gold, a field heal, and a fire ward charm.`, "good");
+      updatePropState(game.currentLevel, "cacheClosed", "cacheOpen");
       break;
     }
     default:
@@ -5093,9 +5795,33 @@ function handleObjectiveInteraction(game, tile) {
       game.increaseDanger?.("seal_shrine", 2);
       return resolveFloorObjective(game, "seal");
     }
+    if (objective.id === "purify_well") {
+      if (!getObjectiveRoomClear(game)) {
+        game.log("The well cannot be purified while enemies still hold the room.", "warning");
+        return true;
+      }
+      game.player.hp = game.player.maxHp;
+      game.player.mana = game.player.maxMana;
+      game.player.constitutionLoss = Math.max(0, (game.player.constitutionLoss || 0) - 1);
+      game.log("You purify the well and drink deep before the halls answer back.", "good");
+      game.increaseDanger?.("fountain", 2);
+      return resolveFloorObjective(game, "purify");
+    }
     if (objective.id === "break_beacon") {
       game.log("You smash the beacon. The hall falls dark for a precious moment.", "good");
       return resolveFloorObjective(game, "beacon");
+    }
+    if (objective.id === "light_watchfire") {
+      if (!getObjectiveRoomClear(game)) {
+        game.log("The watchfire cannot be lit while enemies still hold the chamber.", "warning");
+        return true;
+      }
+      for (let index = 0; index < 10; index += 1) {
+        revealCircle(game.currentLevel, randInt(1, game.currentLevel.width - 2), randInt(1, game.currentLevel.height - 2), 2);
+      }
+      game.addItemToInventory(createItem("mappingScroll", { identified: true }));
+      game.log("You light the watchfire. More of the floor answers in clean lines before the danger returns.", "good");
+      return resolveFloorObjective(game, "watchfire");
     }
   }
 
@@ -5134,7 +5860,7 @@ function getOptionalStatusText(level) {
 }
 
 function grantObjectiveRumor(game) {
-  const rumorPool = [RUMOR_DEFS.relic_hunt, RUMOR_DEFS.nest, RUMOR_DEFS.captive, RUMOR_DEFS.supplies, RUMOR_DEFS.beacon].filter(Boolean);
+  const rumorPool = [RUMOR_DEFS.relic_hunt, RUMOR_DEFS.nest, RUMOR_DEFS.captive, RUMOR_DEFS.supplies, RUMOR_DEFS.waystone, RUMOR_DEFS.ledger, RUMOR_DEFS.shrine_path, RUMOR_DEFS.purify_well, RUMOR_DEFS.beacon, RUMOR_DEFS.watchfire].filter(Boolean);
   const rumor = choice(rumorPool);
   if (rumor && game.learnRumor) {
     game.learnRumor(rumor.id);
@@ -5298,16 +6024,20 @@ function increaseDanger(game, source = "unknown", amount = 1) {
     level.dangerTriggers.loud += 1;
   }
 
+  const contractBonus = typeof game.getContractPaceDangerBonus === "function"
+    ? Math.max(0, game.getContractPaceDangerBonus(source))
+    : 0;
+  const rawAmount = amount + contractBonus;
   const scaledAmount = game.currentDepth === 1
-    ? Math.max(0, amount - (source === "objective_clear" ? 0 : 1))
-    : amount;
+    ? Math.max(0, rawAmount - (source === "objective_clear" ? 0 : 1))
+    : rawAmount;
   level.dangerScore = Math.max(0, (level.dangerScore || 0) + scaledAmount);
   const band = getBandFromScore(level.dangerScore);
   level.dangerLevel = band.label;
   level.dangerTone = band.color;
   const reinforcementLoss = game.currentDepth === 1
     ? Math.max(0, scaledAmount)
-    : amount;
+    : rawAmount;
   level.reinforcementClock = Math.max(game.currentDepth === 1 ? 16 : 6, (level.reinforcementClock || 12) - reinforcementLoss);
   const turnsLost = Math.max(0, previousClock - level.reinforcementClock);
   syncDangerState(game);
@@ -5780,6 +6510,9 @@ function onPlayerMove(game) {
 }
 
 function onMonsterKilled(game, monster) {
+  if (monster?.elite) {
+    game.onEliteKillProgress?.(monster);
+  }
   if (hasPerk(game, "cleave")) {
     const splash = game.currentLevel.actors.find((other) => other !== monster && Math.max(Math.abs(other.x - monster.x), Math.abs(other.y - monster.y)) <= 1);
     if (splash) {
@@ -5871,7 +6604,7 @@ const SHOP_TIER_STOCK = {
 };
 
 function unlocked(game, unlockId) {
-  return Boolean(game.townUnlocks?.[unlockId]);
+  return Boolean(game.durableTownUnlocks?.[unlockId] || game.townUnlocks?.[unlockId]);
 }
 
 function getPhaseConfig(phase) {
@@ -6000,6 +6733,9 @@ function hasFeaturedStock(featuredStock) {
 }
 
 function ensureTownMetaState(game) {
+  const durableTownUnlocks = typeof game.getDurableTownUnlocks === "function"
+    ? game.getDurableTownUnlocks()
+    : getDurableTownUnlocks(game);
   game.townUnlocks = {
     supply_cache: false,
     guild_license: false,
@@ -6007,7 +6743,8 @@ function ensureTownMetaState(game) {
     archive_maps: false,
     ghost_bargains: false,
     deep_contracts: false,
-    ...(game.townUnlocks || {})
+    ...(game.townUnlocks || {}),
+    ...(durableTownUnlocks || {})
   };
   game.rumorTable = Array.isArray(game.rumorTable) ? game.rumorTable : [];
   game.shopTiers = {
@@ -6145,7 +6882,10 @@ function getShopBuyPrice(game, item, shopId = "") {
 function getShopSellPrice(game, item, shopId = "") {
   const basePrice = shopId === "junk" ? 25 : Math.round(getItemValue(item) * 0.55);
   const state = getTownCycleState(game);
-  return Math.max(1, Math.round(basePrice * state.phaseModifiers.sellMultiplier));
+  const contractMultiplier = typeof game.getTownSellBonusMultiplier === "function"
+    ? game.getTownSellBonusMultiplier()
+    : 1;
+  return Math.max(1, Math.round(basePrice * state.phaseModifiers.sellMultiplier * contractMultiplier));
 }
 
 function getSagePrice(game, basePrice = 60) {
@@ -6168,7 +6908,7 @@ function getUnlockCost(unlockId) {
 function getAvailableTownUnlocks(game) {
   ensureTownMetaState(game);
   return Object.values(TOWN_UNLOCK_DEFS)
-    .filter((unlockDef) => !game.townUnlocks[unlockDef.id])
+    .filter((unlockDef) => !unlocked(game, unlockDef.id))
     .map((unlockDef) => ({
       ...unlockDef,
       cost: getUnlockCost(unlockDef.id)
@@ -6178,7 +6918,7 @@ function getAvailableTownUnlocks(game) {
 function purchaseTownUnlock(game, unlockId) {
   ensureTownMetaState(game);
   const unlockDef = TOWN_UNLOCK_DEFS[unlockId];
-  if (!unlockDef || game.townUnlocks[unlockId]) {
+  if (!unlockDef || unlocked(game, unlockId)) {
     return false;
   }
   const cost = getUnlockCost(unlockId);
@@ -6187,6 +6927,7 @@ function purchaseTownUnlock(game, unlockId) {
     return false;
   }
   game.player.gold -= cost;
+  unlockDurableTownProject(game, unlockId);
   game.townUnlocks[unlockId] = true;
   ensureTownMetaState(game);
   refreshTownStocks(game);
@@ -6198,7 +6939,7 @@ function purchaseTownUnlock(game, unlockId) {
   game.recordTelemetry?.("town_unlock_purchase", {
     unlockId,
     cost,
-    unlockOrder: Object.values(game.townUnlocks).filter(Boolean).length
+    unlockOrder: Object.values(game.durableTownUnlocks || game.townUnlocks).filter(Boolean).length
   });
   return true;
 }
@@ -6228,8 +6969,29 @@ function getNextFloorRumor(game) {
   if (level?.floorObjective?.id === "rescue_captive" && RUMOR_DEFS.captive) {
     rumorEntries.push(RUMOR_DEFS.captive);
   }
+  if (level?.floorObjective?.id === "seal_shrine" && RUMOR_DEFS.shrine_path) {
+    rumorEntries.push(RUMOR_DEFS.shrine_path);
+  }
+  if (level?.floorObjective?.id === "secure_supplies" && RUMOR_DEFS.supplies) {
+    rumorEntries.push(RUMOR_DEFS.supplies);
+  }
+  if (level?.floorObjective?.id === "recover_waystone" && RUMOR_DEFS.waystone) {
+    rumorEntries.push(RUMOR_DEFS.waystone);
+  }
+  if (level?.floorObjective?.id === "secure_ledger" && RUMOR_DEFS.ledger) {
+    rumorEntries.push(RUMOR_DEFS.ledger);
+  }
+  if (level?.floorObjective?.id === "purify_well" && RUMOR_DEFS.purify_well) {
+    rumorEntries.push(RUMOR_DEFS.purify_well);
+  }
+  if (level?.floorObjective?.id === "break_beacon" && RUMOR_DEFS.beacon) {
+    rumorEntries.push(RUMOR_DEFS.beacon);
+  }
+  if (level?.floorObjective?.id === "light_watchfire" && RUMOR_DEFS.watchfire) {
+    rumorEntries.push(RUMOR_DEFS.watchfire);
+  }
   if (cycle.phase === "Dawn") {
-    return rumorEntries.find((entry) => ["relic_hunt", "nest", "captive", theme?.id].includes(entry.id)) || rumorEntries[0] || null;
+    return rumorEntries.find((entry) => ["relic_hunt", "nest", "captive", "supplies", "waystone", "ledger", "shrine_path", "watchfire", theme?.id].includes(entry.id)) || rumorEntries[0] || null;
   }
   if (cycle.phase === "Dusk" || cycle.phase === "Night") {
     return rumorEntries[0] || null;
@@ -6292,26 +7054,94 @@ function getTownMetaSummary(game) {
   const rumorTokens = game.player?.runCurrencies?.rumorTokens || 0;
   const bankGold = Math.floor(game.player?.bankGold || 0);
   const onHand = Math.floor(game.player?.gold || 0);
+  const rumorPrice = getRumorPrice(game);
+  const nextRunIntent = typeof game.getNextRunIntent === "function" ? game.getNextRunIntent() : null;
+  const nextRunFocus = nextRunIntent?.progressText || (typeof game.getNextRunFocusLines === "function" ? game.getNextRunFocusLines().find(Boolean) || "" : "");
+  const contractModel = typeof game.getContractViewModel === "function" ? game.getContractViewModel() : null;
+  const recommendedContract = contractModel?.all?.find((contract) => contract.id === contractModel.recommendedId) || null;
+  const canArmRecommendedContract = Boolean(recommendedContract?.unlocked && !recommendedContract?.active);
+  const canBuyRumor = rumorTokens > 0 || onHand >= rumorPrice;
   const nextUnlockText = nextUnlock
     ? onHand >= nextUnlock.cost
       ? `Fund ${nextUnlock.name}`
       : `Save for ${nextUnlock.name} (${nextUnlock.cost} gp)`
     : "All current projects funded";
   const intelText = intel.nextRumor?.text || "No clear rumor posted for the next floor.";
-  const recommendedAction = rumorTokens > 0
-    ? "Spend a rumor token at the bank for fresh intel."
-    : nextUnlock && onHand >= nextUnlock.cost
-      ? `Fund ${nextUnlock.name} now to improve this adventurer's next descents.`
-      : bankGold > 0
-        ? "Use banked gold for safety, intel, or your next town project before descending."
-        : "Check the bank for next-floor intel and support for this adventurer.";
+  let recommendedActionId = "bank";
+  let recommendedActionLabel = "Review Bank Plan";
+  let recommendedAction = "Check the bank for next-floor intel and support for this adventurer.";
+  let recommendedReason = "Town persistence turns a clean return into the next run's edge.";
+
+  if (nextRunIntent?.cta?.actionId?.startsWith("town_unlock:") && nextUnlock && onHand >= nextUnlock.cost) {
+    recommendedActionId = nextRunIntent.cta.actionId;
+    recommendedActionLabel = nextRunIntent.cta.label;
+    recommendedAction = nextRunIntent.cta.text;
+    recommendedReason = nextRunIntent.cta.progressText;
+  } else if (nextRunIntent?.cta?.actionId === "contract_recommended" && canArmRecommendedContract) {
+    recommendedActionId = nextRunIntent.cta.actionId;
+    recommendedActionLabel = nextRunIntent.cta.label;
+    recommendedAction = nextRunIntent.cta.text;
+    recommendedReason = nextRunIntent.cta.progressText;
+  } else if (nextRunIntent?.cta?.actionId === "town_rumor" && canBuyRumor) {
+    recommendedActionId = nextRunIntent.cta.actionId;
+    recommendedActionLabel = nextRunIntent.cta.label;
+    recommendedAction = nextRunIntent.cta.text;
+    recommendedReason = nextRunIntent.cta.progressText;
+  } else if (game.storyFlags?.postReturnBankPrompt && canArmRecommendedContract) {
+    recommendedActionId = "contract_recommended";
+    recommendedActionLabel = `Arm ${recommendedContract.name}`;
+    recommendedAction = `Arm ${recommendedContract.name} before the next run.`;
+    recommendedReason = recommendedContract.recommendationReason || recommendedContract.description;
+  } else if (game.storyFlags?.postReturnBankPrompt && canBuyRumor) {
+    recommendedActionId = "town_rumor";
+    recommendedActionLabel = rumorTokens > 0 ? "Spend Rumor Token" : "Buy Intel";
+    recommendedAction = rumorTokens > 0
+      ? "Spend a rumor token on next-floor intel while the last return is still fresh."
+      : "Buy next-floor intel before heading north again.";
+    recommendedReason = intelText;
+  } else if (canArmRecommendedContract) {
+    recommendedActionId = "contract_recommended";
+    recommendedActionLabel = `Arm ${recommendedContract.name}`;
+    recommendedAction = `Arm ${recommendedContract.name} for the next run.`;
+    recommendedReason = recommendedContract.recommendationReason || recommendedContract.description;
+  } else if (rumorTokens > 0) {
+    recommendedActionId = "town_rumor";
+    recommendedActionLabel = "Spend Rumor Token";
+    recommendedAction = "Spend a rumor token at the bank for fresh intel.";
+    recommendedReason = intelText;
+  } else if (nextUnlock && onHand >= nextUnlock.cost) {
+    recommendedActionId = `town_unlock:${nextUnlock.id}`;
+    recommendedActionLabel = `Fund ${nextUnlock.name}`;
+    recommendedAction = `Fund ${nextUnlock.name} now to improve this adventurer's next descents.`;
+    recommendedReason = nextUnlock.description;
+  } else if (canBuyRumor) {
+    recommendedActionId = "town_rumor";
+    recommendedActionLabel = "Buy Intel";
+    recommendedAction = "Buy intel before heading north again.";
+    recommendedReason = intelText;
+  } else if (bankGold > 0 && onHand < 100) {
+    recommendedActionId = "bank_withdraw";
+    recommendedActionLabel = "Withdraw 100";
+    recommendedAction = "Use banked gold for safety, intel, or your next town project before descending.";
+    recommendedReason = "Liquid gold lets this adventurer convert value before the next descent.";
+  } else if (onHand > 0) {
+    recommendedActionId = "bank_deposit";
+    recommendedActionLabel = "Deposit 100";
+    recommendedAction = "Bank spare gold if you want a safer next descent.";
+    recommendedReason = "Account gold survives the trip back north better than loose coin.";
+  }
   return {
     bankGold,
     rumorTokens,
     nextUnlock,
     nextRumor: intel.nextRumor || null,
+    nextRunIntent,
+    recommendedActionId,
+    recommendedActionLabel,
     recommendedAction,
-    summary: `Secured ${bankGold} gp | Rumor tokens ${rumorTokens} | ${nextUnlockText} | Next-floor intel: ${intelText}`
+    recommendedReason: nextRunFocus ? `${recommendedReason} ${nextRunFocus}` : recommendedReason,
+    recommendedContractId: recommendedContract?.id || "",
+    summary: `Secured ${bankGold} gp | Rumor tokens ${rumorTokens} | ${nextUnlockText} | Next-floor intel: ${intelText} | Next: ${recommendedActionLabel}${nextRunFocus ? ` | ${nextRunFocus}` : ""}`
   };
 }
 
@@ -6410,6 +7240,12 @@ function buildDeathRecapMarkup(game) {
   const masterySummary = typeof game.getClassMasterySummary === "function"
     ? game.getClassMasterySummary(game.player?.classId)
     : "No mastery track.";
+  const carryForward = typeof game.getTownCarryForwardSummary === "function"
+    ? game.getTownCarryForwardSummary()
+    : "Town improvements carried forward: none yet.";
+  const nextRunMarkup = typeof game.getNextRunFocusMarkup === "function"
+    ? game.getNextRunFocusMarkup({ label: "Why Run Again" })
+    : "";
 
   return `
     <div class="section-block text-block">
@@ -6431,15 +7267,18 @@ function buildDeathRecapMarkup(game) {
       <div class="text-block">
         ${escapeHtml(`Mastery: ${masterySummary}`)}<br><br>
         ${escapeHtml(activeContract ? `Active contract: ${activeContract.name}` : "Active contract: none armed")}<br><br>
-        ${escapeHtml(persistentChanges.length > 0 ? persistentChanges.join(", ") : "No permanent unlock changed during this run.")}
+        ${escapeHtml(persistentChanges.length > 0 ? persistentChanges.join(", ") : "No permanent unlock changed during this run.")}<br><br>
+        ${escapeHtml(carryForward)}
       </div>
     </div>
+    ${nextRunMarkup}
   `;
 }
 
 // src/features/meta-progression.js
 
 const META_PROFILE_KEY = "cotw.meta.v1";
+const CAMPAIGN_ARCHIVE_LIMIT = 18;
 
 function parseMetaProfile() {
   if (typeof localStorage === "undefined") {
@@ -6471,10 +7310,59 @@ function defaultUnlockedContracts() {
   return ["pressed_descent"];
 }
 
+function defaultTownUnlocks() {
+  return Object.fromEntries(Object.keys(TOWN_UNLOCK_DEFS).map((unlockId) => [unlockId, false]));
+}
+
+function defaultCommendations() {
+  return Object.fromEntries(Object.keys(COMMENDATION_DEFS).map((commendationId) => [commendationId, false]));
+}
+
+function normalizeBooleanMap(values = {}, defaults = {}) {
+  return Object.fromEntries(
+    Object.keys(defaults).map((key) => [key, Boolean(values?.[key])])
+  );
+}
+
+function buildMasterySummary(def, rank) {
+  const unlocked = (def.ranks || []).filter((entry) => entry.rank <= rank);
+  const next = (def.ranks || []).find((entry) => entry.rank === rank + 1);
+  if (unlocked.length === 0) {
+    return next ? `Next unlock: ${next.name}. ${next.description}` : "No mastery bonus yet.";
+  }
+  const unlockedText = unlocked.map((entry) => entry.name).join(", ");
+  return next
+    ? `Unlocked: ${unlockedText}. Next: ${next.name}.`
+    : `Unlocked: ${unlockedText}.`;
+}
+
+function getRelevantHistory(game, limit = 5) {
+  const history = Array.isArray(game.runSummaryHistory) && game.runSummaryHistory.length > 0
+    ? game.runSummaryHistory
+    : Array.isArray(game.campaignArchive) ? game.campaignArchive : [];
+  return history.slice(-limit);
+}
+
+function dedupeContractUnlocks(game) {
+  game.contracts.unlocked = [...new Set(game.contracts.unlocked)];
+  defaultUnlockedContracts().forEach((contractId) => {
+    if (!game.contracts.unlocked.includes(contractId)) {
+      game.contracts.unlocked.push(contractId);
+    }
+  });
+}
+
 const CONTRACT_UNLOCK_HINTS = {
   pressed_descent: "Available by default for new adventurers.",
   greed_ledger: "Unlocks after clearing any floor objective.",
-  scholar_road: "Unlocks after banking one successful extract."
+  scholar_road: "Unlocks after banking one successful extract.",
+  hunters_call: "Unlocks after killing any elite.",
+  ration_run: "Unlocks after banking a route-heavy extract.",
+  sealed_return: "Unlocks after banking a clean extract without taking a greed room.",
+  route_debt: "Unlocks after earning the Route Reader commendation from a route-heavy extract.",
+  trophy_path: "Unlocks after earning the Elite Hunter commendation from an elite-heavy run.",
+  greedy_burden: "Unlocks after earning the Greed Specialist commendation from a greed-heavy extract.",
+  last_light: "Unlocks after banking a low-recovery extract."
 };
 
 const CONTRACT_EFFECT_LINES = {
@@ -6500,6 +7388,60 @@ const CONTRACT_EFFECT_LINES = {
     "Search reveals more route at a time.",
     "Resolved objectives pay +1 rumor token.",
     "You begin runs with lower maximum health."
+  ],
+  hunters_call: [
+    "Town Persistence",
+    "Opt-in",
+    "Applies to next run only",
+    "Elite kills pay extra gold.",
+    "Elite kills pay +1 rumor token.",
+    "Reinforcement waves are more likely to include elites."
+  ],
+  ration_run: [
+    "Town Persistence",
+    "Opt-in",
+    "Applies to next run only",
+    "Start with a healing potion and mapping scroll.",
+    "Waiting, resting, and searching raise pressure harder."
+  ],
+  sealed_return: [
+    "Town Persistence",
+    "Opt-in",
+    "Applies to next run only",
+    "Start with a Rune of Return and +1 rumor token.",
+    "Greed raises pressure harder.",
+    "You begin runs with lower maximum health."
+  ],
+  route_debt: [
+    "Town Persistence",
+    "Opt-in",
+    "Applies to next run only",
+    "Start with +1 rumor token.",
+    "Search reveals more route at a time.",
+    "Searching raises pressure harder and you begin runs with lower maximum health."
+  ],
+  trophy_path: [
+    "Town Persistence",
+    "Opt-in",
+    "Applies to next run only",
+    "Elite kills pay extra gold.",
+    "Elite kills pay +1 rumor token.",
+    "Elite reinforcements are more likely."
+  ],
+  greedy_burden: [
+    "Town Persistence",
+    "Opt-in",
+    "Applies to next run only",
+    "Greed rooms pay more.",
+    "Town buyers pay better after return.",
+    "Burden penalties worsen and greed raises pressure harder."
+  ],
+  last_light: [
+    "Town Persistence",
+    "Opt-in",
+    "Applies to next run only",
+    "Start with emergency stock.",
+    "Waiting, resting, and searching all raise pressure harder."
   ]
 };
 
@@ -6527,6 +7469,22 @@ function sortContracts(left, right) {
   return left.name.localeCompare(right.name);
 }
 
+function countRecentClassExtracts(game, classId) {
+  const archive = Array.isArray(game.campaignArchive) ? game.campaignArchive : [];
+  let streak = 0;
+  for (let index = archive.length - 1; index >= 0; index -= 1) {
+    const entry = archive[index];
+    if (entry?.outcome !== "extract") {
+      break;
+    }
+    if (entry.classId !== classId) {
+      break;
+    }
+    streak += 1;
+  }
+  return streak;
+}
+
 function ensureMetaProgressionState(game) {
   const stored = parseMetaProfile();
   game.classMasteries = {
@@ -6539,15 +7497,25 @@ function ensureMetaProgressionState(game) {
       ? [...stored.unlockedContracts]
       : defaultUnlockedContracts(),
     activeId: stored.activeContractId || "",
-    currentRunId: "",
+    currentRunId: game.contracts?.currentRunId || "",
     ...(game.contracts || {})
   };
-  game.contracts.unlocked = Array.isArray(game.contracts.unlocked) ? game.contracts.unlocked : defaultUnlockedContracts();
-  defaultUnlockedContracts().forEach((contractId) => {
-    if (!game.contracts.unlocked.includes(contractId)) {
-      game.contracts.unlocked.push(contractId);
-    }
-  });
+  dedupeContractUnlocks(game);
+  game.durableTownUnlocks = {
+    ...defaultTownUnlocks(),
+    ...normalizeBooleanMap(stored.durableTownUnlocks, defaultTownUnlocks()),
+    ...normalizeBooleanMap(game.durableTownUnlocks, defaultTownUnlocks())
+  };
+  game.commendations = {
+    ...defaultCommendations(),
+    ...normalizeBooleanMap(stored.commendations, defaultCommendations()),
+    ...normalizeBooleanMap(game.commendations, defaultCommendations())
+  };
+  game.campaignArchive = Array.isArray(stored.campaignArchive)
+    ? stored.campaignArchive.slice(-CAMPAIGN_ARCHIVE_LIMIT)
+    : Array.isArray(game.campaignArchive)
+      ? game.campaignArchive.slice(-CAMPAIGN_ARCHIVE_LIMIT)
+      : [];
 }
 
 function persistMetaProgressionState(game) {
@@ -6555,24 +7523,61 @@ function persistMetaProgressionState(game) {
   saveMetaProfile({
     classMasteries: game.classMasteries,
     unlockedContracts: game.contracts.unlocked,
-    activeContractId: game.contracts.activeId || ""
+    activeContractId: game.contracts.activeId || "",
+    durableTownUnlocks: game.durableTownUnlocks,
+    commendations: game.commendations,
+    campaignArchive: game.campaignArchive.slice(-CAMPAIGN_ARCHIVE_LIMIT)
   });
 }
 
-function getAvailableContracts(game) {
+function mergeLegacyTownUnlocks(game, legacyTownUnlocks = {}) {
   ensureMetaProgressionState(game);
-  return Object.values(CONTRACT_DEFS).map((contract) => ({
-    ...contract,
-    unlocked: game.contracts.unlocked.includes(contract.id),
-    active: game.contracts.activeId === contract.id,
-    unlockHint: CONTRACT_UNLOCK_HINTS[contract.id] || "Unlock condition not yet documented.",
-    effectLines: CONTRACT_EFFECT_LINES[contract.id] || [
-      "Town Persistence",
-      "Opt-in",
-      "Applies to next run only",
-      contract.description
-    ]
-  })).sort(sortContracts);
+  const defaults = defaultTownUnlocks();
+  let changed = false;
+  Object.keys(defaults).forEach((unlockId) => {
+    if (legacyTownUnlocks?.[unlockId] && !game.durableTownUnlocks[unlockId]) {
+      game.durableTownUnlocks[unlockId] = true;
+      changed = true;
+    }
+  });
+  if (changed) {
+    persistMetaProgressionState(game);
+  }
+  return changed;
+}
+
+function getDurableTownUnlocks(game) {
+  ensureMetaProgressionState(game);
+  return { ...game.durableTownUnlocks };
+}
+
+function unlockDurableTownProject(game, unlockId) {
+  ensureMetaProgressionState(game);
+  if (!Object.prototype.hasOwnProperty.call(game.durableTownUnlocks, unlockId)) {
+    return false;
+  }
+  if (game.durableTownUnlocks[unlockId]) {
+    return false;
+  }
+  game.durableTownUnlocks[unlockId] = true;
+  persistMetaProgressionState(game);
+  return true;
+}
+
+function getCampaignArchive(game, limit = CAMPAIGN_ARCHIVE_LIMIT) {
+  ensureMetaProgressionState(game);
+  return game.campaignArchive.slice(-limit).reverse();
+}
+
+function recordCampaignSummary(game, summary) {
+  ensureMetaProgressionState(game);
+  if (!summary) {
+    return null;
+  }
+  game.campaignArchive.push(summary);
+  game.campaignArchive = game.campaignArchive.slice(-CAMPAIGN_ARCHIVE_LIMIT);
+  persistMetaProgressionState(game);
+  return summary;
 }
 
 function getActiveContract(game, useCurrentRun = false) {
@@ -6602,6 +7607,7 @@ function unlockContract(game, contractId) {
     return false;
   }
   game.contracts.unlocked.push(contractId);
+  dedupeContractUnlocks(game);
   persistMetaProgressionState(game);
   return true;
 }
@@ -6615,6 +7621,22 @@ function applyContractToNewRun(game) {
   return getActiveContract(game, true);
 }
 
+function getAvailableContracts(game) {
+  ensureMetaProgressionState(game);
+  return Object.values(CONTRACT_DEFS).map((contract) => ({
+    ...contract,
+    unlocked: game.contracts.unlocked.includes(contract.id),
+    active: game.contracts.activeId === contract.id,
+    unlockHint: CONTRACT_UNLOCK_HINTS[contract.id] || "Unlock condition not yet documented.",
+    effectLines: CONTRACT_EFFECT_LINES[contract.id] || [
+      "Town Persistence",
+      "Opt-in",
+      "Applies to next run only",
+      contract.description
+    ]
+  })).sort(sortContracts);
+}
+
 function getClassMasteryRank(game, classId) {
   ensureMetaProgressionState(game);
   return game.classMasteries[classId] || 0;
@@ -6626,15 +7648,7 @@ function getClassMasterySummary(game, classId) {
   if (!def) {
     return "No mastery track.";
   }
-  const unlocked = (def.ranks || []).filter((entry) => entry.rank <= rank);
-  const next = (def.ranks || []).find((entry) => entry.rank === rank + 1);
-  if (unlocked.length === 0) {
-    return next ? `Next unlock: ${next.name}. ${next.description}` : "No mastery bonus yet.";
-  }
-  const unlockedText = unlocked.map((entry) => entry.name).join(", ");
-  return next
-    ? `Unlocked: ${unlockedText}. Next: ${next.name}.`
-    : `Unlocked: ${unlockedText}.`;
+  return buildMasterySummary(def, rank);
 }
 
 function getClassMasteryViewModel(game, classId) {
@@ -6676,51 +7690,101 @@ function getClassMasteryViewModel(game, classId) {
   };
 }
 
-function getRecommendedContract(game) {
+function getAvailableCommendations(game) {
   ensureMetaProgressionState(game);
-  const history = Array.isArray(game.runSummaryHistory) ? game.runSummaryHistory.slice(-5) : [];
-  if (history.length === 0) {
+  return Object.values(COMMENDATION_DEFS).map((commendation) => ({
+    ...commendation,
+    unlocked: Boolean(game.commendations?.[commendation.id])
+  }));
+}
+
+function getNextCommendationGoal(game, classId = game.player?.classId || "") {
+  ensureMetaProgressionState(game);
+  const archive = Array.isArray(game.campaignArchive) ? game.campaignArchive : [];
+  if (!game.commendations.clean_extract) {
     return {
-      id: "pressed_descent",
-      reason: "Low-friction opt-in contract for the next run."
+      id: "clean_extract",
+      text: "1 clean extract earns the Clean Extract archive badge."
     };
   }
-  const searchAverage = history.reduce((sum, summary) => sum + (summary.searchCount || 0), 0) / history.length;
-  const greedAverage = history.reduce((sum, summary) => sum + (summary.greedCount || 0), 0) / history.length;
-  if (greedAverage >= 1) {
+  if (!game.commendations.route_reader) {
+    const bestSearch = archive.reduce((max, entry) => Math.max(max, entry?.outcome === "extract" ? (entry.searchCount || 0) : 0), 0);
     return {
-      id: "greed_ledger",
-      reason: "Recent runs lean greedy, so this converts that habit into clearer payout."
+      id: "route_reader",
+      text: `${Math.max(0, 4 - bestSearch)} more route searches in one extract earn Route Reader.`
     };
   }
-  if (searchAverage >= 2) {
+  if (!game.commendations.elite_hunter) {
+    const bestElites = archive.reduce((max, entry) => Math.max(max, entry?.eliteKills || 0), 0);
     return {
-      id: "scholar_road",
-      reason: "Recent runs lean on routing and search, so this sharpens the objective path."
+      id: "elite_hunter",
+      text: `${Math.max(0, 2 - bestElites)} more elite kill${bestElites >= 1 ? "" : "s"} in one run earn Elite Hunter.`
+    };
+  }
+  if (!game.commendations.class_loyalist) {
+    const streak = countRecentClassExtracts(game, classId);
+    return {
+      id: "class_loyalist",
+      text: `${Math.max(0, 3 - streak)} more ${CLASS_MASTERY_DEFS[classId]?.name?.replace(" Mastery", "") || classId || "class"} extract${streak === 2 ? "" : "s"} earn Class Loyalist.`
     };
   }
   return {
-    id: "pressed_descent",
-    reason: "Stable opt-in contract when you want better objective payout without changing the loop."
+    id: "campaign_archive",
+    text: "Current commendation set is complete."
   };
 }
 
-function getContractViewModel(game) {
-  const contracts = getAvailableContracts(game);
-  const recommendation = getRecommendedContract(game);
-  const decorated = contracts.map((contract) => ({
-    ...contract,
-    recommended: recommendation.id === contract.id,
-    recommendationReason: recommendation.id === contract.id ? recommendation.reason : ""
-  }));
-  return {
-    active: decorated.find((contract) => contract.active) || null,
-    unlocked: decorated.filter((contract) => contract.unlocked && !contract.active),
-    locked: decorated.filter((contract) => !contract.unlocked),
-    recommendedId: recommendation.id,
-    recommendedReason: recommendation.reason,
-    all: decorated
+function unlockCommendation(game, commendationId) {
+  ensureMetaProgressionState(game);
+  if (!COMMENDATION_DEFS[commendationId] || game.commendations[commendationId]) {
+    return false;
+  }
+  game.commendations[commendationId] = true;
+  persistMetaProgressionState(game);
+  return true;
+}
+
+function evaluateRunCommendations(game, summary) {
+  ensureMetaProgressionState(game);
+  if (!summary) {
+    return [];
+  }
+  const unlocked = [];
+  const maybeUnlock = (commendationId, contractId = "") => {
+    if (!unlockCommendation(game, commendationId)) {
+      return;
+    }
+    const commendation = COMMENDATION_DEFS[commendationId];
+    const unlockedContract = contractId && unlockContract(game, contractId);
+    unlocked.push({
+      id: commendationId,
+      name: commendation?.name || commendationId,
+      rewardLabel: unlockedContract
+        ? `Unlocks contract: ${CONTRACT_DEFS[contractId]?.name || contractId}`
+        : commendation?.rewardLabel || "Archive badge",
+      contractId: unlockedContract ? contractId : ""
+    });
   };
+
+  if (summary.outcome === "extract" && (summary.greedCount || 0) === 0) {
+    maybeUnlock("clean_extract");
+  }
+  if (summary.outcome === "extract" && (summary.greedCount || 0) >= 2) {
+    maybeUnlock("greed_specialist", "greedy_burden");
+  }
+  if ((summary.eliteKills || 0) >= 2) {
+    maybeUnlock("elite_hunter", "trophy_path");
+  }
+  if (summary.outcome === "extract" && (summary.searchCount || 0) >= 4) {
+    maybeUnlock("route_reader", "route_debt");
+  }
+  if (summary.outcome === "extract" && summary.carriedCurse) {
+    maybeUnlock("curse_survivor");
+  }
+  if (summary.outcome === "extract" && countRecentClassExtracts(game, summary.classId) >= 3) {
+    maybeUnlock("class_loyalist");
+  }
+  return unlocked;
 }
 
 function getCreationPersistencePreview(game, classId) {
@@ -6753,6 +7817,7 @@ function applyClassMasteryBonuses(game) {
     (entry.spellIds || []).forEach((spellId) => {
       if (!game.player.spellsKnown.includes(spellId)) {
         game.player.spellsKnown.push(spellId);
+        game.addSpellToTrayIfSpace?.(spellId);
         applied.push(spellId);
       }
     });
@@ -6761,6 +7826,16 @@ function applyClassMasteryBonuses(game) {
       applied.push(`${entry.rumorTokens} rumor token${entry.rumorTokens === 1 ? "" : "s"}`);
     }
   });
+  return applied;
+}
+
+function applyCommendationBonuses(game) {
+  ensureMetaProgressionState(game);
+  const applied = [];
+  if (game.commendations.class_loyalist && countRecentClassExtracts(game, game.player?.classId) >= 3) {
+    game.player.runCurrencies.rumorTokens += 1;
+    applied.push("Class Loyalist: +1 rumor token");
+  }
   return applied;
 }
 
@@ -6779,6 +7854,99 @@ function advanceClassMastery(game, trigger) {
   game.classMasteries[classId] = nextRank.rank;
   persistMetaProgressionState(game);
   return nextRank;
+}
+
+function getRecommendedContract(game) {
+  ensureMetaProgressionState(game);
+  const history = getRelevantHistory(game, 5);
+  if (history.length === 0) {
+    return {
+      id: "pressed_descent",
+      reason: "Low-friction opt-in contract for the next run."
+    };
+  }
+  const searchAverage = history.reduce((sum, summary) => sum + (summary.searchCount || 0), 0) / history.length;
+  const greedAverage = history.reduce((sum, summary) => sum + (summary.greedCount || 0), 0) / history.length;
+  const eliteAverage = history.reduce((sum, summary) => sum + (summary.eliteKills || 0), 0) / history.length;
+  const lowRecoveryRate = history.filter((summary) => summary.outcome === "extract" && (summary.restCount || 0) === 0 && (summary.waitCount || 0) <= 2).length / history.length;
+  const cleanExtractRate = history.filter((summary) => summary.outcome === "extract" && (summary.greedCount || 0) === 0).length / history.length;
+
+  if (searchAverage >= 4 && game.contracts.unlocked.includes("route_debt")) {
+    return {
+      id: "route_debt",
+      reason: "Recent extracts lean on scouting, so Route Debt sharpens route value at the cost of breathing room."
+    };
+  }
+  if (eliteAverage >= 1.5 && game.contracts.unlocked.includes("trophy_path")) {
+    return {
+      id: "trophy_path",
+      reason: "Recent runs are already elite-heavy, so Trophy Path converts that into a clearer bounty loop."
+    };
+  }
+  if (greedAverage >= 2 && game.contracts.unlocked.includes("greedy_burden")) {
+    return {
+      id: "greedy_burden",
+      reason: "Recent extracts are staying greedy, so Greedy Burden pushes payout higher and punishes over-carry."
+    };
+  }
+  if (lowRecoveryRate >= 0.4 && game.contracts.unlocked.includes("last_light")) {
+    return {
+      id: "last_light",
+      reason: "Recent clean pushes avoided recovery turns, so Last Light sharpens the opener and taxes idle play."
+    };
+  }
+  if (eliteAverage >= 1 && game.contracts.unlocked.includes("hunters_call")) {
+    return {
+      id: "hunters_call",
+      reason: "Recent runs are already hunting elites, so this converts that into better bounty and stronger pressure."
+    };
+  }
+  if (greedAverage >= 1 && game.contracts.unlocked.includes("greed_ledger")) {
+    return {
+      id: "greed_ledger",
+      reason: "Recent runs lean greedy, so this converts that habit into clearer payout."
+    };
+  }
+  if (searchAverage >= 3 && game.contracts.unlocked.includes("ration_run")) {
+    return {
+      id: "ration_run",
+      reason: "Recent runs spend extra turns scouting, so this sharpens the opener but punishes idle play."
+    };
+  }
+  if (searchAverage >= 2 && game.contracts.unlocked.includes("scholar_road")) {
+    return {
+      id: "scholar_road",
+      reason: "Recent runs lean on routing and search, so this sharpens the objective path."
+    };
+  }
+  if (cleanExtractRate >= 0.4 && game.contracts.unlocked.includes("sealed_return")) {
+    return {
+      id: "sealed_return",
+      reason: "Recent returns have been clean and disciplined, so this rewards fast banking and cleaner exits."
+    };
+  }
+  return {
+    id: "pressed_descent",
+    reason: "Stable opt-in contract when you want better objective payout without changing the loop."
+  };
+}
+
+function getContractViewModel(game) {
+  const contracts = getAvailableContracts(game);
+  const recommendation = getRecommendedContract(game);
+  const decorated = contracts.map((contract) => ({
+    ...contract,
+    recommended: recommendation.id === contract.id,
+    recommendationReason: recommendation.id === contract.id ? recommendation.reason : ""
+  }));
+  return {
+    active: decorated.find((contract) => contract.active) || null,
+    unlocked: decorated.filter((contract) => contract.unlocked && !contract.active),
+    locked: decorated.filter((contract) => !contract.unlocked),
+    recommendedId: recommendation.id,
+    recommendedReason: recommendation.reason,
+    all: decorated
+  };
 }
 
 // src/features/telemetry.js
@@ -6822,7 +7990,17 @@ function writeTelemetryStore(store) {
   }));
 }
 
+function average(values = []) {
+  if (!values.length) {
+    return 0;
+  }
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
 function createRunMetrics(game) {
+  const validation = typeof game.getValidationSummary === "function"
+    ? game.getValidationSummary()
+    : { signature: "", variants: {} };
   return {
     runId: makeId("run"),
     startedAt: new Date().toISOString(),
@@ -6840,6 +8018,9 @@ function createRunMetrics(game) {
     firstObjectiveSearchCount: 0,
     firstSearchBeforeObjectiveTurn: null,
     searchCount: 0,
+    waitCount: 0,
+    restCount: 0,
+    eliteKills: 0,
     modalOpenCounts: {
       pack: 0,
       magic: 0,
@@ -6852,7 +8033,9 @@ function createRunMetrics(game) {
     serviceOpenCounts: {},
     objectiveSeenKeys: {},
     optionalSeenKeys: {},
-    deepestDepth: Math.max(0, game.currentDepth || 0, game.player?.deepestDepth || 0)
+    deepestDepth: Math.max(0, game.currentDepth || 0, game.player?.deepestDepth || 0),
+    validationProfile: validation.signature,
+    validationVariants: validation.variants
   };
 }
 
@@ -7015,6 +8198,79 @@ function computeBankOpensAfterReturn(rawEvents = []) {
   };
 }
 
+function computeReturnFollowThrough(rawEvents = []) {
+  const summary = {
+    successfulReturns: 0,
+    bankOpensAfterReturn: 0,
+    rumorBuysAfterReturn: 0,
+    unlockPurchasesAfterReturn: 0,
+    contractArmsAfterReturn: 0,
+    returnsWithAnyTownAction: 0
+  };
+  let pendingReturn = null;
+
+  const finalizePendingReturn = () => {
+    if (!pendingReturn) {
+      return;
+    }
+    if (pendingReturn.bank) {
+      summary.bankOpensAfterReturn += 1;
+    }
+    if (pendingReturn.rumor) {
+      summary.rumorBuysAfterReturn += 1;
+    }
+    if (pendingReturn.unlock) {
+      summary.unlockPurchasesAfterReturn += 1;
+    }
+    if (pendingReturn.contract) {
+      summary.contractArmsAfterReturn += 1;
+    }
+    if (pendingReturn.bank || pendingReturn.rumor || pendingReturn.unlock || pendingReturn.contract) {
+      summary.returnsWithAnyTownAction += 1;
+    }
+    pendingReturn = null;
+  };
+
+  rawEvents.forEach((event) => {
+    if (event.type === "returned_to_town") {
+      finalizePendingReturn();
+      summary.successfulReturns += 1;
+      pendingReturn = {
+        bank: false,
+        rumor: false,
+        unlock: false,
+        contract: false
+      };
+      return;
+    }
+    if (!pendingReturn) {
+      return;
+    }
+    if (event.type === "run_started") {
+      finalizePendingReturn();
+      return;
+    }
+    if (event.type === "bank_persistence_viewed") {
+      pendingReturn.bank = true;
+      return;
+    }
+    if (event.type === "town_rumor_buy") {
+      pendingReturn.rumor = true;
+      return;
+    }
+    if (event.type === "town_unlock_purchase") {
+      pendingReturn.unlock = true;
+      return;
+    }
+    if (event.type === "contract_armed") {
+      pendingReturn.contract = true;
+    }
+  });
+
+  finalizePendingReturn();
+  return summary;
+}
+
 function computeMetaReview(game) {
   const rawEvents = Array.isArray(game.telemetry?.rawEvents) ? game.telemetry.rawEvents : [];
   const summaries = Array.isArray(game.runSummaryHistory) ? game.runSummaryHistory : [];
@@ -7044,6 +8300,18 @@ function computeMetaReview(game) {
   const returnSummaryOpens = rawEvents.filter((event) => event.type === "return_summary_opened").length;
   const returnSummaryCloses = rawEvents.filter((event) => event.type === "return_summary_closed").length;
   const bankAfterReturn = computeBankOpensAfterReturn(rawEvents);
+  const returnFollowThrough = computeReturnFollowThrough(rawEvents);
+  const clearTurns = summaries
+    .map((summary) => summary.firstObjectiveClearTurn)
+    .filter((value) => Number.isFinite(value));
+  const searchCounts = summaries
+    .map((summary) => Number.isFinite(summary.firstObjectiveSearchCount) ? summary.firstObjectiveSearchCount : summary.searchCount)
+    .filter((value) => Number.isFinite(value));
+  const validationProfileCounts = runStarts.reduce((counts, event) => {
+    const key = event.payload?.validationProfile || "default";
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }, {});
   return {
     totalRunStarts: runStarts.length,
     armedRunStarts: armedStarts.length,
@@ -7053,6 +8321,16 @@ function computeMetaReview(game) {
     masteryUnlocksByClass,
     successfulReturns: bankAfterReturn.successfulReturns,
     bankOpensAfterReturn: bankAfterReturn.bankOpensAfterReturn,
+    rumorBuysAfterReturn: returnFollowThrough.rumorBuysAfterReturn,
+    unlockPurchasesAfterReturn: returnFollowThrough.unlockPurchasesAfterReturn,
+    contractArmsAfterReturn: returnFollowThrough.contractArmsAfterReturn,
+    returnsWithAnyTownAction: returnFollowThrough.returnsWithAnyTownAction,
+    contractArmRateAfterReturn: returnFollowThrough.successfulReturns > 0
+      ? returnFollowThrough.contractArmsAfterReturn / returnFollowThrough.successfulReturns
+      : 0,
+    averageFirstObjectiveClearTurn: average(clearTurns),
+    averageFirstObjectiveSearchCount: average(searchCounts),
+    validationProfileCounts,
     returnSummaryOpens,
     returnSummaryCloses,
     archivedReturns: summaries.filter((summary) => summary.outcome !== "death").length
@@ -7114,6 +8392,21 @@ function updateRunMetrics(game, activeRun, type, payload = {}) {
     if (!activeRun.firstObjectiveClearTurn && activeRun.firstSearchBeforeObjectiveTurn === null) {
       activeRun.firstSearchBeforeObjectiveTurn = game.turn || 0;
     }
+    return;
+  }
+
+  if (type === "wait_used") {
+    activeRun.waitCount += 1;
+    return;
+  }
+
+  if (type === "rest_used") {
+    activeRun.restCount += 1;
+    return;
+  }
+
+  if (type === "elite_kill") {
+    activeRun.eliteKills += 1;
     return;
   }
 
@@ -7191,7 +8484,9 @@ function startTelemetryRun(game) {
   recordTelemetryEvent(game, "run_started", {
     classId: activeRun.classId,
     raceId: activeRun.raceId,
-    contractId: activeRun.contractId
+    contractId: activeRun.contractId,
+    validationProfile: activeRun.validationProfile,
+    validationVariants: activeRun.validationVariants
   });
   return activeRun;
 }
@@ -7396,6 +8691,9 @@ function buildRunSummary(game, outcome = "extract", extra = {}) {
     firstSearchBeforeObjectiveTurn: activeRun.firstSearchBeforeObjectiveTurn,
     firstObjectiveSearchCount: activeRun.firstObjectiveSearchCount || activeRun.searchCount || 0,
     searchCount: activeRun.searchCount || 0,
+    waitCount: activeRun.waitCount || 0,
+    restCount: activeRun.restCount || 0,
+    eliteKills: activeRun.eliteKills || 0,
     modalOpenCounts: {
       pack: activeRun.modalOpenCounts?.pack || 0,
       magic: activeRun.modalOpenCounts?.magic || 0,
@@ -7406,6 +8704,7 @@ function buildRunSummary(game, outcome = "extract", extra = {}) {
     greedLabels: [...(activeRun.greedLabels || [])],
     returnValue: Math.floor(game.player?.gold || 0) + Math.floor(game.player?.bankGold || 0),
     cause: extra.cause || "",
+    carriedCurse: Boolean(extra.carriedCurse),
     townServicesOpened: [...(activeRun.townServicesOpened || [])],
     persistentChanges: Array.isArray(extra.persistentChanges) ? [...extra.persistentChanges] : [],
     masteryAdvance: extra.masteryAdvance || null,
@@ -7441,15 +8740,157 @@ function resetTelemetry(game) {
   syncTelemetryMirror(game);
 }
 
+// src/features/validation.js
+const DEFAULT_VALIDATION_VARIANTS = {
+  onboarding: "guided_loop",
+  hud: "dominant_cta",
+  route: "guided_plus",
+  town: "bank_first",
+  contract: "recommended",
+  content: "shrine_path"
+};
+
+const ALLOWED_VARIANTS = {
+  onboarding: ["baseline", "guided_loop", "short_loop"],
+  hud: ["baseline", "dominant_cta"],
+  route: ["baseline", "guided_plus"],
+  town: ["baseline", "bank_first"],
+  contract: ["baseline", "recommended"],
+  content: ["baseline", "shrine_path"]
+};
+
+function resolveVariant(key, rawValue) {
+  const allowed = ALLOWED_VARIANTS[key] || [];
+  return allowed.includes(rawValue) ? rawValue : DEFAULT_VALIDATION_VARIANTS[key];
+}
+
+function readSearchVariant(params, key) {
+  return params.get(`cotw_${key}`)
+    || params.get(`cotw${key[0].toUpperCase()}${key.slice(1)}`)
+    || params.get(key)
+    || "";
+}
+
+function initializeValidationState(game) {
+  const params = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search || "")
+    : new URLSearchParams("");
+  const variants = { ...DEFAULT_VALIDATION_VARIANTS };
+
+  Object.keys(variants).forEach((key) => {
+    variants[key] = resolveVariant(key, readSearchVariant(params, key));
+  });
+
+  game.validation = {
+    variants,
+    signature: Object.entries(variants).map(([key, value]) => `${key}:${value}`).join("|"),
+    source: typeof window !== "undefined" && window.location?.search ? "query" : "default"
+  };
+}
+
+function getValidationVariant(game, key) {
+  return game?.validation?.variants?.[key] || DEFAULT_VALIDATION_VARIANTS[key];
+}
+
+function getValidationSummary(game) {
+  const variants = {
+    ...DEFAULT_VALIDATION_VARIANTS,
+    ...(game?.validation?.variants || {})
+  };
+  return {
+    variants,
+    signature: Object.entries(variants).map(([key, value]) => `${key}:${value}`).join("|")
+  };
+}
+
+function getOnboardingVariantMeta(game) {
+  const variant = getValidationVariant(game, "onboarding");
+  if (variant === "baseline") {
+    return {
+      checklistLabel: "First Run Loop",
+      steps: {
+        visit_town_door: "Check Town",
+        enter_keep: "Enter Keep",
+        find_objective: "Find Objective",
+        clear_objective: "Clear Objective",
+        choose_extract_or_greed: "Choose Exit Or Greed"
+      },
+      firstTownPrimary: "Step onto one labeled town door once.",
+      firstTownSupport: "Then take the north road into the keep.",
+      enterKeepPrimary: "Take the north road and enter the keep.",
+      enterKeepSupport: "Ignore extra town prep for now. The first descent is next.",
+      briefingTownUnchecked: "Step onto one labeled town door, then follow the north road into the keep.",
+      briefingTownChecked: "Town checked. Follow the north road when ready.",
+      objectiveSearchHint: "Search once to extend the marked route.",
+      townDoorPrompt: "Step onto any labeled town door once. Then take the north road."
+    };
+  }
+  if (variant === "short_loop") {
+    return {
+      checklistLabel: "Run Loop",
+      steps: {
+        visit_town_door: "Touch Door",
+        enter_keep: "Take Stairs",
+        find_objective: "Follow Route",
+        clear_objective: "Finish Room",
+        choose_extract_or_greed: "Bank Or Greed"
+      },
+      firstTownPrimary: "Touch one town door, then go north.",
+      firstTownSupport: "Do not over-prep. The keep is the next lesson.",
+      enterKeepPrimary: "Take the keep stairs now.",
+      enterKeepSupport: "Orange route first. Objective clear first. Town later.",
+      briefingTownUnchecked: "Touch one town door, then go north to the keep stairs.",
+      briefingTownChecked: "Town checked. Take the keep stairs next.",
+      objectiveSearchHint: "If the orange line stops, Search once.",
+      townDoorPrompt: "Touch one labeled town door. Then go north."
+    };
+  }
+  return {
+    checklistLabel: "First Run Route",
+    steps: {
+      visit_town_door: "Open Town Support",
+      enter_keep: "Take Keep Stairs",
+      find_objective: "Follow Orange Route",
+      clear_objective: "Finish The Room",
+      choose_extract_or_greed: "Bank Or Greed"
+    },
+    firstTownPrimary: "Open one town door to see what town can do.",
+    firstTownSupport: "Then follow the north road straight into the keep.",
+    enterKeepPrimary: "Town checked. Walk north and take the keep stairs.",
+    enterKeepSupport: "The first lesson is objective clear, not extra shopping.",
+    briefingTownUnchecked: "Open one labeled town door, then stay on the north road into the keep.",
+    briefingTownChecked: "Town checked. Stay on the north road and take the keep stairs.",
+    objectiveSearchHint: "If the orange route runs out, Search once to extend it.",
+    townDoorPrompt: "Open any labeled town door once. Then return to the north road."
+  };
+}
+
+function getRouteExperimentTuning(game, depth = 0) {
+  const variant = getValidationVariant(game, "route");
+  if (variant !== "guided_plus" || depth !== 1) {
+    return {
+      entryRevealBonus: 0,
+      searchRevealBonus: 0
+    };
+  }
+  return {
+    entryRevealBonus: 3,
+    searchRevealBonus: 4
+  };
+}
+
 // src/features/onboarding.js
 
-const FUNNEL_STEPS = [
-  { id: "visit_town_door", label: "Check Town", summary: "Step onto one labeled town door before the first descent." },
-  { id: "enter_keep", label: "Enter Keep", summary: "Walk north on the town road and descend." },
-  { id: "find_objective", label: "Find Objective", summary: "Use the marked route and survey to reach the floor objective." },
-  { id: "clear_objective", label: "Clear Objective", summary: "Resolve the marked room to unlock the next decision." },
-  { id: "choose_extract_or_greed", label: "Choose Exit Or Greed", summary: "Leave clean or stay for one more prize." }
-];
+function getFunnelSteps(game) {
+  const meta = getOnboardingVariantMeta(game);
+  return [
+    { id: "visit_town_door", label: meta.steps.visit_town_door, summary: "Step onto one labeled town door before the first descent." },
+    { id: "enter_keep", label: meta.steps.enter_keep, summary: "Walk north on the town road and descend." },
+    { id: "find_objective", label: meta.steps.find_objective, summary: "Use the marked route and survey to reach the floor objective." },
+    { id: "clear_objective", label: meta.steps.clear_objective, summary: "Resolve the marked room to unlock the next decision." },
+    { id: "choose_extract_or_greed", label: meta.steps.choose_extract_or_greed, summary: "Leave clean or stay for one more prize." }
+  ];
+}
 
 function getFlagKey(stepId) {
   return `onboarding_${stepId}`;
@@ -7479,9 +8920,10 @@ function shouldShowOnboardingChecklist(game) {
 }
 
 function getOnboardingSteps(game) {
-  return FUNNEL_STEPS.map((step, index) => {
+  const steps = getFunnelSteps(game);
+  return steps.map((step, index) => {
     const done = hasOnboardingFlag(game, step.id);
-    const previousComplete = index === 0 || hasOnboardingFlag(game, FUNNEL_STEPS[index - 1].id);
+    const previousComplete = index === 0 || hasOnboardingFlag(game, steps[index - 1].id);
     return {
       ...step,
       done,
@@ -7494,12 +8936,13 @@ function renderOnboardingChecklist(game) {
   if (!shouldShowOnboardingChecklist(game)) {
     return "";
   }
+  const meta = getOnboardingVariantMeta(game);
   const steps = getOnboardingSteps(game);
   const directive = typeof game.getLoopDirective === "function" ? game.getLoopDirective() : null;
   const activeSummary = directive?.primaryText || directive?.supportText || "";
   return `
     <div class="onboarding-checklist">
-      <div class="onboarding-checklist-label">First Run Loop</div>
+      <div class="onboarding-checklist-label">${escapeHtml(meta.checklistLabel)}</div>
       <div class="onboarding-step-row">
         ${steps.map((step) => `
           <span class="onboarding-step${step.done ? " done" : step.active ? " active" : ""}">${escapeHtml(step.label)}</span>
@@ -7511,6 +8954,19 @@ function renderOnboardingChecklist(game) {
 }
 
 // src/features/hud-feed.js
+
+const ACTION_LABELS = {
+  bank: "Bank",
+  interact: "Interact",
+  move: "Move",
+  search: "Search",
+  stairs_down: "Descend",
+  stairs_up: "Ascend",
+  "stairs-up": "Ascend",
+  "stairs-down": "Descend",
+  town_service: "Town Door",
+  town_rumor: "Buy Intel"
+};
 function scoreEntry(entry, currentTurn) {
   const message = entry?.message || "";
   const age = Math.max(0, currentTurn - (entry?.turn || 0));
@@ -7565,10 +9021,14 @@ function getObjectiveLine(game) {
     };
   }
   const directive = typeof game.getLoopDirective === "function" ? game.getLoopDirective() : null;
+  const dominantHud = getValidationVariant(game, "hud") === "dominant_cta";
+  const recommendedAction = ACTION_LABELS[directive?.recommendedActionId || ""] || "";
   return {
-    turnLabel: directive?.phase ? (typeof game.getLoopDirectiveLabel === "function" ? game.getLoopDirectiveLabel(directive.phase) : "Loop") : "Goal",
+    turnLabel: dominantHud ? "Next" : (directive?.phase ? (typeof game.getLoopDirectiveLabel === "function" ? game.getLoopDirectiveLabel(directive.phase) : "Loop") : "Goal"),
     tone: "ticker-context",
-    text: directive?.primaryText || "Follow the current directive."
+    text: dominantHud && recommendedAction
+      ? `${recommendedAction}: ${directive?.primaryText || "Follow the current directive."}`
+      : directive?.primaryText || "Follow the current directive."
   };
 }
 
@@ -7722,6 +9182,102 @@ const FILTER_DEFS = [
   { key: "sell", label: "Sell" }
 ];
 
+const SPELL_CATEGORY_DEFS = [
+  { key: "offense", label: "Offense" },
+  { key: "defense", label: "Defense" },
+  { key: "recovery", label: "Recovery" },
+  { key: "control", label: "Control" },
+  { key: "travel", label: "Travel" },
+  { key: "sight", label: "Sight" },
+  { key: "identify", label: "Identify" },
+  { key: "curse", label: "Curse" },
+  { key: "utility", label: "Utility" }
+];
+
+const INVENTORY_CATEGORY_DEFS = [
+  { key: "weapons", label: "Weapons" },
+  { key: "armor", label: "Armor" },
+  { key: "accessories", label: "Accessories" },
+  { key: "consumables", label: "Consumables" },
+  { key: "spellbooks", label: "Spellbooks" },
+  { key: "wands", label: "Wands & Tools" },
+  { key: "valuables", label: "Valuables" },
+  { key: "quest", label: "Quest" }
+];
+
+const EFFECT_ALIASES = {
+  clairvoyance: "mapping"
+};
+
+function getSpellEffectKey(spellId = "") {
+  if (!spellId) {
+    return "";
+  }
+  return EFFECT_ALIASES[spellId] || spellId;
+}
+
+function getSpellCategoryDefs() {
+  return SPELL_CATEGORY_DEFS;
+}
+
+function getInventoryCategoryDefs() {
+  return INVENTORY_CATEGORY_DEFS;
+}
+
+function getSpellCategoryKey(spellOrId) {
+  const spell = typeof spellOrId === "string" ? SPELLS[spellOrId] : spellOrId;
+  const spellId = typeof spellOrId === "string" ? spellOrId : spellOrId?.id;
+  if (!spell) {
+    return "utility";
+  }
+  if (spellId === "identify") {
+    return "identify";
+  }
+  if (spellId === "removeCurse") {
+    return "curse";
+  }
+  if (["phaseDoor", "teleport", "runeOfReturn"].includes(spellId) || spell.school === "escape") {
+    return "travel";
+  }
+  if (["clairvoyance", "light", "detectTraps"].includes(spellId) || spell.school === "divination") {
+    return "sight";
+  }
+  if (spell.school === "restoration") {
+    return "recovery";
+  }
+  if (spell.school === "warding") {
+    return "defense";
+  }
+  if (spell.school === "control" || ["frostBolt", "slowMonster", "holdMonster"].includes(spellId)) {
+    return "control";
+  }
+  if (
+    ["magicMissile", "fireball", "lightningBolt"].includes(spellId)
+    || ["opener", "burst"].includes(String(spell.roleLabel || "").toLowerCase())
+  ) {
+    return "offense";
+  }
+  return "utility";
+}
+
+function getSpellCategoryLabel(spellOrId) {
+  const key = getSpellCategoryKey(spellOrId);
+  return SPELL_CATEGORY_DEFS.find((entry) => entry.key === key)?.label || "Utility";
+}
+
+function getItemEffectKey(item) {
+  if (!item) {
+    return "";
+  }
+  if (item.kind === "spellbook") {
+    return getSpellEffectKey(item.spell);
+  }
+  if (item.effect) {
+    return EFFECT_ALIASES[item.effect] || item.effect;
+  }
+  return "";
+}
+
 function getVisibleEnemyCount(game) {
   if (!game.player || !game.currentLevel) {
     return 0;
@@ -7747,6 +9303,89 @@ function getShopTagForContext(item, shopId = "") {
   return SHOP_LABELS[shopId] || null;
 }
 
+function getInventoryCategoryLabel(categoryKey = "utility") {
+  return INVENTORY_CATEGORY_DEFS.find((entry) => entry.key === categoryKey)?.label || "Item";
+}
+
+function getSemanticScanTags(item, context = {}) {
+  if (!item) {
+    return [];
+  }
+  const {
+    unknown = false,
+    cursed = false,
+    sellHereTag = null,
+    groupKey = "",
+    recommendation = ""
+  } = context;
+  const tags = [];
+  if (
+    item.kind === "weapon"
+    || getItemPower(item) > 0
+    || getItemAccuracyBonus(item) > 0
+    || getItemCritBonus(item) > 0
+    || item.effect === "lightning"
+  ) {
+    tags.push("damage");
+  }
+  if (getItemArmor(item) >= 3 || getItemGuardBonus(item) > 0 || item.effect === "slow") {
+    tags.push("guard");
+  }
+  if (getItemWardBonus(item) > 0) {
+    tags.push("ward");
+  }
+  if (getItemSearchBonus(item) > 0 || getItemLightBonus(item) > 0) {
+    tags.push("search");
+  }
+  if (
+    getItemDexBonus(item) > 0
+    || ["teleport", "runeReturn", "mapping"].includes(getItemEffectKey(item))
+  ) {
+    tags.push("travel");
+  }
+  if (getItemFireResist(item) > 0 || getItemColdResist(item) > 0) {
+    tags.push("resist");
+  }
+  if (unknown || cursed || recommendation === "Identify first") {
+    tags.push("cursed-risk");
+  }
+  if (sellHereTag || groupKey === "sell" || item.markedForSale) {
+    tags.push("sell");
+  }
+  return [...new Set(tags)];
+}
+
+function getInventoryCategoryKey(item, context = {}) {
+  if (!item) {
+    return "valuables";
+  }
+  if (item.kind === "quest") {
+    return "quest";
+  }
+  if (item.kind === "spellbook" && item.spell) {
+    return "spellbooks";
+  }
+  if (item.kind === "charged") {
+    return "wands";
+  }
+  if (item.kind === "consumable") {
+    return "consumables";
+  }
+  if (item.kind === "weapon") {
+    return "weapons";
+  }
+  if (item.kind === "armor") {
+    if (["ring", "amulet"].includes(item.slot)) {
+      return "accessories";
+    }
+    return "armor";
+  }
+  if (item.kind === "junk") {
+    return "valuables";
+  }
+  return "valuables";
+}
+
 function getBurdenWeightTone(game, item) {
   const state = game.getBurdenUiState();
   const weight = item.weight || 0;
@@ -7765,15 +9404,19 @@ function getBuildSummary(game) {
   const burdenUi = game.getBurdenUiState();
   const armorValue = typeof game.getArmorValue === "function" ? game.getArmorValue() : 0;
   const attackValue = typeof game.getAttackValue === "function" ? game.getAttackValue() : 0;
-  const manaLean = armorPieces.reduce((sum, item) => sum + getItemManaBonus(item), 0) + ((game.player?.spellsKnown?.length || 0) * 2);
+  const manaLean = armorPieces.reduce((sum, item) => sum + getItemManaBonus(item) + getItemIntBonus(item), 0) + ((game.player?.spellsKnown?.length || 0) * 2);
   const utilityLean = armorPieces.reduce((sum, item) => sum + getItemDexBonus(item) + getItemLightBonus(item) + getItemSearchBonus(item), 0);
-  const guardLean = armorPieces.reduce((sum, item) => sum + getItemGuardBonus(item) + getItemWardBonus(item), 0);
+  const guardLean = armorPieces.reduce((sum, item) => sum + getItemGuardBonus(item) + getItemWardBonus(item) + getItemConBonus(item), 0);
+  const strengthLean = armorPieces.reduce((sum, item) => sum + getItemStrBonus(item), 0);
   let headline = "Balanced kit";
   let note = "Mixed offense, defense, and utility.";
 
   if (manaLean >= attackValue + 2) {
     headline = "Mana-leaning";
     note = "Built around spells, mana pieces, and tools.";
+  } else if (strengthLean >= 2) {
+    headline = "Heavy hauler";
+    note = "Leans on strength pieces, burden control, and harder swings.";
   } else if (guardLean >= 4) {
     headline = "Layered defense";
     note = "Guard and ward pieces soak hits instead of just stacking armor.";
@@ -7813,8 +9456,14 @@ function getSlotQualityLabel(game, slotDef, compatibleCount = 0) {
   if (getItemGuardBonus(item) >= 2 || getItemWardBonus(item) >= 2) {
     return "Protection piece";
   }
-  if (getItemManaBonus(item) > 0) {
+  if (getItemManaBonus(item) > 0 || getItemIntBonus(item) > 0) {
     return "Mana piece";
+  }
+  if (getItemStrBonus(item) > 0) {
+    return "Power piece";
+  }
+  if (getItemConBonus(item) > 0) {
+    return "Endurance piece";
   }
   if (getItemDexBonus(item) > 0 || getItemLightBonus(item) > 0 || getItemSearchBonus(item) > 0) {
     return "Utility piece";
@@ -7828,12 +9477,34 @@ function getSlotQualityLabel(game, slotDef, compatibleCount = 0) {
   return "Stable slot";
 }
 
+function getEquipmentComparisonTarget(game, item) {
+  if (!item?.slot) {
+    return {
+      targetSlot: "",
+      equipped: null
+    };
+  }
+  if (typeof game.getEquipmentSlotForItem === "function") {
+    const target = game.getEquipmentSlotForItem(item) || {};
+    const targetSlot = target.targetSlot || "";
+    return {
+      targetSlot,
+      equipped: targetSlot ? game.player?.equipment?.[targetSlot] || null : null
+    };
+  }
+  return {
+    targetSlot: item.slot,
+    equipped: game.player?.equipment?.[item.slot] || null
+  };
+}
+
 function getComparisonDeltas(game, item) {
   if (!item.slot || (item.kind !== "weapon" && item.kind !== "armor")) {
     return null;
   }
-  const equipped = game.player.equipment[item.slot] || null;
+  const { targetSlot, equipped } = getEquipmentComparisonTarget(game, item);
   return {
+    targetSlot,
     equipped,
     attack: item.kind === "weapon" ? getItemPower(item) - (equipped ? getItemPower(equipped) : 0) : 0,
     armor: item.kind === "armor" ? getItemArmor(item) - (equipped ? getItemArmor(equipped) : 0) : 0,
@@ -7842,7 +9513,10 @@ function getComparisonDeltas(game, item) {
     guard: getItemGuardBonus(item) - (equipped ? getItemGuardBonus(equipped) : 0),
     ward: getItemWardBonus(item) - (equipped ? getItemWardBonus(equipped) : 0),
     mana: getItemManaBonus(item) - (equipped ? getItemManaBonus(equipped) : 0),
+    str: getItemStrBonus(item) - (equipped ? getItemStrBonus(equipped) : 0),
     dex: getItemDexBonus(item) - (equipped ? getItemDexBonus(equipped) : 0),
+    con: getItemConBonus(item) - (equipped ? getItemConBonus(equipped) : 0),
+    int: getItemIntBonus(item) - (equipped ? getItemIntBonus(equipped) : 0),
     sight: getItemLightBonus(item) - (equipped ? getItemLightBonus(equipped) : 0),
     search: getItemSearchBonus(item) - (equipped ? getItemSearchBonus(equipped) : 0),
     fireResist: getItemFireResist(item) - (equipped ? getItemFireResist(equipped) : 0),
@@ -7861,7 +9535,7 @@ function getUpgradeSummary(game, item) {
     };
   }
 
-  const slotLabel = game.getPackSlotDefinition(item.slot).label.toLowerCase();
+  const slotLabel = game.getPackSlotDefinition(deltas.targetSlot || item.slot).label.toLowerCase();
   if (!deltas.equipped) {
     return {
       isUpgrade: true,
@@ -7878,7 +9552,10 @@ function getUpgradeSummary(game, item) {
     + (deltas.guard * 2)
     + (deltas.ward * 2)
     + deltas.mana
+    + (deltas.str * 2)
     + deltas.dex
+    + (deltas.con * 2)
+    + (deltas.int * 2)
     + deltas.sight
     + deltas.search
     + deltas.fireResist
@@ -7900,8 +9577,17 @@ function getUpgradeSummary(game, item) {
   if (deltas.mana > 0) {
     return { isUpgrade: true, score, reason: `Adds +${deltas.mana} mana to your build`, fillsGap: false };
   }
+  if (deltas.str > 0) {
+    return { isUpgrade: true, score, reason: `Adds +${deltas.str} strength`, fillsGap: false };
+  }
   if (deltas.dex > 0) {
     return { isUpgrade: true, score, reason: `Adds +${deltas.dex} dexterity`, fillsGap: false };
+  }
+  if (deltas.con > 0) {
+    return { isUpgrade: true, score, reason: `Adds +${deltas.con} constitution`, fillsGap: false };
+  }
+  if (deltas.int > 0) {
+    return { isUpgrade: true, score, reason: `Adds +${deltas.int} intelligence`, fillsGap: false };
   }
   if (deltas.sight > 0) {
     return { isUpgrade: true, score, reason: `Improves sight by +${deltas.sight}`, fillsGap: false };
@@ -7920,7 +9606,7 @@ function getUpgradeSummary(game, item) {
   };
 }
 
-function buildItemSemantics(game, item, index, options = {}) {
+function buildInventoryItemSemantics(game, item, index, options = {}) {
   const { shopId = "" } = options;
   const hpRatio = game.player.maxHp > 0 ? game.player.hp / game.player.maxHp : 1;
   const manaRatio = game.player.maxMana > 0 ? game.player.mana / game.player.maxMana : 1;
@@ -7933,7 +9619,10 @@ function buildItemSemantics(game, item, index, options = {}) {
   const upgrade = getUpgradeSummary(game, item);
   const heavyLabel = getBurdenWeightTone(game, item);
   const hasCursedEquipped = Object.values(game.player.equipment || {}).some((equippedItem) => equippedItem && equippedItem.cursed);
+  const itemEffectKey = getItemEffectKey(item);
+  const knownEffectKeys = (game.player?.spellsKnown || []).map((spellId) => getSpellEffectKey(spellId));
   const isDuplicateSpellbook = item.kind === "spellbook" && game.player.spellsKnown.includes(item.spell);
+  const isKnownEffect = Boolean(itemEffectKey && knownEffectKeys.includes(itemEffectKey));
   const isEmptyCharged = item.kind === "charged" && (item.charges || 0) <= 0;
   const inDanger = visibleEnemies > 0 || hpRatio < 0.45 || (game.currentDepth > 0 && burdenUi.state !== "safe");
   const buildIdentity = item.affixId
@@ -8054,7 +9743,7 @@ function buildItemSemantics(game, item, index, options = {}) {
     sortScore = 58;
   } else if (item.kind === "spellbook") {
     recommendation = "Keep";
-    reason = "Teaches an unknown spell";
+    reason = isKnownEffect ? "Already covered by a known spell" : "Teaches an unknown spell";
     groupKey = "recommended";
     sortScore = 72;
   } else if ((item.kind === "weapon" || item.kind === "armor") && shopTags.length > 0) {
@@ -8068,6 +9757,23 @@ function buildItemSemantics(game, item, index, options = {}) {
     groupKey = shopTags.length > 0 ? "sell" : "emergency";
     sortScore = 50;
   }
+
+  const categoryKey = getInventoryCategoryKey(item, {
+    unknown,
+    cursed,
+    groupKey,
+    isDuplicateSpellbook,
+    heavyLabel,
+    upgrade
+  });
+  const categoryLabel = getInventoryCategoryLabel(categoryKey);
+  const scanTags = getSemanticScanTags(item, {
+    unknown,
+    cursed,
+    sellHereTag,
+    groupKey,
+    recommendation
+  });
 
   return {
     index,
@@ -8083,7 +9789,12 @@ function buildItemSemantics(game, item, index, options = {}) {
     shopTags,
     sellHereTag,
     heavyLabel,
-    kindLabel: classifyItem(item)
+    kindLabel: classifyItem(item),
+    effectKey: itemEffectKey,
+    isKnownEffect,
+    categoryKey,
+    categoryLabel,
+    scanTags
   };
 }
 
@@ -8092,7 +9803,7 @@ function stackGroupEntries(entries, selectedIndex) {
   entries.forEach((entry) => {
     const shouldStack = entry.item.kind === "consumable";
     const stackKey = shouldStack
-      ? `${entry.groupKey}:${entry.item.id}:${entry.reason}:${entry.recommendation}`
+      ? `${entry.groupKey}:${entry.categoryKey}:${entry.item.id}:${entry.reason}:${entry.recommendation}`
       : `single:${entry.index}`;
     if (!stacks.has(stackKey)) {
       stacks.set(stackKey, {
@@ -8122,7 +9833,7 @@ function matchesFilter(entry, filter, shopId = "", inTown = false) {
       if (shopId) {
         return Boolean(entry.sellHereTag);
       }
-      return inTown ? entry.shopTags.length > 0 : false;
+      return Boolean(entry.item.markedForSale);
     default:
       return true;
   }
@@ -8131,15 +9842,20 @@ function matchesFilter(entry, filter, shopId = "", inTown = false) {
 function buildInventoryPresentationModel(game, options = {}) {
   const { filter = "all", selectedIndex = -1, shopId = "" } = options;
   const inTown = game.currentDepth === 0;
-  const entries = game.player.inventory.map((item, index) => buildItemSemantics(game, item, index, { shopId }));
+  const entries = game.player.inventory.map((item, index) => buildInventoryItemSemantics(game, item, index, { shopId }));
   const visibleEntries = entries.filter((entry) => matchesFilter(entry, filter, shopId, inTown));
   const groups = GROUP_DEFS.map((group) => {
     const groupedEntries = entries
       .filter((entry) => entry.groupKey === group.key)
       .filter((entry) => matchesFilter(entry, filter, shopId, inTown));
+    const items = stackGroupEntries(groupedEntries, selectedIndex);
     return {
       ...group,
-      items: stackGroupEntries(groupedEntries, selectedIndex)
+      items,
+      sections: INVENTORY_CATEGORY_DEFS.map((category) => ({
+        ...category,
+        items: items.filter((entry) => entry.categoryKey === category.key)
+      })).filter((section) => section.items.length > 0)
     };
   }).filter((group) => group.items.length > 0);
   const sortedVisibleEntries = groups.flatMap((group) => group.items);
@@ -8334,21 +10050,24 @@ function useStairsCommand(game, direction) {
         optionalTaken: Boolean(previousLevel?.floorOptional?.opened)
       });
       game.refreshShopState();
-    if (game.player?.quest?.hasRunestone) {
-      game.checkQuestState?.();
-    } else {
-      game.maybeShowTownStoryScene?.();
-    }
-    if (previousLevel?.floorResolved) {
-      const returnMeta = game.recordTownReturnSummary?.(previousLevel, game.currentDepth + 1);
-      if (returnMeta?.summary && game.mode !== "modal") {
-        game.showExtractionSummaryModal?.(returnMeta.summary, {
-          ...returnMeta,
-          level: previousLevel
-        });
+      let blockedByStorySurface = false;
+      if (game.player?.quest?.hasRunestone) {
+        const beforeQuestMode = game.mode;
+        game.checkQuestState?.();
+        blockedByStorySurface = beforeQuestMode !== "modal" && game.mode === "modal";
+      } else {
+        blockedByStorySurface = Boolean(game.maybeShowTownStoryScene?.());
+      }
+      if (previousLevel?.floorResolved) {
+        const returnMeta = game.recordTownReturnSummary?.(previousLevel, game.currentDepth + 1);
+        if (returnMeta?.summary && !blockedByStorySurface) {
+          game.showExtractionSummaryModal?.(returnMeta.summary, {
+            ...returnMeta,
+            level: previousLevel
+          });
+        }
       }
     }
-  }
   game.recordTelemetry?.("depth_entered", {
     depth: nextDepth,
     source: "stairs_up",
@@ -8366,6 +10085,30 @@ function useStairsCommand(game, direction) {
 // src/features/combat.js
 
 const UNDEAD_IDS = new Set(["skeleton", "wraith", "cryptlord"]);
+const BASE_MOVE_THRESHOLD = 100;
+
+function getMonsterMoveSpeed(monster) {
+  let speed = typeof monster.moveSpeed === "number" ? monster.moveSpeed : BASE_MOVE_THRESHOLD;
+  if ((monster.slowed || 0) > 0) {
+    speed *= 0.5;
+  }
+  return clamp(Math.round(speed), 40, 120);
+}
+
+function bankMonsterMovement(monster) {
+  monster.moveMeter = Math.min(
+    BASE_MOVE_THRESHOLD * 2,
+    (typeof monster.moveMeter === "number" ? monster.moveMeter : BASE_MOVE_THRESHOLD) + getMonsterMoveSpeed(monster)
+  );
+}
+
+function canMonsterSpendMovement(monster) {
+  if ((monster.moveMeter || 0) < BASE_MOVE_THRESHOLD) {
+    return false;
+  }
+  monster.moveMeter -= BASE_MOVE_THRESHOLD;
+  return true;
+}
 
 function isUndead(actor) {
   return Boolean(actor && UNDEAD_IDS.has(actor.id));
@@ -8708,6 +10451,10 @@ function killMonster(game, monster) {
       label: monster.name,
       depth: game.currentDepth
     });
+    game.recordTelemetry?.("elite_kill", {
+      label: monster.name,
+      depth: game.currentDepth
+    });
   }
   game.player.exp += monster.exp;
   game.log(`${monster.name} dies.`, "good");
@@ -8762,6 +10509,7 @@ function handleDeath(game) {
 function processMonsters(game) {
   const level = game.currentLevel;
   level.actors.forEach((monster) => {
+    bankMonsterMovement(monster);
     if ((monster.tempBuffTurns || 0) > 0) {
       monster.tempBuffTurns -= 1;
       if (monster.tempBuffTurns <= 0) {
@@ -8770,6 +10518,9 @@ function processMonsters(game) {
     }
     if ((monster.bannerCooldown || 0) > 0) {
       monster.bannerCooldown -= 1;
+    }
+    if ((monster.slowed || 0) > 0) {
+      monster.slowed -= 1;
     }
     if (monster.sleeping) {
       const wakes = distance(game.player, monster) <= 3 || (isVisible(level, monster.x, monster.y) && Math.random() < 0.55);
@@ -8785,12 +10536,6 @@ function processMonsters(game) {
       game.emitReadout("Held", monster.x, monster.y, "#cbbfff", 220);
       return;
     }
-    if (monster.slowed) {
-      monster.slowed -= 1;
-      if (game.turn % 2 === 0) {
-        return;
-      }
-    }
     const dx = game.player.x - monster.x;
     const dy = game.player.y - monster.y;
     const distanceToPlayer = Math.max(Math.abs(dx), Math.abs(dy));
@@ -8803,7 +10548,9 @@ function processMonsters(game) {
     }
 
     if (monster.chargeWindup) {
-      applyCharge(game, monster);
+      if (canMonsterSpendMovement(monster)) {
+        applyCharge(game, monster);
+      }
       return;
     }
 
@@ -8917,7 +10664,7 @@ function processMonsters(game) {
     if (monster.alerted > 0) {
       if (monster.behaviorKit === "stalker" && canSeePlayer && distanceToPlayer <= 3) {
         const retreat = findRetreatStep(game, monster);
-        if (retreat) {
+        if (retreat && canMonsterSpendMovement(monster)) {
           monster.x = retreat.x;
           monster.y = retreat.y;
           return;
@@ -8925,7 +10672,7 @@ function processMonsters(game) {
       }
       if (monster.tactic === "skirmish" && distanceToPlayer <= 4) {
         const retreat = findRetreatStep(game, monster);
-        if (retreat) {
+        if (retreat && canMonsterSpendMovement(monster)) {
           monster.x = retreat.x;
           monster.y = retreat.y;
           return;
@@ -8956,7 +10703,7 @@ function processMonsters(game) {
       game.attack(monster, game.player);
       return;
     }
-    if (canMonsterMoveTo(game, monster, nx, ny)) {
+    if (canMonsterMoveTo(game, monster, nx, ny) && canMonsterSpendMovement(monster)) {
       monster.x = nx;
       monster.y = ny;
     }
@@ -8969,6 +10716,7 @@ function performWait(game) {
   if (!game.player || game.mode !== "game" || game.player.hp <= 0) {
     return;
   }
+  game.recordTelemetry?.("wait_used");
   game.log(`${game.player.name} waits.`, "warning");
   game.audio.play("ui");
   onPlayerWait(game);
@@ -8980,6 +10728,7 @@ function restUntilSafe(game) {
   if (!game.player || game.mode !== "game" || game.player.hp <= 0) {
     return;
   }
+  game.recordTelemetry?.("rest_used", { kind: "rest" });
   let recovered = 0;
   let interrupted = false;
   onPlayerWait(game);
@@ -9004,6 +10753,7 @@ function sleepUntilRestored(game) {
   if (!game.player || game.mode !== "game" || game.player.hp <= 0) {
     return;
   }
+  game.recordTelemetry?.("rest_used", { kind: "sleep" });
   if (game.player.hp >= game.player.maxHp && game.player.mana >= game.player.maxMana) {
     game.log("You are already fully restored.", "warning");
     game.render();
@@ -9063,19 +10813,27 @@ function resolveTurn(game, advanceTurn = true) {
   if (!game.player || game.player.hp <= 0) {
     return;
   }
+  let monsterActions = 1;
+  if (typeof advanceTurn === "object") {
+    monsterActions = Math.max(0, Math.floor(advanceTurn.monsterActions ?? 1));
+    advanceTurn = advanceTurn.advanceTurn ?? true;
+  }
   if (advanceTurn) {
     game.turn += 1;
   }
-  const encumbrance = getEncumbranceTier(game.player);
+  const encumbrance = game.getEncumbranceTier ? game.getEncumbranceTier() : 0;
+  const stats = game.getActorStats ? game.getActorStats(game.player) : game.player.stats;
   const hpRegenBase = encumbrance >= 2 ? 0.01 : encumbrance === 1 ? 0.02 : 0.03;
   const manaRegenBase = encumbrance >= 2 ? 0.02 : encumbrance === 1 ? 0.04 : 0.06;
-  const hpRegen = hpRegenBase + Math.max(0, game.player.stats.con - 10) * 0.004;
-  const manaRegen = manaRegenBase + Math.max(0, game.player.stats.int - 10) * 0.006;
+  const hpRegen = hpRegenBase + Math.max(0, stats.con - 10) * 0.004;
+  const manaRegen = manaRegenBase + Math.max(0, stats.int - 10) * 0.006;
   game.player.hp = Math.min(game.player.maxHp, game.player.hp + hpRegen);
   game.player.mana = Math.min(game.player.maxMana, game.player.mana + manaRegen);
   advanceDangerTurn(game);
-  game.processMonsters();
-  if (encumbrance >= 2 && game.currentDepth > 0) {
+  for (let index = 0; index < monsterActions; index += 1) {
+    game.processMonsters();
+  }
+  if (monsterActions > 0 && encumbrance >= 2 && game.currentDepth > 0) {
     game.processMonsters();
   }
   if ((game.player.slowed || 0) > 0) {
@@ -9118,14 +10876,19 @@ function endTurn(game, advanceTurn = true) {
   if (!game.player || game.player.hp <= 0) {
     return;
   }
+  let options = {};
+  if (typeof advanceTurn === "object") {
+    options = advanceTurn;
+    advanceTurn = advanceTurn.advanceTurn ?? true;
+  }
   if ((game.hasPendingProgressionChoice && game.hasPendingProgressionChoice()) || game.pendingSpellChoices > 0) {
-    game.pendingTurnResolution = advanceTurn;
+    game.pendingTurnResolution = { advanceTurn, ...options };
     if (!game.showNextProgressionModal || !game.showNextProgressionModal()) {
       game.render();
     }
     return;
   }
-  game.resolveTurn(advanceTurn);
+  game.resolveTurn({ advanceTurn, ...options });
 }
 
 // src/features/advisor.js
@@ -9155,23 +10918,23 @@ function buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lo
       advice = `${focus.name} is sleeping. Open on your terms or slip past.`;
       pushAction("search", "Scout", "Set the clean route", true);
       if (game.player.spellsKnown.length > 0) {
-        pushAction("open-hub", "Magic", "Prep a clean opener", false, "magic");
+        pushAction("open-spell-tray", "Magic", "Prep a clean opener", false, "magic");
       }
     } else if (hpRatio < 0.35 && (focusIntent === "shoot" || focusIntent === "summon" || focusIntent === "charge" || focusDistance <= 2)) {
       advice = `Break contact now. ${focus.name} can finish this exchange.`;
       pushAction("stairs-up", "Ascend", "Leave the floor", true);
-      pushAction("open-hub", "Magic", "Spend control or escape", false, "magic");
+      pushAction("open-spell-tray", "Magic", "Spend control or escape", false, "magic");
     } else if (focus.ranged && focusIntent !== "sleep") {
       advice = `Break line of sight on ${focus.name}.`;
-      pushAction("open-hub", "Magic", "Answer ranged pressure", true, "magic");
+      pushAction("open-spell-tray", "Magic", "Answer ranged pressure", true, "magic");
       pushAction("wait", "Hold", "Do not walk into fire", false);
     } else if (focus.abilities && focus.abilities.includes("charge") && focusIntent !== "sleep") {
       advice = "Sidestep the charge lane before you advance.";
       pushAction("wait", "Hold", "Read the charge lane", true);
-      pushAction("open-hub", "Magic", "Slow or burst it", false, "magic");
+      pushAction("open-spell-tray", "Magic", "Slow or burst it", false, "magic");
     } else if (focus.abilities && focus.abilities.includes("summon") && focusIntent !== "sleep") {
       advice = "Kill the summoner before the room fills.";
-      pushAction("open-hub", "Magic", "Kill summoner", true, "magic");
+      pushAction("open-spell-tray", "Magic", "Kill summoner", true, "magic");
     } else if (focusDistance >= 4 && focusIntent === "advance") {
       advice = `${focus.name} is aware. Set the approach before opening more map.`;
       pushAction("wait", "Hold", "Read the lane", true);
@@ -9194,14 +10957,20 @@ function buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lo
         : "The captive is pinned here. Clear the room before the rescue can move.";
       pushAction("wait", "Hold", "Finish the fight before rescuing them", true);
       if (game.player.spellsKnown.length > 0) {
-        pushAction("open-hub", "Magic", "Spend control to win the room", false, "magic");
+        pushAction("open-spell-tray", "Magic", "Spend control to win the room", false, "magic");
       }
     } else if (objectiveId === "purge_nest" && !roomClear) {
       advice = "The nest is exposed, but defenders are still alive. Clear the room first.";
       pushAction("wait", "Hold", "Finish the room before purging it", true);
+    } else if (objectiveId === "recover_waystone") {
+      advice = "Claim the waystone now. It sharpens the next floor instead of this one.";
+      pushAction("pickup", "Take Waystone", "Bank the route edge", true);
     } else if (objectiveId === "seal_shrine") {
       advice = "Seal the shrine when ready. It spends mana and spikes floor pressure.";
       pushAction("interact", "Seal", "Finish the objective", true);
+    } else if (objectiveId === "purify_well") {
+      advice = "Purify the well when ready. It refills you, but the floor answers immediately.";
+      pushAction("interact", "Purify", "Take the refill and clear the floor", true);
     } else {
       advice = "Resolve the objective now.";
       pushAction("interact", "Resolve", "Finish the floor objective", true);
@@ -9232,7 +11001,12 @@ function buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lo
     advice = game.storyFlags?.townServiceVisited
       ? "You checked a town door. Take the north road into the keep."
       : "Step onto one labeled town door, then take the north road into the keep.";
-    pushAction("map-focus", "Survey", "Check the north road", true);
+    pushAction(
+      "map-focus",
+      game.storyFlags?.townServiceVisited ? "Go North" : "Services",
+      game.storyFlags?.townServiceVisited ? "Enter the keep" : "Open a town door",
+      true
+    );
     pushAction("open-briefing", "Briefing", "Hear the run goal", false);
     pushAction("open-hub", "Journal", "Review the run goal", false, "journal");
   } else if (game.currentDepth === 0 && townMeta) {
@@ -9294,11 +11068,12 @@ function buildDockSlots(game, actions) {
         prompt: "X",
         label: game.player.spellsKnown.length > 0 ? "Magic" : "Survey",
         note: game.player.spellsKnown.length > 0 ? "Review spell options" : "Check the minimap",
-        action: game.player.spellsKnown.length > 0 ? "open-hub" : "map-focus",
+        action: game.player.spellsKnown.length > 0 ? "open-spell-tray" : "map-focus",
         tab: game.player.spellsKnown.length > 0 ? "magic" : "",
         tone: "primary"
       },
       {
+        key: "back",
         prompt: "B",
         label: "Cancel",
         note: "Leave targeting",
@@ -9339,10 +11114,16 @@ function buildDockSlots(game, actions) {
       label: "Briefing",
       note: "Hear the keep objective"
     });
+  } else if (firstTownRun && game.storyFlags?.townServiceVisited) {
+    pushCandidate({
+      action: "map-focus",
+      label: "Go North",
+      note: "Enter the keep"
+    });
   }
   if (game.player.spellsKnown.length > 0) {
     pushCandidate({
-      action: "open-hub",
+      action: "open-spell-tray",
       label: "Magic",
       note: "Cast, burst, or control",
       tab: "magic"
@@ -9373,33 +11154,48 @@ function buildDockSlots(game, actions) {
     });
   }
 
+  const dominantHud = getValidationVariant(game, "hud") === "dominant_cta";
+  const orderedCandidates = dominantHud
+    ? candidates.slice().sort((left, right) => Number(Boolean(right.recommended)) - Number(Boolean(left.recommended)))
+    : candidates;
+  const primaryAction = game.getControllerPrimaryDockAction
+    ? game.getControllerPrimaryDockAction(orderedCandidates)
+    : orderedCandidates[0];
+  const secondaryAction = orderedCandidates.find((entry) =>
+    entry.action !== primaryAction.action || (entry.tab || "") !== (primaryAction.tab || "")
+  ) || orderedCandidates[0];
+
   return [
     {
       key: "primary",
       prompt: "A",
-      label: candidates[0].label,
-      note: candidates[0].note,
-      action: candidates[0].action,
-      tab: candidates[0].tab || "",
+      label: primaryAction.label,
+      note: primaryAction.note,
+      action: primaryAction.action,
+      tab: primaryAction.tab || "",
+      service: primaryAction.service || "",
       tone: "primary",
       active: true
     },
     {
       key: "secondary",
       prompt: "X",
-      label: candidates[1].label,
-      note: candidates[1].note,
-      action: candidates[1].action,
-      tab: candidates[1].tab || "",
+      label: secondaryAction.label,
+      note: secondaryAction.note,
+      action: secondaryAction.action,
+      tab: secondaryAction.tab || "",
       tone: "secondary"
     },
     {
-      key: "tertiary",
+      key: "back",
       prompt: "B",
-      label: candidates[2].label,
-      note: candidates[2].note,
-      action: candidates[2].action,
-      tab: candidates[2].tab || "",
+      label: "Back",
+      note: game.layoutMode === "desktop"
+        ? "Cancel targeting or close menus"
+        : game.mapDrawer && game.mapDrawerOpen
+          ? "Close the survey"
+          : "Cancel targeting or close menus",
+      action: "target-cancel",
       tone: "secondary"
     },
     {
@@ -9513,12 +11309,18 @@ function getAdvisorModel(game) {
   const onboardingMarkup = shouldShowOnboardingChecklist(game)
     ? renderOnboardingChecklist(game)
     : "";
+  const dominantHud = getValidationVariant(game, "hud") === "dominant_cta";
+  const dominantAction = objectiveView.actions.find((entry) => entry.recommended) || objectiveView.actions[0] || null;
+  const dominantCtaMarkup = dominantHud && dominantAction
+    ? `<div class="field-brief-cta"><span class="pill">Now</span><strong>${escapeHtml(dominantAction.label)}</strong><span>${escapeHtml(dominantAction.note)}</span></div>`
+    : "";
 
   const fieldHtml = `
     <div class="field-summary-head">
       <span class="advisor-label">${escapeHtml(ribbonLabel)}</span>
       <span class="field-summary-state ${focusHealth ? focusHealth.tone : visible.length > 0 ? "warning" : pressure.tone}">${escapeHtml(ribbonState)}</span>
     </div>
+    ${dominantCtaMarkup}
     <div class="field-brief-text">${escapeHtml(objectiveView.advice)}</div>
     ${supportMarkup}
     ${townMetaMarkup}
@@ -9599,7 +11401,7 @@ function renderActionBar(game) {
   const advisor = getAdvisorModel(game);
   game.actionBar.dataset.mode = game.targetMode ? "target" : "field";
   game.actionBar.innerHTML = advisor.dockSlots.map((slot) => `
-    <button class="action-button dock-action dock-slot dock-slot-${slot.key} dock-tone-${slot.tone}${slot.tone === "primary" ? " recommended" : ""}${slot.active ? " is-active" : ""}" data-action="${slot.action}"${slot.tab ? ` data-tab="${slot.tab}"` : ""} data-focus-key="dock:${slot.key}" type="button">
+    <button class="action-button dock-action dock-slot dock-slot-${slot.key} dock-tone-${slot.tone}${slot.tone === "primary" ? " recommended" : ""}${slot.active ? " is-active" : ""}" data-action="${slot.action}"${slot.tab ? ` data-tab="${slot.tab}"` : ""}${slot.service ? ` data-service="${slot.service}"` : ""} data-focus-key="dock:${slot.key}" type="button">
       <span class="context-slot">${escapeHtml(slot.prompt)}</span>
       <span class="context-copy">
         <span class="context-main">${escapeHtml(slot.label)}</span>
@@ -9612,13 +11414,13 @@ function renderActionBar(game) {
 // src/ui/render.js
 
 const TOWN_BUILDING_RENDER = {
-  general: { width: 0.78, height: 0.66, crop: 0.86, yOffset: 0.5 },
-  junk: { width: 0.72, height: 0.62, crop: 0.9, yOffset: 0.52 },
-  armory: { width: 0.8, height: 0.68, crop: 0.84, yOffset: 0.56 },
-  guild: { width: 0.62, height: 0.62, crop: 0.94, yOffset: 0.46 },
-  temple: { width: 0.84, height: 0.72, crop: 0.86, yOffset: 0.46 },
-  bank: { width: 0.82, height: 0.7, crop: 0.88, yOffset: 0.5 },
-  sage: { width: 0.56, height: 0.56, crop: 0.94, yOffset: 0.42 }
+  general: { width: 0.86, height: 1, crop: 1, yOffset: 0.08 },
+  junk: { width: 0.84, height: 0.98, crop: 1, yOffset: 0.08 },
+  armory: { width: 0.88, height: 1.02, crop: 1, yOffset: 0.06 },
+  guild: { width: 0.8, height: 0.98, crop: 1, yOffset: 0.04 },
+  temple: { width: 0.92, height: 1.02, crop: 1, yOffset: 0.04 },
+  bank: { width: 0.9, height: 1.18, crop: 1, yOffset: 0.02 },
+  sage: { width: 0.7, height: 0.86, crop: 1, yOffset: 0.04 }
 };
 
 const townTerrainImages = buildTownTerrainImages();
@@ -9729,6 +11531,9 @@ function buildImageCache() {
   Object.values(BOARD_PROP_VISUALS).forEach((visual) => {
     (visual.frames || []).forEach((frame) => sources.add(frame.src));
   });
+  Object.values(ITEM_VISUALS).forEach((visual) => {
+    (visual.frames || []).forEach((frame) => sources.add(frame.src));
+  });
   return Object.fromEntries([...sources].map((src) => [src, loadImage(src)]));
 }
 
@@ -9787,6 +11592,321 @@ function drawFrame(ctx, frame, dx, dy, width, height, options = {}) {
   return true;
 }
 
+function drawGlyphVisual(ctx, glyph, dx, dy, width, height, options = {}) {
+  if (!glyph) {
+    return false;
+  }
+  const x = Math.round(dx);
+  const y = Math.round(dy);
+  const w = Math.max(6, Math.round(width));
+  const h = Math.max(6, Math.round(height));
+  const midX = x + Math.round(w / 2);
+  const accent = options.tint || "#d6ccb8";
+  const dark = shadeColor(accent, -58);
+  const deep = shadeColor(accent, -78);
+  const light = shadeColor(accent, 18);
+  const bright = shadeColor(accent, 38);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  switch (glyph) {
+    case "rescueBanner":
+    case "routePennant":
+      ctx.fillStyle = "#6f5738";
+      ctx.fillRect(x + 1, y + 1, 2, h - 2);
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(x + 3, y + 2);
+      ctx.lineTo(x + w - 3, y + 4);
+      ctx.lineTo(x + Math.round(w * 0.62), y + Math.round(h * 0.48));
+      ctx.lineTo(x + w - 5, y + h - 4);
+      ctx.lineTo(x + 3, y + h - 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + Math.round(w * 0.55), y + Math.round(h * 0.38), 2, Math.max(3, Math.round(h * 0.28)));
+      break;
+    case "prisonerCell":
+      ctx.fillStyle = "#687280";
+      ctx.fillRect(x + 1, y + 2, w - 2, h - 4);
+      ctx.fillStyle = deep;
+      ctx.fillRect(x + 3, y + 4, w - 6, h - 8);
+      ctx.fillStyle = light;
+      for (let bar = x + 5; bar <= x + w - 5; bar += 4) {
+        ctx.fillRect(bar, y + 3, 1, h - 6);
+      }
+      ctx.fillRect(x + 3, y + 5, w - 6, 1);
+      ctx.fillRect(x + 3, y + h - 6, w - 6, 1);
+      ctx.fillStyle = accent;
+      ctx.fillRect(x + w - 6, y + Math.round(h / 2), 2, 3);
+      break;
+    case "broodNest":
+      ctx.fillStyle = deep;
+      ctx.beginPath();
+      ctx.ellipse(midX, y + h - 5, Math.round(w * 0.34), Math.round(h * 0.17), 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(midX - 3, y + h - 5, 4, Math.PI * 0.2, Math.PI * 1.4);
+      ctx.arc(midX + 3, y + h - 5, 4, Math.PI * 1.7, Math.PI * 0.8, true);
+      ctx.stroke();
+      ctx.fillStyle = light;
+      ctx.beginPath();
+      ctx.ellipse(midX - 4, y + h - 8, 2, 3, 0, 0, Math.PI * 2);
+      ctx.ellipse(midX + 1, y + h - 9, 2, 3, 0, 0, Math.PI * 2);
+      ctx.ellipse(midX + 5, y + h - 7, 2, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    case "shrineSeal":
+    case "routeSeal":
+    case "routeRitual":
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(midX, y + Math.round(h / 2), Math.max(4, Math.round(w * 0.28)), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = dark;
+      ctx.beginPath();
+      ctx.arc(midX, y + Math.round(h / 2), Math.max(2, Math.round(w * 0.15)), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = light;
+      ctx.fillRect(midX - 1, y + 2, 2, 3);
+      ctx.fillRect(midX - 1, y + h - 5, 2, 3);
+      ctx.fillRect(x + 2, y + Math.round(h / 2) - 1, 3, 2);
+      ctx.fillRect(x + w - 5, y + Math.round(h / 2) - 1, 3, 2);
+      if (glyph !== "routeSeal") {
+        ctx.fillStyle = bright;
+        ctx.fillRect(midX - 1, y + Math.round(h / 2) - 1, 2, 2);
+      }
+      break;
+    case "relicPedestal":
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + Math.round(w * 0.26), y + h - 5, Math.round(w * 0.48), 3);
+      ctx.fillStyle = light;
+      ctx.fillRect(x + Math.round(w * 0.32), y + Math.round(h * 0.46), Math.round(w * 0.36), Math.round(h * 0.3));
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 1);
+      ctx.lineTo(x + Math.round(w * 0.66), y + Math.round(h * 0.28));
+      ctx.lineTo(midX, y + Math.round(h * 0.45));
+      ctx.lineTo(x + Math.round(w * 0.34), y + Math.round(h * 0.28));
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case "loreBook":
+    case "spellbookItem":
+    case "routeJournal":
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + 3, y + 3, w - 6, h - 6);
+      ctx.fillStyle = accent;
+      ctx.fillRect(x + 5, y + 4, w - 8, h - 8);
+      ctx.fillStyle = light;
+      ctx.fillRect(midX - 1, y + 5, 2, h - 10);
+      ctx.fillRect(x + 7, y + 7, w - 14, 1);
+      ctx.fillRect(x + 7, y + 10, w - 14, 1);
+      break;
+    case "inscribedStone":
+    case "routeCairn":
+      ctx.fillStyle = dark;
+      if (glyph === "routeCairn") {
+        ctx.fillRect(midX - 4, y + h - 4, 8, 2);
+        ctx.fillRect(midX - 3, y + h - 7, 6, 2);
+        ctx.fillRect(midX - 2, y + h - 10, 4, 2);
+      } else {
+        ctx.fillRect(x + Math.round(w * 0.28), y + 2, Math.round(w * 0.44), h - 4);
+        ctx.fillStyle = light;
+        ctx.fillRect(x + Math.round(w * 0.34), y + 4, Math.round(w * 0.32), h - 8);
+        ctx.fillStyle = accent;
+        ctx.fillRect(midX - 1, y + 6, 2, h - 12);
+        ctx.fillRect(x + Math.round(w * 0.38), y + 8, Math.round(w * 0.24), 1);
+        ctx.fillRect(x + Math.round(w * 0.4), y + 12, Math.round(w * 0.2), 1);
+      }
+      break;
+    case "barricade":
+    case "routeBarricade":
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + 3, y + 4, w - 6, 3);
+      ctx.fillRect(x + 2, y + h - 7, w - 4, 3);
+      ctx.save();
+      ctx.translate(midX, y + Math.round(h / 2));
+      ctx.rotate(-0.42);
+      ctx.fillStyle = accent;
+      ctx.fillRect(-Math.round(w * 0.32), -2, Math.round(w * 0.64), 4);
+      ctx.rotate(0.84);
+      ctx.fillRect(-Math.round(w * 0.32), -2, Math.round(w * 0.64), 4);
+      ctx.restore();
+      break;
+    case "archiveStack":
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + 3, y + h - 5, w - 6, 3);
+      ctx.fillStyle = accent;
+      ctx.fillRect(x + 4, y + h - 9, w - 8, 3);
+      ctx.fillStyle = light;
+      ctx.fillRect(x + 6, y + h - 13, w - 10, 3);
+      ctx.fillStyle = bright;
+      ctx.fillRect(x + 6, y + 4, Math.round(w * 0.4), 4);
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + Math.round(w * 0.54), y + 6, Math.round(w * 0.22), 1);
+      break;
+    case "beaconFocus":
+    case "routeBeacon":
+      ctx.fillStyle = dark;
+      ctx.fillRect(midX - 2, y + Math.round(h * 0.42), 4, h - Math.round(h * 0.42) - 2);
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 2);
+      ctx.lineTo(x + Math.round(w * 0.72), y + Math.round(h * 0.42));
+      ctx.lineTo(x + Math.round(w * 0.58), y + Math.round(h * 0.58));
+      ctx.lineTo(x + Math.round(w * 0.42), y + Math.round(h * 0.58));
+      ctx.lineTo(x + Math.round(w * 0.28), y + Math.round(h * 0.42));
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = bright;
+      ctx.fillRect(midX - 1, y + 1, 2, 3);
+      break;
+    case "well":
+    case "routeWater":
+    case "flaskItem":
+      if (glyph === "flaskItem") {
+        ctx.fillStyle = dark;
+        ctx.fillRect(midX - 2, y + 2, 4, 3);
+        ctx.fillStyle = accent;
+        ctx.beginPath();
+        ctx.moveTo(midX - 4, y + 5);
+        ctx.lineTo(midX + 4, y + 5);
+        ctx.lineTo(midX + 6, y + h - 4);
+        ctx.lineTo(midX - 6, y + h - 4);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.fillStyle = dark;
+        ctx.fillRect(x + 4, y + Math.round(h * 0.58), w - 8, 3);
+        ctx.strokeStyle = light;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(midX, y + Math.round(h * 0.5), Math.max(4, Math.round(w * 0.26)), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = accent;
+        ctx.fillRect(midX - 4, y + Math.round(h * 0.44), 8, 3);
+      }
+      break;
+    case "routeTorch":
+      ctx.fillStyle = dark;
+      ctx.fillRect(midX - 1, y + 5, 2, h - 8);
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 1);
+      ctx.lineTo(midX + 4, y + 6);
+      ctx.lineTo(midX, y + 8);
+      ctx.lineTo(midX - 4, y + 6);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case "routeRune":
+    case "routeMark":
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + 3, y + h - 4);
+      ctx.lineTo(midX, y + 3);
+      ctx.lineTo(x + w - 3, y + h - 4);
+      ctx.stroke();
+      if (glyph === "routeRune") {
+        ctx.fillStyle = light;
+        ctx.fillRect(midX - 1, y + Math.round(h * 0.45), 2, 3);
+      }
+      break;
+    case "routeLamp":
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 1);
+      ctx.lineTo(midX, y + 4);
+      ctx.stroke();
+      ctx.fillStyle = accent;
+      ctx.fillRect(midX - 3, y + 4, 6, 6);
+      ctx.fillStyle = bright;
+      ctx.fillRect(midX - 1, y + 6, 2, 2);
+      break;
+    case "routeSupply":
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + 4, y + 4, w - 8, h - 8);
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x + 4.5, y + 4.5, w - 9, h - 9);
+      ctx.beginPath();
+      ctx.moveTo(x + 6, y + 6);
+      ctx.lineTo(x + w - 6, y + h - 6);
+      ctx.moveTo(x + w - 6, y + 6);
+      ctx.lineTo(x + 6, y + h - 6);
+      ctx.stroke();
+      break;
+    case "routeTracks":
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.ellipse(midX - 3, y + Math.round(h * 0.38), 2, 3, -0.35, 0, Math.PI * 2);
+      ctx.ellipse(midX + 3, y + Math.round(h * 0.62), 2, 3, 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    case "shieldItem":
+      ctx.fillStyle = dark;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 2);
+      ctx.lineTo(x + w - 4, y + 5);
+      ctx.lineTo(x + w - 5, y + Math.round(h * 0.62));
+      ctx.lineTo(midX, y + h - 2);
+      ctx.lineTo(x + 5, y + Math.round(h * 0.62));
+      ctx.lineTo(x + 4, y + 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 4);
+      ctx.lineTo(x + w - 6, y + 6);
+      ctx.lineTo(x + w - 7, y + Math.round(h * 0.58));
+      ctx.lineTo(midX, y + h - 4);
+      ctx.lineTo(x + 7, y + Math.round(h * 0.58));
+      ctx.lineTo(x + 6, y + 6);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case "relicItem":
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 1);
+      ctx.lineTo(x + w - 5, y + Math.round(h * 0.34));
+      ctx.lineTo(midX + 1, y + h - 2);
+      ctx.lineTo(x + 5, y + Math.round(h * 0.34));
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = bright;
+      ctx.fillRect(midX - 1, y + 4, 2, Math.round(h * 0.42));
+      break;
+    default:
+      ctx.restore();
+      return false;
+  }
+
+  ctx.restore();
+  return true;
+}
+
+function drawConfiguredVisual(ctx, visual, dx, dy, width, height, time = 0, options = {}) {
+  if (!visual) {
+    return false;
+  }
+  if (visual.frames?.length) {
+    const frameIndex = visual.frames.length <= 1 ? 0 : Math.floor(time / 220) % visual.frames.length;
+    return drawFrame(ctx, visual.frames[frameIndex], dx, dy, width, height, options);
+  }
+  if (visual.glyph) {
+    return drawGlyphVisual(ctx, visual.glyph, dx, dy, width, height, options);
+  }
+  return false;
+}
+
 function drawSpriteVisual(ctx, visual, sx, sy, time = 0, options = {}) {
   if (!visual?.frames?.length) {
     return false;
@@ -9828,6 +11948,66 @@ function fillStipple(ctx, x, y, width, height, baseColor, speckColor, step = 5, 
       ctx.fillRect(px, py, 1, 1);
     }
   }
+}
+
+function drawTownCivicTile(ctx, tile, worldX, worldY, sx, sy, visible) {
+  const x = sx * TILE_SIZE;
+  const y = sy * TILE_SIZE;
+  const seed = tileHash(worldX, worldY, 13);
+  if (tile.kind !== "stone" && tile.kind !== "plaza") {
+    return false;
+  }
+
+  const stoneBase = visible ? (seed % 2 === 0 ? "#857a69" : "#7a7060") : "#4e473c";
+  const stoneSpeck = visible ? "#5e5548" : "#2f2a24";
+  const plazaBase = visible ? (seed % 2 === 0 ? "#c2b49a" : "#b7a98f") : "#6d6254";
+  const plazaSpeck = visible ? "#8b7f6b" : "#433c33";
+  const base = tile.kind === "plaza" ? plazaBase : stoneBase;
+  const speck = tile.kind === "plaza" ? plazaSpeck : stoneSpeck;
+
+  fillStipple(ctx, x, y, TILE_SIZE, TILE_SIZE, base, speck, 6, seed);
+  ctx.fillStyle = visible ? "rgba(255, 244, 218, 0.18)" : "rgba(255, 244, 218, 0.06)";
+  ctx.fillRect(x, y, TILE_SIZE, 1);
+  ctx.fillRect(x, y, 1, TILE_SIZE);
+  ctx.fillStyle = visible ? "rgba(56, 47, 38, 0.22)" : "rgba(16, 13, 10, 0.16)";
+  ctx.fillRect(x, y + TILE_SIZE - 1, TILE_SIZE, 1);
+  ctx.fillRect(x + TILE_SIZE - 1, y, 1, TILE_SIZE);
+
+  if (tile.kind === "plaza") {
+    ctx.strokeStyle = visible ? "rgba(95, 82, 62, 0.32)" : "rgba(32, 26, 21, 0.22)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 3.5, y + 3.5, TILE_SIZE - 7, TILE_SIZE - 7);
+    ctx.beginPath();
+    ctx.moveTo(x + TILE_SIZE / 2, y + 3);
+    ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE - 3);
+    ctx.moveTo(x + 3, y + TILE_SIZE / 2);
+    ctx.lineTo(x + TILE_SIZE - 3, y + TILE_SIZE / 2);
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = visible ? "rgba(67, 57, 47, 0.24)" : "rgba(22, 18, 15, 0.2)";
+    ctx.lineWidth = 1;
+    if (seed % 3 === 0) {
+      ctx.beginPath();
+      ctx.moveTo(x + 4, y + 1);
+      ctx.lineTo(x + 4, y + TILE_SIZE - 2);
+      ctx.moveTo(x + 12, y + 1);
+      ctx.lineTo(x + 12, y + TILE_SIZE - 2);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(x + 1, y + 7);
+      ctx.lineTo(x + TILE_SIZE - 2, y + 7);
+      ctx.moveTo(x + 1, y + 15);
+      ctx.lineTo(x + TILE_SIZE - 2, y + 15);
+      ctx.stroke();
+    }
+  }
+
+  if (!visible) {
+    ctx.fillStyle = "rgba(5, 8, 7, 0.28)";
+    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  }
+  return true;
 }
 
 function drawDungeonTerrainBase(ctx, tile, worldX, worldY, x, y, visible) {
@@ -9965,6 +12145,9 @@ function drawTownBuildingBase(ctx, building, tile, worldX, worldY, sx, sy, visib
 function drawTownTerrainTile(ctx, level, tile, worldX, worldY, sx, sy, visible) {
   if (!townTerrainImages || level.kind !== "town") {
     return false;
+  }
+  if (drawTownCivicTile(ctx, tile, worldX, worldY, sx, sy, visible)) {
+    return true;
   }
   let image = null;
   if (tile.kind === "grass") {
@@ -10176,23 +12359,23 @@ function drawTownBuildings(ctx, level, view) {
     if (doorX < 0 || doorY < 0 || doorX >= VIEW_SIZE || doorY >= VIEW_SIZE) {
       continue;
     }
-    const label = building.name || building.service || "Service";
+    const label = building.label || building.name || building.service || "Service";
     ctx.save();
-    ctx.font = "700 9px Trebuchet MS";
-    const pillWidth = Math.min(building.w * TILE_SIZE - 10, Math.max(46, ctx.measureText(label).width + 16));
-    const pillX = doorX * TILE_SIZE + (TILE_SIZE - pillWidth) / 2;
-    const pillY = top * TILE_SIZE + 4;
+    ctx.font = "700 10px Trebuchet MS";
+    const pillWidth = Math.min(building.w * TILE_SIZE - 6, Math.max(62, ctx.measureText(label).width + 18));
+    const pillX = left * TILE_SIZE + (building.w * TILE_SIZE - pillWidth) / 2;
+    const pillY = top * TILE_SIZE + 2;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = anyVisible ? "rgba(17, 23, 28, 0.92)" : "rgba(17, 23, 28, 0.56)";
-    ctx.strokeStyle = anyVisible ? "rgba(242, 215, 166, 0.68)" : "rgba(242, 215, 166, 0.32)";
+    ctx.fillStyle = anyVisible ? "rgba(17, 23, 28, 0.94)" : "rgba(17, 23, 28, 0.66)";
+    ctx.strokeStyle = anyVisible ? "rgba(246, 224, 182, 0.82)" : "rgba(246, 224, 182, 0.42)";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(pillX, pillY, pillWidth, 14, 7);
+    ctx.roundRect(pillX, pillY, pillWidth, 16, 8);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = anyVisible ? "#f3ddb1" : "rgba(243, 221, 177, 0.7)";
-    ctx.fillText(label, pillX + pillWidth / 2, pillY + 7);
+    ctx.fillStyle = anyVisible ? "#fff0cf" : "rgba(255, 240, 207, 0.82)";
+    ctx.fillText(label, pillX + pillWidth / 2, pillY + 8);
     ctx.restore();
   }
 }
@@ -10215,27 +12398,26 @@ function drawBoardProps(ctx, level, view, time = 0, options = {}) {
     if (level.kind !== "town" && !level.visible[prop.y * level.width + prop.x] && !prop.alwaysVisible) {
       return;
     }
-    if (visual.light) {
+    const glowEnabled = prop.light !== undefined ? prop.light : visual.light;
+    if (glowEnabled) {
       const cx = sx * TILE_SIZE + 12;
       const cy = sy * TILE_SIZE + 12;
       const pulse = reducedMotion ? 0.18 : 0.16 + (Math.sin((time + index * 45) / 170) + 1) * 0.05;
       const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, TILE_SIZE * 0.95);
-      glow.addColorStop(0, rgbaWithAlpha(visual.tint || "rgba(255, 199, 128, 0.36)", pulse));
+      glow.addColorStop(0, rgbaWithAlpha(prop.tint || visual.tint || "rgba(255, 199, 128, 0.36)", pulse));
       glow.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = glow;
       ctx.fillRect(sx * TILE_SIZE - 6, sy * TILE_SIZE - 6, TILE_SIZE + 12, TILE_SIZE + 12);
     }
-    const frames = visual.frames || [];
-    const frame = frames.length <= 1 ? frames[0] : frames[Math.floor(time / 220) % frames.length];
-    if (!frame) {
+    if (!visual.frames?.length && !visual.glyph) {
       return;
     }
     const lift = Math.round((visual.lift || 0) * TILE_SIZE);
     const scale = visual.scale || 0.68;
     const size = Math.round(TILE_SIZE * scale);
     const offset = Math.round((TILE_SIZE - size) / 2);
-    drawFrame(ctx, frame, sx * TILE_SIZE + offset, sy * TILE_SIZE + TILE_SIZE - size - 2 - lift, size, size, {
-      tint: visual.tint || ""
+    drawConfiguredVisual(ctx, visual, sx * TILE_SIZE + offset, sy * TILE_SIZE + TILE_SIZE - size - 2 - lift, size, size, time, {
+      tint: prop.tint || visual.tint || ""
     });
   });
   const corpses = Array.isArray(level?.corpses) ? level.corpses : [];
@@ -10455,10 +12637,12 @@ function drawItem(ctx, item, sx, sy, time = 0, options = {}) {
     || (item.kind === "charged" ? ITEM_VISUAL_IDS.defaultCharged : "")
     || (item.kind === "spellbook" ? ITEM_VISUAL_IDS.defaultSpellbook : "")
     || ITEM_VISUAL_IDS.defaultConsumable;
-  const frame = getTileVisual(itemVisualId, item.x || sx, item.y || sy);
+  const itemVisual = getItemVisual(itemVisualId);
   const itemSize = Math.round(TILE_SIZE * 0.62);
   const itemOffset = Math.round((TILE_SIZE - itemSize) / 2);
-  if (frame && drawFrame(ctx, frame, x + itemOffset, y + TILE_SIZE - itemSize - 3, itemSize, itemSize)) {
+  if (itemVisual && drawConfiguredVisual(ctx, itemVisual, x + itemOffset, y + TILE_SIZE - itemSize - 3, itemSize, itemSize, time, {
+    tint: itemVisual.tint || ""
+  })) {
     return;
   }
   const color = item.kind === "consumable" ? "#9f3256" : item.kind === "spellbook" ? "#7040a8" : item.kind === "quest" ? "#b7f0ff" : item.kind === "charged" ? "#63a4d2" : "#c4c4c4";
@@ -10739,10 +12923,34 @@ function drawTargetCursor(ctx, cursor, view, source = null, time = 0, options = 
     return;
   }
   const reducedMotion = Boolean(options.reducedMotion);
+  const targetPreview = options.targetPreview || null;
+  const previewValid = targetPreview ? targetPreview.valid : true;
+  const previewColor = targetPreview?.spell?.previewColor || targetPreview?.spell?.effectColor || "#ffd36b";
+  const cursorColor = previewValid ? previewColor : "#ff8f73";
   const pulse = reducedMotion ? 0.22 : 0.18 + (Math.sin(time / 110) + 1) * 0.08;
+  if (Array.isArray(targetPreview?.tiles) && targetPreview.tiles.length > 0) {
+    ctx.save();
+    targetPreview.tiles.forEach((tile) => {
+      const px = tile.x - view.x;
+      const py = tile.y - view.y;
+      if (px < 0 || py < 0 || px >= VIEW_SIZE || py >= VIEW_SIZE) {
+        return;
+      }
+      const isCenter = tile.x === cursor.x && tile.y === cursor.y;
+      ctx.fillStyle = cursorColor;
+      ctx.globalAlpha = (previewValid ? 0.12 : 0.08) + (isCenter ? 0.08 : 0);
+      ctx.fillRect(px * TILE_SIZE + 3, py * TILE_SIZE + 3, TILE_SIZE - 6, TILE_SIZE - 6);
+      ctx.strokeStyle = cursorColor;
+      ctx.globalAlpha = previewValid ? 0.36 : 0.28;
+      ctx.lineWidth = isCenter ? 2 : 1.5;
+      ctx.strokeRect(px * TILE_SIZE + 4, py * TILE_SIZE + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+    });
+    ctx.restore();
+  }
   if (source) {
     ctx.save();
-    ctx.strokeStyle = `rgba(255, 211, 107, ${reducedMotion ? 0.38 : 0.3 + pulse * 0.3})`;
+    ctx.strokeStyle = cursorColor;
+    ctx.globalAlpha = reducedMotion ? 0.38 : 0.3 + pulse * 0.3;
     ctx.lineWidth = 2;
     if (!reducedMotion) {
       ctx.setLineDash([6, 4]);
@@ -10755,11 +12963,44 @@ function drawTargetCursor(ctx, cursor, view, source = null, time = 0, options = 
     ctx.restore();
   }
   ctx.save();
-  ctx.fillStyle = `rgba(255, 211, 107, ${pulse})`;
-  ctx.fillRect(sx * TILE_SIZE + 5, sy * TILE_SIZE + 5, TILE_SIZE - 10, TILE_SIZE - 10);
-  ctx.strokeStyle = "#ffd36b";
+  const tileX = sx * TILE_SIZE;
+  const tileY = sy * TILE_SIZE;
+  const centerX = tileX + TILE_SIZE / 2;
+  const centerY = tileY + TILE_SIZE / 2;
+  ctx.strokeStyle = cursorColor;
   ctx.lineWidth = 2;
-  ctx.strokeRect(sx * TILE_SIZE + 2, sy * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+  ctx.strokeRect(tileX + 2, tileY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+  ctx.globalAlpha = reducedMotion ? 0.2 : 0.16 + pulse * 0.28;
+  ctx.strokeRect(tileX + 5, tileY + 5, TILE_SIZE - 10, TILE_SIZE - 10);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = cursorColor;
+  ctx.beginPath();
+  ctx.moveTo(centerX, tileY + 3);
+  ctx.lineTo(centerX, tileY + 8);
+  ctx.moveTo(centerX, tileY + TILE_SIZE - 8);
+  ctx.lineTo(centerX, tileY + TILE_SIZE - 3);
+  ctx.moveTo(tileX + 3, centerY);
+  ctx.lineTo(tileX + 8, centerY);
+  ctx.moveTo(tileX + TILE_SIZE - 8, centerY);
+  ctx.lineTo(tileX + TILE_SIZE - 3, centerY);
+  ctx.stroke();
+  ctx.fillStyle = cursorColor;
+  ctx.globalAlpha = reducedMotion ? 0.16 : 0.08 + pulse * 0.1;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, reducedMotion ? 2.5 : 2.5 + Math.sin(time / 140) * 0.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  if (targetPreview?.hitCount > 0) {
+    ctx.font = "bold 11px Trebuchet MS";
+    ctx.textAlign = "center";
+    ctx.fillStyle = cursorColor;
+    ctx.strokeStyle = "rgba(6, 8, 10, 0.82)";
+    ctx.lineWidth = 3;
+    const label = `${targetPreview.hitCount} HIT`;
+    ctx.strokeText(label, centerX, tileY - 4);
+    ctx.fillText(label, centerX, tileY - 4);
+    ctx.textAlign = "left";
+  }
   ctx.restore();
 }
 
@@ -10780,19 +13021,23 @@ function drawEffect(ctx, effect, view, time = 0, options = {}) {
     ctx.globalAlpha = reducedMotion ? 0.58 : 0.88 - life * 0.2;
     ctx.strokeStyle = effect.color;
     ctx.lineWidth = options.intensity === "enhanced" ? 4 : 3;
+    if (effect.style === "lightning" && !reducedMotion) {
+      ctx.setLineDash([5, 3]);
+      ctx.lineDashOffset = -time / 18;
+    }
     ctx.beginPath();
     ctx.moveTo(startX, startY);
     ctx.lineTo(endX, endY);
     ctx.stroke();
     ctx.fillStyle = effect.color;
     ctx.beginPath();
-    ctx.arc(endX, endY, reducedMotion ? 3 : 2.5 + (1 - life) * 2, 0, Math.PI * 2);
+    ctx.arc(endX, endY, reducedMotion ? 3 : 2.5 + (1 - life) * (effect.style === "fire" ? 3 : 2), 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     return;
   }
 
-  if (effect.type === "blink") {
+  if (effect.type === "blink" || effect.type === "castFlare") {
     if (!tileOnScreen(effect, view)) {
       return;
     }
@@ -10802,14 +13047,30 @@ function drawEffect(ctx, effect, view, time = 0, options = {}) {
     ctx.strokeStyle = effect.color;
     ctx.globalAlpha = 0.9 - life * 0.5;
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(sx * TILE_SIZE + 12, sy * TILE_SIZE + 12, 7 + life * 8, 0, Math.PI * 2);
-    ctx.stroke();
+    if (effect.type === "castFlare") {
+      const cx = sx * TILE_SIZE + 12;
+      const cy = sy * TILE_SIZE + 12;
+      const flareRadius = 5 + (1 - life) * 6;
+      for (let i = 0; i < 4; i += 1) {
+        const angle = (Math.PI / 2) * i + life * 0.7;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(angle) * 2, cy + Math.sin(angle) * 2);
+        ctx.lineTo(cx + Math.cos(angle) * flareRadius, cy + Math.sin(angle) * flareRadius);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(cx, cy, flareRadius, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(sx * TILE_SIZE + 12, sy * TILE_SIZE + 12, 7 + life * 8, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     ctx.restore();
     return;
   }
 
-  if (effect.type === "tileFlash" || effect.type === "telegraphPulse" || effect.type === "impactSpark" || effect.type === "castCircle" || effect.type === "deathBurst") {
+  if (effect.type === "tileFlash" || effect.type === "telegraphPulse" || effect.type === "impactSpark" || effect.type === "castCircle" || effect.type === "deathBurst" || effect.type === "spellBurst") {
     const point = effect.x !== undefined ? { x: effect.x, y: effect.y } : effect.to;
     if (!point || !tileOnScreen(point, view)) {
       return;
@@ -10897,6 +13158,33 @@ function drawEffect(ctx, effect, view, time = 0, options = {}) {
       ctx.arc(cx, cy, 4 + life * 12, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
+      return;
+    }
+
+    if (effect.type === "spellBurst") {
+      const radius = (effect.radius || 1) * TILE_SIZE * 0.72;
+      ctx.save();
+      ctx.strokeStyle = effect.color;
+      ctx.globalAlpha = 0.9 - life * 0.72;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6 + radius * life, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 0.16 * (1 - life);
+      ctx.fillStyle = effect.color;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4 + radius * 0.7 * life, 0, Math.PI * 2);
+      ctx.fill();
+      const rays = effect.style === "fire" ? 8 : 6;
+      ctx.globalAlpha = 0.8 - life * 0.7;
+      for (let i = 0; i < rays; i += 1) {
+        const angle = (Math.PI * 2 * i) / rays + life * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(angle) * 4, cy + Math.sin(angle) * 4);
+        ctx.lineTo(cx + Math.cos(angle) * (8 + radius * 0.55 * life), cy + Math.sin(angle) * (8 + radius * 0.55 * life));
+        ctx.stroke();
+      }
+      ctx.restore();
     }
     return;
   }
@@ -10938,10 +13226,79 @@ class SoundBoard {
   constructor(settings) {
     this.settings = settings;
     this.ctx = null;
+    this.music = null;
+    this.musicTrack = "";
   }
 
   updateSettings(settings) {
     this.settings = settings;
+    if (!this.settings.musicEnabled) {
+      this.stopMusic();
+    }
+  }
+
+  ensureMusicElement() {
+    if (typeof window === "undefined" || typeof window.Audio === "undefined") {
+      return null;
+    }
+    if (!this.music) {
+      this.music = new window.Audio();
+      this.music.loop = true;
+      this.music.preload = "metadata";
+      this.music.volume = 0.55;
+      this.music.setAttribute("playsinline", "");
+    }
+    return this.music;
+  }
+
+  isMusicPlaying() {
+    return Boolean(this.music && !this.music.paused && !this.music.ended);
+  }
+
+  syncMusic(track = "") {
+    this.musicTrack = track || "";
+    if (!this.musicTrack || !this.settings.musicEnabled) {
+      this.stopMusic();
+      return;
+    }
+    const music = this.ensureMusicElement();
+    if (!music) {
+      return;
+    }
+    if (music.dataset.track !== this.musicTrack) {
+      music.dataset.track = this.musicTrack;
+      music.src = this.musicTrack;
+      music.currentTime = 0;
+    }
+  }
+
+  resumeMusic() {
+    if (!this.settings.musicEnabled || !this.musicTrack) {
+      return;
+    }
+    const music = this.ensureMusicElement();
+    if (!music) {
+      return;
+    }
+    if (music.dataset.track !== this.musicTrack) {
+      music.dataset.track = this.musicTrack;
+      music.src = this.musicTrack;
+      music.currentTime = 0;
+    }
+    const playPromise = music.play?.();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        // Ignore autoplay rejections until the next user gesture.
+      });
+    }
+  }
+
+  stopMusic() {
+    if (!this.music) {
+      return;
+    }
+    this.music.pause();
+    this.music.currentTime = 0;
   }
 
   play(type) {
@@ -10978,8 +13335,14 @@ class SoundBoard {
 class GamepadInput {
   constructor() {
     this.lastMoveAt = 0;
+    this.lastMoveDirection = "";
     this.lastScrollAt = 0;
     this.lastButtons = new Map();
+  }
+
+  resetMoveState() {
+    this.lastMoveAt = 0;
+    this.lastMoveDirection = "";
   }
 
   isConnected() {
@@ -11004,18 +13367,21 @@ class GamepadInput {
     return null;
   }
 
-  poll(mode) {
+  poll(mode, moveRepeatMs = 180) {
     const pad = this.getGamepad();
     if (!pad) {
+      this.resetMoveState();
       return null;
     }
     const now = nowTime();
     const axes = pad.axes || [];
     const buttons = pad.buttons || [];
-    const moveRepeatReady = now - this.lastMoveAt > 180;
     const scrollRepeatReady = now - this.lastScrollAt > 140;
     const dx = Math.abs(axes[0] || 0) > 0.45 ? Math.sign(axes[0]) : (buttons[15]?.pressed ? 1 : buttons[14]?.pressed ? -1 : 0);
     const dy = Math.abs(axes[1] || 0) > 0.45 ? Math.sign(axes[1]) : (buttons[13]?.pressed ? 1 : buttons[12]?.pressed ? -1 : 0);
+    const moveDirection = (dx || dy) ? `${dx},${dy}` : "";
+    const moveRepeatReady = Boolean(moveDirection)
+      && (moveDirection !== this.lastMoveDirection || now - this.lastMoveAt >= moveRepeatMs);
     const scrollAxis = Math.abs(axes[3] || 0) > 0.45
       ? Math.sign(axes[3])
       : buttons[7]?.pressed
@@ -11025,6 +13391,7 @@ class GamepadInput {
           : 0;
     if ((dx || dy) && moveRepeatReady) {
       this.lastMoveAt = now;
+      this.lastMoveDirection = moveDirection;
       if (mode === "target") {
         return { type: "target", dx, dy };
       }
@@ -11032,6 +13399,9 @@ class GamepadInput {
         return { type: "ui-move", dx, dy };
       }
       return { type: "move", dx, dy };
+    }
+    if (!moveDirection) {
+      this.lastMoveDirection = "";
     }
     const pressed = (index) => {
       const current = !!buttons[index]?.pressed;
@@ -11075,6 +13445,7 @@ const getCreationDraftStats = getCreationStats;
 const resetCreationState = resetCreationDraft;
 const showCreationScreen = showCreationModal;
 const showTitleModal = showTitleScreen;
+const loadAllSavedRunMeta = getAllSavedRunMeta;
 const loadSavedRunMeta = getSavedRunMeta;
 const formatSavedRunStamp = formatSaveStamp;
 const loadGameState = loadGame;
@@ -11106,6 +13477,7 @@ const applyBoonReward = grantBoon;
 const addRumorToken = grantRumorToken;
 const getTownCycleMeta = getTownCycleState;
 const buildTownMetaSummary = getTownMetaSummary;
+const buildValidationSummary = getValidationSummary;
 
 
 class Game {
@@ -11117,7 +13489,11 @@ class Game {
     this.mapCtx = this.mapCanvas ? this.mapCanvas.getContext("2d") : null;
     this.mapCaption = document.getElementById("map-caption");
     this.mapDrawer = document.getElementById("map-drawer");
+    this.mapPanelLabel = document.getElementById("map-panel-label");
+    this.mapPanelState = document.getElementById("map-panel-state");
     this.mapToggleButton = document.getElementById("map-toggle-button");
+    this.spellTrayToggleButton = document.getElementById("spell-tray-toggle-button");
+    this.spellTray = document.getElementById("spell-tray");
     this.contextChip = document.getElementById("context-chip");
     this.modalRoot = document.getElementById("modal-root");
     this.actionBar = document.getElementById("action-bar");
@@ -11134,6 +13510,7 @@ class Game {
     this.eventTicker = document.getElementById("event-ticker");
     this.turn = 1;
     this.mode = "title";
+    this.activeSaveSlotId = null;
     this.levels = [];
     this.currentDepth = 0;
     this.currentLevel = null;
@@ -11152,8 +13529,13 @@ class Game {
     this.pendingRewardQueue = [];
     this.pendingTurnResolution = null;
     this.activeHubTab = "pack";
+    this.activeJournalSection = "current";
     this.activePackFilter = "all";
+    this.activeMagicFilter = "all";
+    this.activeSpellLearnFilter = "all";
+    this.activeShopPanel = "buy";
     this.activePackSelection = { type: "inventory", value: 0 };
+    this.spellTrayOpen = false;
     this.targetMode = null;
     this.visualEffects = [];
     this.boardImpulse = null;
@@ -11178,8 +13560,11 @@ class Game {
     this.lastRunSummary = null;
     this.runPersistenceChanges = null;
     this.modalSurfaceKey = null;
+    this.modalReturnContext = null;
+    this.utilityMenuOpenerFocusKey = null;
     this.settings = loadSettings();
     this.mapDrawerOpen = false;
+    this.layoutMode = "mobile";
     this.lastInputSource = "pointer";
     this.controllerFocusKey = null;
     this.reducedMotionQuery = typeof window !== "undefined" && window.matchMedia
@@ -11187,15 +13572,21 @@ class Game {
       : null;
     this.feedDrawerOpen = false;
     this.liveFeedSticky = null;
+    this.movementCadence = this.createMovementCadenceState();
     document.documentElement.dataset.uiScale = this.settings.uiScale;
     this.shopState = createInitialShopState();
+    this.shopBrowseState = null;
+    this.lastPreviewKey = "";
+    this.hoveredPackSelection = null;
     ensureTownMetaState(this);
     ensureChronicleState(this);
     ensureMetaProgressionState(this);
     initializeTelemetry(this);
+    initializeValidationState(this);
     this.audio = new SoundBoard(this.settings);
     this.gamepadInput = new GamepadInput();
     this.bindEvents();
+    this.syncAdaptiveLayout(true);
     this.registerServiceWorker();
     this.startRuntimeLoop();
     this.refreshChrome();
@@ -11208,8 +13599,18 @@ class Game {
       this.setInputSource("keyboard");
       this.handleKeydown(event);
     });
+    document.addEventListener("keyup", (event) => this.handleKeyup(event));
     document.addEventListener("click", (event) => this.handleClick(event));
-    document.addEventListener("pointerdown", () => this.setInputSource("pointer"));
+    document.addEventListener("dblclick", (event) => this.handleDoubleClick(event));
+    document.addEventListener("change", (event) => this.handleChange(event));
+    document.addEventListener("mouseover", (event) => this.handlePreviewPointer(event));
+    document.addEventListener("focusin", (event) => this.handlePreviewFocus(event));
+    document.addEventListener("pointerdown", (event) => {
+      this.setInputSource("pointer");
+      this.handlePointerDown(event);
+    });
+    document.addEventListener("pointerup", () => this.releaseHeldMovement("pointer"));
+    document.addEventListener("pointercancel", () => this.releaseHeldMovement("pointer"));
     document.addEventListener("mousedown", () => this.setInputSource("pointer"));
     document.addEventListener("touchstart", () => this.setInputSource("pointer"), { passive: true });
     document.addEventListener("input", (event) => {
@@ -11229,11 +13630,15 @@ class Game {
         reason: "pagehide"
       });
     });
+    window.addEventListener("blur", () => this.resetMovementCadence());
   }
 
   startRuntimeLoop() {
     const tick = () => {
-      this.pollGamepad();
+      const gamepadHandled = this.pollGamepad();
+      if (!gamepadHandled) {
+        this.pollHeldMovement();
+      }
       this.updateEffects();
       requestAnimationFrame(tick);
     };
@@ -11246,6 +13651,145 @@ class Game {
         navigator.serviceWorker.register("./service-worker.js").catch(() => {});
       });
     }
+  }
+
+  createMovementCadenceState() {
+    return {
+      strideSteps: 0,
+      lastStepAt: 0,
+      heldKeyboard: null,
+      heldPointer: null,
+      ignoreMoveClickUntil: 0
+    };
+  }
+
+  getMovementRepeatInterval() {
+    const steps = this.movementCadence?.strideSteps || 0;
+    if (steps >= 8) {
+      return 72;
+    }
+    if (steps >= 5) {
+      return 94;
+    }
+    if (steps >= 4) {
+      return 118;
+    }
+    return 168;
+  }
+
+  noteSuccessfulMove() {
+    const cadence = this.movementCadence || (this.movementCadence = this.createMovementCadenceState());
+    const now = nowTime();
+    cadence.strideSteps = now - cadence.lastStepAt <= 420
+      ? cadence.strideSteps + 1
+      : 1;
+    cadence.lastStepAt = now;
+  }
+
+  resetMovementCadence(options = {}) {
+    const {
+      clearHeld = true,
+      clearStride = true
+    } = options;
+    const cadence = this.movementCadence || (this.movementCadence = this.createMovementCadenceState());
+    if (clearStride) {
+      cadence.strideSteps = 0;
+      cadence.lastStepAt = 0;
+    }
+    if (clearHeld) {
+      cadence.heldKeyboard = null;
+      cadence.heldPointer = null;
+      cadence.ignoreMoveClickUntil = 0;
+    }
+    if (clearStride) {
+      this.gamepadInput?.resetMoveState?.();
+    }
+  }
+
+  setHeldMovement(source, dx, dy, key = "") {
+    const held = {
+      dx,
+      dy,
+      key,
+      nextRepeatAt: 0
+    };
+    if (source === "keyboard") {
+      this.movementCadence.heldKeyboard = held;
+    } else if (source === "pointer") {
+      this.movementCadence.heldPointer = held;
+    }
+    return held;
+  }
+
+  getHeldMovement(source) {
+    if (source === "keyboard") {
+      return this.movementCadence?.heldKeyboard || null;
+    }
+    if (source === "pointer") {
+      return this.movementCadence?.heldPointer || null;
+    }
+    return null;
+  }
+
+  releaseHeldMovement(source) {
+    if (!this.movementCadence) {
+      return;
+    }
+    if (source === "keyboard") {
+      this.movementCadence.heldKeyboard = null;
+      return;
+    }
+    if (source === "pointer") {
+      this.movementCadence.heldPointer = null;
+    }
+  }
+
+  scheduleHeldMovementRepeat(source) {
+    const held = this.getHeldMovement(source);
+    if (held) {
+      held.nextRepeatAt = nowTime() + this.getMovementRepeatInterval();
+    }
+  }
+
+  pollHeldMovement() {
+    if (!this.canPlayerAct()) {
+      return false;
+    }
+    const sources = this.lastInputSource === "pointer" ? ["pointer", "keyboard"] : ["keyboard", "pointer"];
+    const now = nowTime();
+    for (const source of sources) {
+      const held = this.getHeldMovement(source);
+      if (!held || now < held.nextRepeatAt) {
+        continue;
+      }
+      this.handleMovementIntent(held.dx, held.dy);
+      if (this.getHeldMovement(source) === held) {
+        held.nextRepeatAt = nowTime() + this.getMovementRepeatInterval();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  handleKeyup(event) {
+    const lower = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+    const held = this.getHeldMovement("keyboard");
+    if (held?.key === lower) {
+      this.releaseHeldMovement("keyboard");
+    }
+  }
+
+  handlePointerDown(event) {
+    const moveButton = event.target.closest("[data-move]");
+    if (!moveButton || !this.canPlayerAct()) {
+      return;
+    }
+    event.preventDefault();
+    const [dx, dy] = moveButton.dataset.move.split(",").map(Number);
+    this.movementCadence.ignoreMoveClickUntil = nowTime() + 400;
+    this.setHeldMovement("pointer", dx, dy);
+    this.handleMovementIntent(dx, dy);
+    this.scheduleHeldMovementRepeat("pointer");
   }
 
   legacyRefreshChromeUnused() {
@@ -11309,6 +13853,10 @@ class Game {
     return 2 + (stats.dex >= 15 || stats.int >= 15 ? 1 : 0) + (stats.int >= 18 ? 1 : 0);
   }
 
+  getMoveSpeedForStats(stats) {
+    return clamp(90 + (stats.dex - 10) * 5, 72, 130);
+  }
+
   getSearchPowerForStats(stats, level = 1) {
     return stats.dex + stats.int + level * 2;
   }
@@ -11346,6 +13894,59 @@ class Game {
     const race = this.getPlayerRaceTemplate(player);
     const role = this.getPlayerClassTemplate(player);
     return (race ? race.mana : 0) + (role ? role.bonuses.mana : 0);
+  }
+
+  getLevelProgress(player = this.player) {
+    const safePlayer = player || {};
+    const level = Math.max(1, safePlayer.level || 1);
+    let previousThreshold = 0;
+    let nextThreshold = 80;
+    for (let currentLevel = 1; currentLevel < level; currentLevel += 1) {
+      previousThreshold = nextThreshold;
+      nextThreshold = Math.floor(nextThreshold * 1.58);
+    }
+    nextThreshold = safePlayer.nextLevelExp || nextThreshold;
+    const exp = Math.max(0, safePlayer.exp || 0);
+    const levelSpan = Math.max(1, nextThreshold - previousThreshold);
+    const gained = clamp(exp - previousThreshold, 0, levelSpan);
+    return {
+      exp,
+      previousThreshold,
+      nextThreshold,
+      gained,
+      remaining: Math.max(0, nextThreshold - exp),
+      percent: clamp(Math.round((gained / levelSpan) * 100), 0, 100)
+    };
+  }
+
+  getEquipmentStatBonuses(actor = this.player) {
+    const bonuses = { str: 0, dex: 0, con: 0, int: 0 };
+    if (!actor?.equipment) {
+      return bonuses;
+    }
+    Object.values(actor.equipment).forEach((item) => {
+      if (!item) {
+        return;
+      }
+      bonuses.str += getItemStrBonus(item);
+      bonuses.dex += getItemDexBonus(item);
+      bonuses.con += getItemConBonus(item);
+      bonuses.int += getItemIntBonus(item);
+    });
+    return bonuses;
+  }
+
+  getActorStats(actor = this.player) {
+    if (!actor?.stats) {
+      return { str: 0, dex: 0, con: 0, int: 0 };
+    }
+    const equipmentBonuses = this.getEquipmentStatBonuses(actor);
+    return {
+      str: actor.stats.str + equipmentBonuses.str,
+      dex: actor.stats.dex + equipmentBonuses.dex,
+      con: actor.stats.con + equipmentBonuses.con,
+      int: actor.stats.int + equipmentBonuses.int
+    };
   }
 
   isPlayerDead() {
@@ -11612,7 +14213,113 @@ class Game {
     return this.getAdvisorModel().dockSlots || [];
   }
 
+  getControllerContextAction() {
+    if (!this.player || !this.currentLevel) {
+      return null;
+    }
+    const tile = getTile(this.currentLevel, this.player.x, this.player.y);
+    const directive = typeof this.getLoopDirective === "function" ? this.getLoopDirective(tile) : null;
+    const recommendedActionId = directive?.recommendedActionId || "";
+    const lootHere = itemsAt(this.currentLevel, this.player.x, this.player.y);
+    if (lootHere.length > 0) {
+      return {
+        action: "pickup",
+        label: "Pick Up",
+        note: lootHere.length === 1
+          ? this.describeItemReadout(lootHere[0])
+          : `${lootHere.length} items underfoot`
+      };
+    }
+    if (this.currentDepth === 0 && tile?.kind === "buildingDoor" && tile.service) {
+      return {
+        action: "open-town-service",
+        service: tile.service,
+        label: "Open",
+        note: `Open ${SHOPS[tile.service]?.name || tile.label || "town service"}`
+      };
+    }
+    if (tile?.kind === "stairUp" && this.currentDepth > 0 && recommendedActionId === "stairs-up") {
+      return {
+        action: "stairs-up",
+        label: "Ascend",
+        note: "Leave the floor"
+      };
+    }
+    if (tile?.kind === "stairDown" && this.currentDepth > 0 && recommendedActionId === "stairs-down") {
+      return {
+        action: "stairs-down",
+        label: "Descend",
+        note: "Go deeper"
+      };
+    }
+    if (tile && (
+      tile.objectiveId
+      || tile.optionalId
+      || tile.discoveryId
+      || tile.roomEventId
+      || tile.kind === "altar"
+      || tile.kind === "fountain"
+      || tile.kind === "throne"
+    )) {
+      const prompt = this.getTileActionPrompt(tile);
+      return {
+        action: "interact",
+        label: prompt?.label || "Use",
+        note: prompt?.detail || "Resolve the current tile"
+      };
+    }
+    return null;
+  }
+
+  getControllerPrimaryDockAction(candidates = []) {
+    const contextAction = this.getControllerContextAction();
+    if (contextAction) {
+      return contextAction;
+    }
+    return candidates[0] || {
+      action: "open-utility-menu",
+      label: "Menu",
+      note: "Save, settings, and help"
+    };
+  }
+
+  handleControllerBackAction() {
+    this.resetMovementCadence({ clearHeld: false });
+    if (this.mode === "target") {
+      this.cancelTargetMode();
+      return true;
+    }
+    if (this.pendingPickupPrompt) {
+      this.cancelPendingPickup();
+      return true;
+    }
+    if (this.spellTrayOpen) {
+      this.closeSpellTray();
+      return true;
+    }
+    if (this.mode === "modal" || this.mode === "creation") {
+      this.closeModal();
+      this.render();
+      return true;
+    }
+    if (this.mapDrawerOpen && this.layoutMode !== "desktop") {
+      this.mapDrawerOpen = false;
+      this.refreshChrome();
+      return true;
+    }
+    if (this.feedDrawerOpen) {
+      this.feedDrawerOpen = false;
+      this.render();
+      return true;
+    }
+    return false;
+  }
+
   triggerDockSlot(key) {
+    if (key === "back") {
+      this.handleControllerBackAction();
+      return;
+    }
     if (!this.player) {
       return;
     }
@@ -11620,7 +14327,13 @@ class Game {
     if (!slot || !slot.action) {
       return;
     }
-    this.handleAction(slot.action, { dataset: { action: slot.action, tab: slot.tab || "" } });
+    this.handleAction(slot.action, {
+      dataset: {
+        action: slot.action,
+        tab: slot.tab || "",
+        service: slot.service || ""
+      }
+    });
   }
 
   buildMonsterDiscoveryMessage(monsters) {
@@ -11706,10 +14419,12 @@ class Game {
     }
     const capacity = getCarryCapacity(this.player);
     const beforeWeight = getCarryWeight(this.player);
-    const afterWeight = beforeWeight + (item.weight || 0);
-    const beforeTier = getEncumbranceTier(this.player);
-    const afterTier = afterWeight > capacity ? 2 : afterWeight > capacity * 0.75 ? 1 : 0;
-    return afterTier > beforeTier || (item.weight || 0) >= 5;
+    const itemWeight = item.weight || 0;
+    const afterWeight = beforeWeight + itemWeight;
+    if (afterWeight > capacity) {
+      return true;
+    }
+    return beforeWeight > capacity && itemWeight >= 5;
   }
 
   setModalVisibility(isOpen) {
@@ -11728,6 +14443,220 @@ class Game {
       this.appShell.classList.toggle("controller-active", controllerActive);
     }
     document.documentElement.classList.toggle("controller-active", controllerActive);
+  }
+
+  getSpellTrayLimit() {
+    return 8;
+  }
+
+  syncPlayerSpellTray(player = this.player) {
+    if (!player) {
+      return [];
+    }
+    player.spellsKnown = Array.isArray(player.spellsKnown)
+      ? [...new Set(player.spellsKnown.filter((spellId) => Boolean(SPELLS[spellId])))]
+      : [];
+    const hasSavedTray = Array.isArray(player.spellTrayIds);
+    const tray = hasSavedTray
+      ? [...new Set(player.spellTrayIds.filter((spellId) => player.spellsKnown.includes(spellId)))]
+      : [];
+    if ((!hasSavedTray || tray.length === 0) && player.spellsKnown.length > 0) {
+      tray.push(...player.spellsKnown.slice(0, this.getSpellTrayLimit()));
+    }
+    player.spellTrayIds = tray.slice(0, this.getSpellTrayLimit());
+    if (player === this.player) {
+      if (this.pendingSpell && !player.spellsKnown.includes(this.pendingSpell)) {
+        this.pendingSpell = null;
+      }
+      if (!this.pendingSpell) {
+        this.pendingSpell = player.spellTrayIds[0] || player.spellsKnown[0] || null;
+      }
+    }
+    return [...player.spellTrayIds];
+  }
+
+  getPinnedSpellIds(player = this.player) {
+    return this.syncPlayerSpellTray(player);
+  }
+
+  getSpellBookFocusKey(spellId) {
+    return `hub:spell:${spellId}`;
+  }
+
+  getSpellCastFocusKey(spellId, surface = "hub") {
+    return `${surface}:spell-cast:${spellId}`;
+  }
+
+  getMagicFilterFocusKey(filter) {
+    return `magic:filter:${filter}`;
+  }
+
+  getSpellLearnFilterFocusKey(filter) {
+    return `spell-learn:filter:${filter}`;
+  }
+
+  getSpellFilterDefs() {
+    return [
+      { key: "all", label: "All" },
+      ...getSpellCategoryDefs().map((entry) => ({ key: entry.key, label: entry.label }))
+    ];
+  }
+
+  getSpellFilterDefsForEntries(entries = []) {
+    const keys = new Set(entries.map((entry) => getSpellCategoryKey(entry)).filter(Boolean));
+    return [
+      { key: "all", label: "All" },
+      ...getSpellCategoryDefs()
+        .filter((entry) => keys.has(entry.key))
+        .map((entry) => ({ key: entry.key, label: entry.label }))
+    ];
+  }
+
+  getSpellFilterChipsMarkup(currentFilter = "all", actionName = "magic-filter", focusKeyGetter = (key) => key, rowClass = "magic-filter-row", filterDefs = this.getSpellFilterDefs()) {
+    return `
+      <div class="pack-filter-row ${rowClass}">
+        ${filterDefs.map((filterDef) => `
+          <button class="hub-filter-chip${currentFilter === filterDef.key ? " active" : ""}" data-action="${actionName}" data-filter="${filterDef.key}" data-focus-key="${focusKeyGetter(filterDef.key)}" type="button">${escapeHtml(filterDef.label)}</button>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  getSpellTrayToggleFocusKey() {
+    return "top:spell-tray";
+  }
+
+  getSpellTraySelectionId() {
+    const pinned = this.getPinnedSpellIds();
+    if (this.targetMode?.type === "spell" && this.targetMode.spellId) {
+      return this.targetMode.spellId;
+    }
+    if (this.pendingSpell && pinned.includes(this.pendingSpell)) {
+      return this.pendingSpell;
+    }
+    return pinned[0] || this.player?.spellsKnown?.[0] || "";
+  }
+
+  getSortedKnownSpellIds(spellIds = this.player?.spellsKnown || []) {
+    return [...new Set((spellIds || []).filter((spellId) => Boolean(SPELLS[spellId])))]
+      .sort((leftId, rightId) => {
+        const left = SPELLS[leftId];
+        const right = SPELLS[rightId];
+        const roleCompare = this.getSpellRoleLabel(left).localeCompare(this.getSpellRoleLabel(right));
+        if (roleCompare) {
+          return roleCompare;
+        }
+        const schoolCompare = String(left.school || "spell").localeCompare(String(right.school || "spell"));
+        if (schoolCompare) {
+          return schoolCompare;
+        }
+        const tierCompare = (left.tier || 1) - (right.tier || 1);
+        if (tierCompare) {
+          return tierCompare;
+        }
+        return left.name.localeCompare(right.name);
+      });
+  }
+
+  addSpellToTrayIfSpace(spellId, player = this.player) {
+    if (!player || !SPELLS[spellId]) {
+      return false;
+    }
+    const tray = this.syncPlayerSpellTray(player);
+    if (tray.includes(spellId) || tray.length >= this.getSpellTrayLimit()) {
+      return false;
+    }
+    player.spellTrayIds = [...tray, spellId];
+    if (!this.pendingSpell) {
+      this.pendingSpell = spellId;
+    }
+    return true;
+  }
+
+  refreshMagicHub(focusTarget = null) {
+    if (this.mode === "modal" && this.activeHubTab === "magic") {
+      this.showHubModal("magic", {
+        preserveScroll: true,
+        focusTarget: focusTarget || this.getSpellBookFocusKey(this.pendingSpell || this.player?.spellsKnown?.[0] || "")
+      });
+      return;
+    }
+    this.refreshChrome();
+    this.render();
+  }
+
+  selectSpell(spellId, options = {}) {
+    if (!this.player || !SPELLS[spellId] || !this.player.spellsKnown.includes(spellId)) {
+      return false;
+    }
+    const { openTray = false, focusTarget = null } = options;
+    if (this.mode === "target" && this.targetMode?.type === "spell" && this.targetMode.spellId !== spellId) {
+      this.cancelTargetMode({ silent: true, keepTrayOpen: true });
+    }
+    this.pendingSpell = spellId;
+    if (openTray) {
+      this.spellTrayOpen = true;
+    }
+    if (openTray && this.mode !== "modal") {
+      if (this.mode !== "modal") {
+        this.refreshChrome();
+      }
+      return true;
+    }
+    this.refreshMagicHub(focusTarget);
+    return true;
+  }
+
+  pinSpellToTray(spellId) {
+    if (!this.player || !SPELLS[spellId] || !this.player.spellsKnown.includes(spellId)) {
+      return false;
+    }
+    const tray = this.getPinnedSpellIds();
+    if (tray.includes(spellId)) {
+      return true;
+    }
+    if (tray.length >= this.getSpellTrayLimit()) {
+      this.log("Spell tray is full. Remove one before pinning another.", "warning");
+      return false;
+    }
+    this.player.spellTrayIds = [...tray, spellId];
+    this.pendingSpell = spellId;
+    return true;
+  }
+
+  unpinSpellFromTray(spellId) {
+    if (!this.player) {
+      return false;
+    }
+    const tray = this.getPinnedSpellIds();
+    if (!tray.includes(spellId)) {
+      return false;
+    }
+    this.player.spellTrayIds = tray.filter((entry) => entry !== spellId);
+    if (this.pendingSpell === spellId) {
+      this.pendingSpell = this.player.spellTrayIds[0] || this.player.spellsKnown[0] || null;
+    }
+    return true;
+  }
+
+  moveTraySpell(spellId, direction = 0) {
+    if (!this.player || !direction) {
+      return false;
+    }
+    const tray = this.getPinnedSpellIds();
+    const index = tray.indexOf(spellId);
+    if (index < 0) {
+      return false;
+    }
+    const nextIndex = clamp(index + direction, 0, tray.length - 1);
+    if (nextIndex === index) {
+      return false;
+    }
+    const reordered = [...tray];
+    const [entry] = reordered.splice(index, 1);
+    reordered.splice(nextIndex, 0, entry);
+    this.player.spellTrayIds = reordered;
+    return true;
   }
 
   getLearnableSpellOptions() {
@@ -11785,6 +14714,10 @@ class Game {
     this.addEffect({ type: "castCircle", x, y, color, duration: 220 });
   }
 
+  emitCastFlare(x, y, color, style = "arcane") {
+    this.addEffect({ type: "castFlare", x, y, color, style, duration: 220, decorative: true });
+  }
+
   emitTelegraphPulse(x, y, color, duration = 260) {
     this.addEffect({ type: "telegraphPulse", x, y, color, duration });
   }
@@ -11806,6 +14739,146 @@ class Game {
 
   emitDeathBurst(x, y, color) {
     this.addEffect({ type: "deathBurst", x, y, color, duration: 240 });
+  }
+
+  emitSpellBurst(x, y, color, radius = 1, style = "arcane") {
+    this.addEffect({
+      type: "spellBurst",
+      x,
+      y,
+      color,
+      radius,
+      style,
+      duration: this.getReducedMotionActive() ? 150 : 240,
+      decorative: true
+    });
+  }
+
+  getSpellTargetingMode(spell) {
+    if (!spell) {
+      return "single";
+    }
+    if (spell.targetingMode) {
+      return spell.targetingMode;
+    }
+    return spell.target === "self" ? "self" : "single";
+  }
+
+  getSpellRoleLabel(spell) {
+    if (!spell) {
+      return "spell";
+    }
+    if (spell.roleLabel) {
+      return spell.roleLabel;
+    }
+    if (this.getSpellTargetingMode(spell) === "self") {
+      return "utility";
+    }
+    return spell.school || "spell";
+  }
+
+  getSpellTargetingLabel(spell) {
+    switch (this.getSpellTargetingMode(spell)) {
+      case "self":
+        return "Self";
+      case "blast":
+        return `Blast ${((spell?.blastRadius || 0) * 2) + 1}x${((spell?.blastRadius || 0) * 2) + 1}`;
+      default:
+        return `Single · Range ${spell?.range || 1}`;
+    }
+  }
+
+  getSpellProjectileStyle(spell) {
+    if (!spell) {
+      return "arcane";
+    }
+    return spell.projectileStyle || (spell.school === "elemental" ? "elemental" : "arcane");
+  }
+
+  resolveSpellTargetPreview(spellOrId, point = null) {
+    const spell = typeof spellOrId === "string" ? SPELLS[spellOrId] : spellOrId;
+    const targetingMode = this.getSpellTargetingMode(spell);
+    const center = point
+      ? { x: point.x, y: point.y }
+      : this.targetMode?.cursor
+        ? { x: this.targetMode.cursor.x, y: this.targetMode.cursor.y }
+        : null;
+    const preview = {
+      spell,
+      targetingMode,
+      center,
+      tiles: [],
+      actors: [],
+      targetActor: null,
+      hitCount: 0,
+      withinRange: targetingMode === "self",
+      los: targetingMode === "self",
+      valid: targetingMode === "self",
+      reason: ""
+    };
+    if (!spell || !this.player || !this.currentLevel) {
+      preview.valid = false;
+      preview.reason = "No spell target is available.";
+      return preview;
+    }
+    if (targetingMode === "self") {
+      preview.valid = true;
+      return preview;
+    }
+    if (!center || !inBounds(this.currentLevel, center.x, center.y)) {
+      preview.valid = false;
+      preview.reason = "Move the cursor onto the board.";
+      return preview;
+    }
+
+    preview.withinRange = distance(this.player, center) <= (spell.range || 8);
+    preview.los = hasLineOfSight(this.currentLevel, this.player.x, this.player.y, center.x, center.y);
+
+    if (targetingMode === "blast") {
+      const radius = Math.max(0, spell.blastRadius || 1);
+      for (let y = center.y - radius; y <= center.y + radius; y += 1) {
+        for (let x = center.x - radius; x <= center.x + radius; x += 1) {
+          if (!inBounds(this.currentLevel, x, y)) {
+            continue;
+          }
+          preview.tiles.push({ x, y });
+        }
+      }
+      preview.actors = this.currentLevel.actors.filter((actor) =>
+        actor.hp > 0
+        && preview.tiles.some((tile) => tile.x === actor.x && tile.y === actor.y)
+      );
+      preview.hitCount = preview.actors.length;
+      preview.valid = preview.withinRange && preview.los && preview.hitCount > 0;
+      if (!preview.withinRange) {
+        preview.reason = `${spell.name} is out of range.`;
+      } else if (!preview.los) {
+        preview.reason = "The blast point is out of line of sight.";
+      } else if (preview.hitCount <= 0) {
+        preview.reason = "No enemy stands in the blast.";
+      }
+      return preview;
+    }
+
+    preview.targetActor = actorAt(this.currentLevel, center.x, center.y);
+    preview.actors = preview.targetActor ? [preview.targetActor] : [];
+    preview.hitCount = preview.actors.length;
+    preview.valid = preview.withinRange && preview.los && Boolean(preview.targetActor);
+    if (!preview.withinRange) {
+      preview.reason = `${spell.name} is out of range.`;
+    } else if (!preview.los) {
+      preview.reason = "That target is out of line of sight.";
+    } else if (!preview.targetActor) {
+      preview.reason = "No target stands on that square.";
+    }
+    return preview;
+  }
+
+  getActiveSpellTargetPreview() {
+    if (!this.targetMode?.spellId) {
+      return null;
+    }
+    return this.resolveSpellTargetPreview(this.targetMode.spellId, this.targetMode.cursor);
   }
 
   getDamageEffectColor(damageType, defender) {
@@ -11876,6 +14949,11 @@ class Game {
   handleClick(event) {
     const moveButton = event.target.closest("[data-move]");
     if (moveButton) {
+      if ((this.movementCadence?.ignoreMoveClickUntil || 0) > nowTime()) {
+        this.movementCadence.ignoreMoveClickUntil = 0;
+        event.preventDefault();
+        return;
+      }
       if (!this.canPlayerAct()) {
         return;
       }
@@ -11887,6 +14965,9 @@ class Game {
 
     const action = event.target.closest("[data-action]");
     if (action) {
+      if (event.target instanceof HTMLInputElement && event.target.type === "checkbox") {
+        return;
+      }
       event.preventDefault();
       this.handleAction(action.dataset.action, action);
       return;
@@ -11896,7 +14977,10 @@ class Game {
     if (raceChoice) {
       this.captureCreationDraft();
       this.selectedRace = raceChoice.dataset.race;
-      this.showCreationModal({ focusTarget: `creation:race:${raceChoice.dataset.race}` });
+      this.showCreationModal({
+        preserveScroll: true,
+        focusTarget: `creation:race:${raceChoice.dataset.race}`
+      });
       return;
     }
 
@@ -11904,12 +14988,151 @@ class Game {
     if (classChoice) {
       this.captureCreationDraft();
       this.selectedClass = classChoice.dataset.class;
-      this.showCreationModal({ focusTarget: `creation:class:${classChoice.dataset.class}` });
+      this.showCreationModal({
+        preserveScroll: true,
+        focusTarget: `creation:class:${classChoice.dataset.class}`
+      });
+      return;
+    }
+
+    if (
+      this.spellTrayOpen
+      && this.mode === "game"
+      && !event.target.closest("#spell-tray")
+      && !event.target.closest("#spell-tray-toggle-button")
+      && !event.target.closest("#game-canvas")
+    ) {
+      this.closeSpellTray();
+    }
+  }
+
+  handleDoubleClick(event) {
+    const action = event.target.closest("[data-double-action]");
+    if (!action) {
+      return;
+    }
+    event.preventDefault();
+    this.handleAction(action.dataset.doubleAction, action);
+  }
+
+  handleChange(event) {
+    const action = event.target.closest("[data-action]");
+    if (!action) {
+      return;
+    }
+    this.handleAction(action.dataset.action, action);
+  }
+
+  handlePreviewPointer(event) {
+    this.lastPreviewKey = event.target.closest("[data-preview-key]")?.dataset?.previewKey || this.lastPreviewKey;
+    this.syncPackHoverPreview(event.target, { allowKeyboard: false });
+  }
+
+  handlePreviewFocus(event) {
+    this.lastPreviewKey = event.target.closest("[data-preview-key]")?.dataset?.previewKey || this.lastPreviewKey;
+    this.syncPackHoverPreview(event.target, { allowKeyboard: true });
+  }
+
+  canUsePackHoverPreview({ allowKeyboard = false } = {}) {
+    if (this.mode !== "modal" || this.activeHubTab !== "pack" || this.layoutMode !== "desktop") {
+      return false;
+    }
+    const finePointer = typeof window !== "undefined" && window.matchMedia
+      ? window.matchMedia("(pointer:fine)").matches
+      : false;
+    if (!finePointer) {
+      return false;
+    }
+    return allowKeyboard ? this.lastInputSource === "keyboard" : this.lastInputSource === "pointer";
+  }
+
+  getPackHoverSelectionFromTarget(target) {
+    if (!(target instanceof HTMLElement)) {
+      return null;
+    }
+    const previewNode = target.closest("[data-pack-preview-type]");
+    if (!previewNode) {
+      return null;
+    }
+    if (previewNode.dataset.packPreviewType === "slot") {
+      return previewNode.dataset.packPreviewValue
+        ? { type: "slot", value: previewNode.dataset.packPreviewValue }
+        : null;
+    }
+    const index = Number(previewNode.dataset.packPreviewValue);
+    return Number.isFinite(index) ? { type: "inventory", value: index } : null;
+  }
+
+  isSamePackSelection(left, right) {
+    return Boolean(left && right && left.type === right.type && left.value === right.value);
+  }
+
+  refreshPackInspectorPreview() {
+    if (this.mode !== "modal" || this.activeHubTab !== "pack") {
+      return;
+    }
+    const currentInspector = this.modalRoot.querySelector(".pack-inspector-panel");
+    if (!currentInspector) {
+      return;
+    }
+    const model = this.getPackSelectionModel();
+    const inventoryModel = buildInventoryPresentationModel(this, {
+      filter: this.activePackFilter,
+      selectedIndex: model.selection.type === "inventory" ? model.selection.value : -1,
+      shopId: this.getCurrentPackShopContext()
+    });
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = this.getPackInspectorMarkup(model, inventoryModel).trim();
+    const nextInspector = wrapper.firstElementChild;
+    if (nextInspector) {
+      currentInspector.replaceWith(nextInspector);
+    }
+  }
+
+  setHoveredPackSelection(selection) {
+    if (!selection) {
+      this.clearHoveredPackSelection();
+      return;
+    }
+    const normalized = selection.type === "slot"
+      ? { type: "slot", value: selection.value }
+      : { type: "inventory", value: Math.max(0, Number(selection.value) || 0) };
+    if (this.isSamePackSelection(this.hoveredPackSelection, normalized)) {
+      return;
+    }
+    this.hoveredPackSelection = normalized;
+    this.refreshPackInspectorPreview();
+  }
+
+  clearHoveredPackSelection() {
+    if (!this.hoveredPackSelection) {
+      return;
+    }
+    this.hoveredPackSelection = null;
+    this.refreshPackInspectorPreview();
+  }
+
+  syncPackHoverPreview(target, { allowKeyboard = false } = {}) {
+    if (!this.canUsePackHoverPreview({ allowKeyboard })) {
+      this.clearHoveredPackSelection();
+      return;
+    }
+    const selection = this.getPackHoverSelectionFromTarget(target);
+    if (selection) {
+      this.setHoveredPackSelection(selection);
+      return;
+    }
+    if (target instanceof HTMLElement && target.closest(".hub-window-pack")) {
+      this.clearHoveredPackSelection();
     }
   }
 
   handleCanvasClick(event) {
     if (!this.player || this.isPlayerDead() || (this.mode !== "game" && this.mode !== "target")) {
+      return;
+    }
+    if (this.spellTrayOpen && this.mode === "game") {
+      this.closeSpellTray();
       return;
     }
     const rect = this.canvas.getBoundingClientRect();
@@ -11928,6 +15151,11 @@ class Game {
     const dx = clamp(tileX - this.player.x, -1, 1);
     const dy = clamp(tileY - this.player.y, -1, 1);
     if (dx === 0 && dy === 0) {
+      const currentTile = getTile(this.currentLevel, this.player.x, this.player.y);
+      if (currentTile?.optionalId) {
+        this.interactHere();
+        return;
+      }
       this.performWait();
       return;
     }
@@ -11938,27 +15166,55 @@ class Game {
     if (this.isPlayerDead() && !["new-game", "load-game"].includes(actionName)) {
       return;
     }
+    this.resetMovementCadence({ clearHeld: false });
     switch (actionName) {
       case "new-game":
         this.resetCreationDraft();
         this.showCreationModal();
         break;
-      case "save-game":
-        this.saveGame();
+      case "save-game": {
+        const requestedSlot = Number(element?.dataset?.saveSlot || 0) || null;
+        if (requestedSlot) {
+          this.saveGame({ slotId: requestedSlot });
+          this.showSaveSlotsModal("save", {
+            preserveScroll: true,
+            focusTarget: `save-slots:save:${requestedSlot}`
+          });
+          break;
+        }
+        this.showSaveSlotsModal("save", {
+          preserveScroll: this.mode === "modal",
+          focusTarget: element?.dataset?.focusKey || null
+        });
         break;
-      case "load-game":
+      }
+      case "load-game": {
+        const requestedSlot = Number(element?.dataset?.saveSlot || 0) || null;
+        if (!requestedSlot) {
+          this.showSaveSlotsModal("load", {
+            preserveScroll: this.mode === "modal" || this.mode === "title",
+            focusTarget: element?.dataset?.focusKey || null
+          });
+          break;
+        }
         if (this.mode === "title") {
           this.recordTelemetry("title_continue_used", {
-            hasSave: Boolean(this.getSavedRunMeta())
+            hasSave: Boolean(this.getSavedRunMeta(requestedSlot)),
+            slotId: requestedSlot
           });
         }
-        this.loadGame();
+        this.loadGame({ slotId: requestedSlot });
+        break;
+      }
+      case "toggle-music":
+        this.toggleMusicPreference();
         break;
       case "export-telemetry":
         this.exportTelemetryTrace();
         break;
       case "open-hub": {
         const tab = element && element.dataset.tab ? element.dataset.tab : "pack";
+        const journalSection = element?.dataset?.journalSection || null;
         if (tab === "pack" && element?.dataset?.filter) {
           this.activePackFilter = element.dataset.filter;
           const inventoryModel = buildInventoryPresentationModel(this, {
@@ -11972,12 +15228,30 @@ class Game {
         }
         this.showHubModal(tab, {
           preserveScroll: this.mode === "modal",
-          focusTarget: element ? this.getHubTabFocusKey(tab) : null
+          focusTarget: tab === "journal" && journalSection
+            ? this.getJournalSectionFocusKey(journalSection)
+            : element
+              ? this.getHubTabFocusKey(tab)
+              : null,
+          journalSection
         });
         break;
       }
+      case "journal-section":
+        this.showHubModal("journal", {
+          preserveScroll: true,
+          focusTarget: this.getJournalSectionFocusKey(element?.dataset?.section || "current"),
+          journalSection: element?.dataset?.section || "current"
+        });
+        break;
+      case "open-spell-tray":
+        this.openSpellTray();
+        break;
       case "inventory":
         this.showInventoryModal();
+        break;
+      case "open-character-sheet":
+        this.showCharacterSheet(this.getUtilityModalReturnOptions("utility:stats"));
         break;
       case "spells":
         this.showSpellModal();
@@ -12005,16 +15279,25 @@ class Game {
         this.sleepUntilRestored();
         break;
       case "help":
-        this.showHelpModal();
+        this.showHelpModal(this.getUtilityModalReturnOptions("utility:help"));
         break;
       case "open-briefing":
-        this.showBriefingModal();
+        this.showBriefingModal(this.getUtilityModalReturnOptions("utility:briefing"));
+        break;
+      case "open-bank":
+        this.showBankModal({
+          focusTarget: this.getTownActionFocusKey("rumor")
+        });
+        this.render();
         break;
       case "settings":
-        this.showSettingsModal();
+        this.showSettingsModal(this.getUtilityModalReturnOptions("utility:settings"));
         break;
       case "open-utility-menu":
         this.showUtilityMenu();
+        break;
+      case "open-town-service":
+        this.openTownService(element.dataset.service);
         break;
       case "view-map":
         if (this.mode === "modal" && !this.pendingPickupPrompt) {
@@ -12023,8 +15306,12 @@ class Game {
         this.focusMap();
         break;
       case "toggle-map":
-        this.mapDrawerOpen = !this.mapDrawerOpen;
-        this.refreshChrome();
+        if (this.mapDrawer) {
+          this.mapDrawerOpen = !this.mapDrawerOpen;
+          this.refreshChrome();
+        } else {
+          this.focusMap();
+        }
         break;
       case "toggle-feed-log":
         this.feedDrawerOpen = !this.feedDrawerOpen;
@@ -12036,12 +15323,16 @@ class Game {
       case "creation-reset-stats":
         this.captureCreationDraft();
         this.creationStatBonuses = { str: 0, dex: 0, con: 0, int: 0 };
-        this.showCreationModal({ focusTarget: "creation:reset-stats" });
+        this.showCreationModal({
+          preserveScroll: true,
+          focusTarget: "creation:reset-stats"
+        });
         break;
       case "creation-adjust-stat":
         this.captureCreationDraft();
         if (this.adjustCreationStat(element.dataset.stat, Number(element.dataset.delta))) {
           this.showCreationModal({
+            preserveScroll: true,
             focusTarget: `creation:stat:${element.dataset.stat}:${element.dataset.delta === "-1" ? "down" : "up"}`
           });
         }
@@ -12067,6 +15358,12 @@ class Game {
         break;
       case "item-drop":
         this.dropInventoryItem(element.dataset.index);
+        break;
+      case "toggle-sale-mark":
+        this.toggleInventorySaleMark(
+          element.dataset.index,
+          element instanceof HTMLInputElement && element.type === "checkbox" ? element.checked : null
+        );
         break;
       case "inspect-pack-item":
         this.showHubModal("pack", {
@@ -12102,20 +15399,74 @@ class Game {
           focusTarget: this.getPackFilterFocusKey(this.activePackFilter)
         });
         break;
+      case "magic-filter":
+        this.activeMagicFilter = element.dataset.filter || "all";
+        this.refreshMagicHub(this.getMagicFilterFocusKey(this.activeMagicFilter));
+        break;
+      case "spell-learn-filter":
+        this.activeSpellLearnFilter = element.dataset.filter || "all";
+        this.showSpellLearnModal();
+        break;
       case "learn-spell":
         this.learnLevelUpSpell(element.dataset.spell);
         break;
       case "choose-reward":
         this.chooseRewardChoice(element.dataset.reward);
         break;
+      case "spell-select":
+        this.selectSpell(element.dataset.spell, {
+          openTray: element.dataset.surface === "tray",
+          focusTarget: element.dataset.focusKey || this.getSpellBookFocusKey(element.dataset.spell || "")
+        });
+        break;
       case "spell-cast":
+        this.selectSpell(element.dataset.spell, {
+          openTray: true,
+          focusTarget: element.dataset.focusKey || this.getSpellBookFocusKey(element.dataset.spell || "")
+        });
         this.prepareSpell(element.dataset.spell);
+        break;
+      case "spell-pin-toggle": {
+        const spellId = element.dataset.spell || "";
+        const changed = this.getPinnedSpellIds().includes(spellId)
+          ? this.unpinSpellFromTray(spellId)
+          : this.pinSpellToTray(spellId);
+        if (changed) {
+          this.refreshMagicHub(this.getSpellBookFocusKey(spellId));
+        }
+        break;
+      }
+      case "spell-pin-up":
+        if (this.moveTraySpell(element.dataset.spell || "", -1)) {
+          this.refreshMagicHub(this.getSpellBookFocusKey(element.dataset.spell || ""));
+        }
+        break;
+      case "spell-pin-down":
+        if (this.moveTraySpell(element.dataset.spell || "", 1)) {
+          this.refreshMagicHub(this.getSpellBookFocusKey(element.dataset.spell || ""));
+        }
+        break;
+      case "spell-tray-close":
+        this.closeSpellTray();
         break;
       case "shop-buy":
         this.buyShopItem(element.dataset.shop, element.dataset.item);
         break;
       case "shop-sell":
         this.sellShopItem(element.dataset.index);
+        break;
+      case "shop-panel":
+        this.activeShopPanel = element.dataset.panel === "sell" ? "sell" : "buy";
+        if (this.pendingShop) {
+          this.showShopModal(this.pendingShop.id, this.pendingShop, {
+            preserveScroll: true,
+            focusTarget: this.getShopPanelFocusKey(this.activeShopPanel),
+            panel: this.activeShopPanel
+          });
+        }
+        break;
+      case "shop-sell-marked":
+        this.sellMarkedItems();
         break;
       case "bank-deposit":
         this.handleBank("deposit");
@@ -12150,7 +15501,31 @@ class Game {
           this.render();
         }
         break;
+      case "contract-arm-recommended": {
+        const recommendation = this.getRecommendedContract();
+        if (recommendation?.id && this.setActiveContract(recommendation.id)) {
+          if (this.mode === "creation") {
+            this.showCreationModal({
+              preserveScroll: true,
+              focusTarget: "creation:contract:recommended"
+            });
+          } else if (this.mode === "title") {
+            this.showTitleScreen();
+          } else {
+            this.showBankModal({
+              preserveScroll: true,
+              focusTarget: `contract:${recommendation.id}`
+            });
+          }
+          this.render();
+        }
+        break;
+      }
       case "service-use":
+        if (!this.pendingService && this.currentDepth === 0 && element?.dataset?.service) {
+          this.openTownService(element.dataset.service);
+          break;
+        }
         this.useService(element.dataset.service);
         break;
       case "interact":
@@ -12270,10 +15645,22 @@ class Game {
     if (DIRECTIONS[lower]) {
       event.preventDefault();
       const [dx, dy] = DIRECTIONS[lower];
-      this.handleMovementIntent(dx, dy);
+      this.setHeldMovement("keyboard", dx, dy, lower);
+      if (!event.repeat) {
+        this.handleMovementIntent(dx, dy);
+        this.scheduleHeldMovementRepeat("keyboard");
+      }
       return;
     }
 
+    this.resetMovementCadence();
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (this.handleControllerBackAction()) {
+        this.render();
+      }
+      return;
+    }
     switch (lower) {
       case ".":
       case "5":
@@ -12283,7 +15670,7 @@ class Game {
         break;
       case "m":
         event.preventDefault();
-        if (this.mapDrawerOpen) {
+        if (this.mapDrawer && this.mapDrawerOpen) {
           this.mapDrawerOpen = false;
           this.refreshChrome();
         } else {
@@ -12296,7 +15683,11 @@ class Game {
         break;
       case "s":
         event.preventDefault();
-        this.showSpellModal();
+        if (event.shiftKey) {
+          this.showSpellModal();
+        } else {
+          this.openSpellTray();
+        }
         break;
       case ">":
         event.preventDefault();
@@ -12344,12 +15735,16 @@ class Game {
   }
 
   beginAdventure() {
+    this.resetMovementCadence();
+    this.activeSaveSlotId = null;
     const race = getRace(this.selectedRace);
     const role = getClass(this.selectedClass);
     this.captureCreationDraft();
     const heroName = this.creationName || "Morgan";
     const stats = this.getCreationStats();
     ensureMetaProgressionState(this);
+    initializeValidationState(this);
+    const onboardingMeta = getOnboardingVariantMeta(this);
 
     this.player = {
       id: "player",
@@ -12374,17 +15769,10 @@ class Game {
       maxHp: 1,
       mana: 0,
       maxMana: 0,
+      moveSpeed: 100,
+      moveTurnBudget: 0,
       inventory: [],
-      equipment: {
-        weapon: null,
-        offhand: null,
-        head: null,
-        body: null,
-        cloak: null,
-        feet: null,
-        ring: null,
-        amulet: null
-      },
+      equipment: createEmptyEquipment(),
       perks: [],
       relics: [],
       runCurrencies: {
@@ -12394,6 +15782,7 @@ class Game {
       },
       knownRumors: [],
       spellsKnown: [...role.spells],
+      spellTrayIds: [...role.spells].slice(0, this.getSpellTrayLimit()),
       lightRadius: FOV_RADIUS,
       quest: {
         hasRunestone: false,
@@ -12406,10 +15795,13 @@ class Game {
         npcSceneFlags: {}
       }
     };
+    this.ensureEquipmentAliases(this.player);
+    this.syncPlayerSpellTray(this.player);
 
     role.startItems.forEach((itemId) => this.addItemToInventory(createTownItem(itemId)));
     const activeContract = applyContractToNewRun(this);
     const masteryRewards = applyClassMasteryBonuses(this);
+    const commendationRewards = applyCommendationBonuses(this);
     this.autoEquipStarterGear();
     this.turn = 1;
     this.storyFlags = {
@@ -12426,7 +15818,8 @@ class Game {
     this.deathContext = null;
     this.runPersistenceChanges = {
       masteryUnlocks: [],
-      contractUnlocks: []
+      contractUnlocks: [],
+      commendationUnlocks: []
     };
     this.lastTownRefreshTurn = 0;
     this.pendingSpellChoices = 0;
@@ -12451,14 +15844,18 @@ class Game {
     this.player.mana = this.player.maxMana;
     this.mode = "game";
     this.closeModal();
+    this.syncAdaptiveLayout(true);
     this.log(`${heroName} enters the valley beneath the ruined keep.`, "good");
     this.log("Recover the Runestone of the Winds from the lower halls and return to town.", "warning");
-    this.log("Step onto one labeled town door first. Then follow the north road into the keep.", "warning");
+    this.log(`${onboardingMeta.firstTownPrimary} ${onboardingMeta.firstTownSupport}`, "warning");
     if (activeContract) {
       this.log(`Contract active: ${activeContract.name}. ${activeContract.summary}`, "warning");
     }
     if (masteryRewards.length > 0) {
       this.log(`Class mastery loadout: ${masteryRewards.join(", ")}.`, "good");
+    }
+    if (commendationRewards.length > 0) {
+      this.log(`Commendation prep: ${commendationRewards.join(", ")}.`, "good");
     }
     startTelemetryRun(this);
     this.recordTelemetry("creation_confirmed", {
@@ -12477,8 +15874,9 @@ class Game {
   autoEquipStarterGear() {
     const equippedIds = new Set();
     this.player.inventory.forEach((item, index) => {
-      if ((item.kind === "weapon" || item.kind === "armor") && !this.player.equipment[item.slot]) {
-        this.player.equipment[item.slot] = item;
+      const equipTarget = this.getEquipmentSlotForItem(item);
+      if ((item.kind === "weapon" || item.kind === "armor") && equipTarget.targetSlot) {
+        this.player.equipment[equipTarget.targetSlot] = item;
         equippedIds.add(index);
       }
     });
@@ -12515,15 +15913,17 @@ class Game {
     for (let y = 4; y < height - 4; y += 1) {
       setTile(level, 24, y, tileDef("road"));
     }
-    fillRect(level, 20, 13, 9, 7, tileDef("stone"));
-    fillRect(level, 21, 14, 7, 5, tileDef("plaza"));
-    placeBuilding(level, 4, 4, 9, 7, "Provisioner", "general");
+    fillRect(level, 19, 12, 11, 9, tileDef("stone"));
+    fillRect(level, 20, 13, 9, 7, tileDef("plaza"));
+    fillRect(level, 22, 6, 5, 5, tileDef("stone"));
+    fillRect(level, 23, 7, 3, 3, tileDef("plaza"));
+    placeBuilding(level, 4, 4, 9, 7, "General Store", "general");
     placeBuilding(level, 35, 4, 9, 7, "Armory", "armory");
-    placeBuilding(level, 4, 22, 9, 7, "Guild", "guild");
+    placeBuilding(level, 4, 22, 9, 7, "Wizard Guild", "guild");
     placeBuilding(level, 35, 22, 9, 7, "Temple", "temple");
     placeBuilding(level, 20, 25, 9, 5, "Bank", "bank");
-    placeBuilding(level, 15, 4, 7, 6, "Sage", "sage");
-    placeBuilding(level, 27, 4, 6, 6, "Junk", "junk");
+    placeBuilding(level, 15, 4, 7, 6, "Sage Tower", "sage");
+    placeBuilding(level, 27, 4, 6, 6, "Junk Shop", "junk");
     setTile(level, 24, 8, tileDef("stairDown"));
     level.start = { x: 24, y: 16 };
     level.stairsDown = { x: 24, y: 8 };
@@ -12718,50 +16118,64 @@ class Game {
     const styles = {
       recover_relic: {
         id: "relic_route",
-        breadcrumbPropId: "inscribedStone",
-        landmarkPropId: "shrineSeal",
-        label: "inscribed stones",
-        leadText: "Follow the inscribed stones into the relic hall."
+        breadcrumbPropId: "routeRune",
+        landmarkPropId: "relicPedestal",
+        label: "runic cuts",
+        leadText: "Follow the runic cuts into the relic hall."
       },
       purge_nest: {
         id: "nest_route",
-        breadcrumbPropId: "roomTorch",
+        breadcrumbPropId: "routeTorch",
         landmarkPropId: "broodNest",
         label: "smoke-marked torches",
         leadText: "Follow the smoke-marked torches toward the kennels."
       },
       rescue_captive: {
         id: "cell_route",
-        breadcrumbPropId: "rescueBanner",
+        breadcrumbPropId: "routePennant",
         landmarkPropId: "prisonerCell",
         label: "torn pennants",
         leadText: "Follow the torn pennants toward the cells."
       },
       seal_shrine: {
         id: "shrine_route",
-        breadcrumbPropId: "shrineTorch",
+        breadcrumbPropId: "routeLamp",
         landmarkPropId: "shrineSeal",
         label: "violet lamps",
         leadText: "Follow the violet lamps toward the chapel."
       },
       break_beacon: {
         id: "watch_route",
-        breadcrumbPropId: "roadBeacon",
-        landmarkPropId: "inscribedStone",
-        label: "watch lights",
-        leadText: "Follow the watch lights toward the beacon room."
+        breadcrumbPropId: "routeBeacon",
+        landmarkPropId: "beaconFocus",
+        label: "watch sparks",
+        leadText: "Follow the watch sparks toward the beacon room."
       },
       secure_supplies: {
         id: "supply_route",
-        breadcrumbPropId: "cacheClosed",
+        breadcrumbPropId: "routeSupply",
         landmarkPropId: "vaultChest",
-        label: "stacked supply marks",
-        leadText: "Follow the supply marks into the store rooms."
+        label: "chalk supply marks",
+        leadText: "Follow the chalk supply marks into the store rooms."
+      },
+      recover_waystone: {
+        id: "waystone_route",
+        breadcrumbPropId: "routeCairn",
+        landmarkPropId: "relicPedestal",
+        label: "survey cairns",
+        leadText: "Follow the survey cairns toward the waystone chamber."
+      },
+      purify_well: {
+        id: "well_route",
+        breadcrumbPropId: "routeWater",
+        landmarkPropId: "well",
+        label: "silver ripples",
+        leadText: "Follow the silver ripples toward the corrupted well."
       }
     };
     return styles[objectiveId] || {
       id: "floor_route",
-      breadcrumbPropId: "roomTorch",
+      breadcrumbPropId: "routeMark",
       landmarkPropId: "inscribedStone",
       label: "route marks",
       leadText: "Follow the route marks toward the floor objective."
@@ -12804,7 +16218,9 @@ class Game {
       rescue_captive: "cell wing",
       seal_shrine: "chapel",
       break_beacon: "watch post",
-      secure_supplies: "store rooms"
+      secure_supplies: "store rooms",
+      recover_waystone: "survey vault",
+      purify_well: "well chamber"
     };
     return `${direction} ${nouns[objective.id] || "objective wing"}`;
   }
@@ -12854,14 +16270,14 @@ class Game {
       if (!tile?.walkable || tile.objectiveId || tile.optionalId || tile.roomEventId || tile.kind === "stairUp" || tile.kind === "stairDown") {
         continue;
       }
-      const propId = placed === 0 ? style.landmarkPropId : style.breadcrumbPropId;
+      const propId = style.breadcrumbPropId;
       addLevelProp(level, {
         id: `route-crumb-${depth}-${style.id}-${index}`,
         x: point.x,
         y: point.y,
         propId,
         layer: "fixture",
-        light: propId === "roomTorch" || propId === "roadBeacon" || propId === "shrineTorch" || propId === "shrineSeal"
+        light: ["routeTorch", "routeLamp", "routeBeacon", "routeWater"].includes(propId)
       });
       setTile(level, point.x, point.y, tileDef(tile.kind || "floor", {
         ...tile,
@@ -12888,6 +16304,7 @@ class Game {
     const supportRoomIndex = objectiveRoute
       .map((point) => this.getRoomIndexForPoint(level, point))
       .find((roomIndex) => roomIndex !== null && roomIndex !== undefined && roomIndex !== 0 && roomIndex !== objectiveRoomIndex) ?? null;
+    const routeTuning = getRouteExperimentTuning(this, depth);
     const entryRevealSteps = depth === 1
       ? Math.max(1, Math.min(14, objectiveRoute.length - 1))
       : depth <= 3
@@ -12899,9 +16316,9 @@ class Game {
       objectiveRoute,
       stairsRoute,
       routeBeats,
-      entryRevealSteps,
-      revealedRouteSteps: entryRevealSteps,
-      searchRevealChunk,
+      entryRevealSteps: Math.min(objectiveRoute.length, entryRevealSteps + (routeTuning.entryRevealBonus || 0)),
+      revealedRouteSteps: Math.min(objectiveRoute.length, entryRevealSteps + (routeTuning.entryRevealBonus || 0)),
+      searchRevealChunk: searchRevealChunk + (routeTuning.searchRevealBonus || 0),
       entryReconApplied: false,
       criticalPathExposed: false,
       routeConfidence: depth === 1 ? "seeded" : "partial",
@@ -13024,8 +16441,8 @@ class Game {
       thesis: "The approach is marked by old warding and a deliberate route into danger.",
       routeCue: "Objective route passes a broken ward seal.",
       warning: "The floor was shaped to funnel intruders inward.",
-      propId: "shrineSeal",
-      cuePropId: "inscribedStone",
+      propId: "routeSeal",
+      cuePropId: "routeRune",
       point: routePoint
     };
     if (depth === 1) {
@@ -13035,8 +16452,8 @@ class Game {
         thesis: "The first halls still show the path of someone who tried to flee the keep.",
         routeCue: "The first route follows a survivor's trace toward the objective.",
         warning: "Early rooms are meant to teach the path, not bury it.",
-        propId: "loreBook",
-        cuePropId: "roomTorch",
+        propId: "routeJournal",
+        cuePropId: "routeTorch",
         point: routePoint
       };
     } else if (roomEvent?.id === "failed_summoning" || floorSpecialId === "restless_dead") {
@@ -13046,8 +16463,8 @@ class Game {
         thesis: "Restless energy is pooling ahead. Corpses and summons are part of this floor's pressure.",
         routeCue: "Ritual pressure stains the route ahead.",
         warning: "Fresh bodies may not stay down.",
-        propId: "summonTrap",
-        cuePropId: "shrineTorch",
+        propId: "routeRitual",
+        cuePropId: "routeLamp",
         point: routePoint
       };
     } else if (roomEvent?.id === "barricaded_hold" || floorSpecialId === "barricaded_rooms" || floorSpecialId === "warband") {
@@ -13057,8 +16474,8 @@ class Game {
         thesis: "The floor is organized around holds and choke points rather than loose skirmishes.",
         routeCue: "Barricades mark the approach to the objective wing.",
         warning: "Expect tighter, denser holds.",
-        propId: "cacheClosed",
-        cuePropId: "roomTorch",
+        propId: "routeBarricade",
+        cuePropId: "routeTorch",
         point: routePoint
       };
     } else if (roomEvent?.id === "wounded_survivor") {
@@ -13068,8 +16485,8 @@ class Game {
         thesis: "Someone made it this far and left warnings in the dark.",
         routeCue: "A survivor's trail points toward the first real decision.",
         warning: "The route carries signs of a hurried retreat.",
-        propId: "loreBook",
-        cuePropId: "roomTorch",
+        propId: "routeJournal",
+        cuePropId: "routeTorch",
         point: routePoint
       };
     } else if (floorSpecialId === "hunting_party" || specialElite) {
@@ -13079,8 +16496,8 @@ class Game {
         thesis: "A formed hunting party is active on this floor and moving before you do.",
         routeCue: "Tracks and torchlight suggest a patrol ahead.",
         warning: "Something active is moving ahead of you.",
-        propId: "roomTorch",
-        cuePropId: "roadBeacon",
+        propId: "routeTracks",
+        cuePropId: "routeBeacon",
         point: routePoint
       };
     }
@@ -13135,17 +16552,17 @@ class Game {
     guidance.routeBeats = routeBeats;
     routeBeats.forEach((beat, index) => {
       const cuePropId = beat.id === "thesis"
-        ? (signatureReveal?.cuePropId || "roomTorch")
+        ? (signatureReveal?.cuePropId || "routeTorch")
         : beat.id === "approach"
-          ? "shrineSeal"
-          : "roomTorch";
+          ? "routeMark"
+          : "routeTorch";
       addLevelProp(level, {
         id: `route-beat-${depth}-${beat.id}`,
         x: beat.x,
         y: beat.y,
         propId: cuePropId,
         layer: "fixture",
-        light: cuePropId === "roomTorch" || cuePropId === "roadBeacon" || cuePropId === "shrineTorch" || cuePropId === "shrineSeal"
+        light: ["routeTorch", "routeLamp", "routeBeacon", "routeWater", "routeRitual"].includes(cuePropId)
       });
       const existingTile = getTile(level, beat.x, beat.y);
       if (existingTile?.walkable) {
@@ -13163,7 +16580,7 @@ class Game {
           y: beat.y,
           propId: signatureReveal.propId,
           layer: "fixture",
-          light: signatureReveal.propId !== "cacheClosed"
+          light: ["routeTorch", "routeLamp", "routeBeacon", "routeWater", "routeRitual"].includes(signatureReveal.propId)
         });
       }
     });
@@ -13221,10 +16638,16 @@ class Game {
         return "Seal the shrine; pressure will jump the moment you commit.";
       case "recover_relic":
         return "Reach the pedestal and claim the relic to unlock the exit.";
+      case "recover_waystone":
+        return "Reach the waystone and claim it to sharpen the next route.";
       case "break_beacon":
         return blockers > 0
           ? `Break the beacon after the last ${blockers} defender${blockers === 1 ? "" : "s"} drop.`
           : "Room clear. Smash the beacon now.";
+      case "purify_well":
+        return blockers > 0
+          ? `Clear ${blockers} defender${blockers === 1 ? "" : "s"}, then purify the well for a full refill.`
+          : "Room clear. Purify the well now for a clean refill.";
       default:
         return "Reach the marker and resolve the floor objective.";
     }
@@ -13346,6 +16769,14 @@ class Game {
           readyDetail: "Pick up the cache.",
           recommendedActionId: "pickup"
         };
+      case "recover_waystone":
+        return {
+          label: "Take Waystone",
+          tone: "good",
+          roomDetail: "The waystone is in this room. Pick it up.",
+          readyDetail: "Pick up the waystone.",
+          recommendedActionId: "pickup"
+        };
       case "rescue_captive":
         return {
           label: "Free Captive",
@@ -13373,6 +16804,15 @@ class Game {
           readyDetail: "Press U on the shrine; this raises pressure.",
           recommendedActionId: remaining > 0 ? "wait" : "interact"
         };
+      case "purify_well":
+        return {
+          label: "Purify Well",
+          tone: remaining > 0 ? "warning" : "good",
+          blockedDetail: `${blockerText} Clear the room, then press U on the well.`,
+          roomDetail: remaining > 0 ? `${blockerText} Clear the room, then press U on the well.` : "The well is clear. Press U on it for a full refill and a pressure spike.",
+          readyDetail: "Press U on the well for a full refill and a pressure spike.",
+          recommendedActionId: remaining > 0 ? "wait" : "interact"
+        };
       case "break_beacon":
         return {
           label: "Break Beacon",
@@ -13395,6 +16835,7 @@ class Game {
   }
 
   getLoopDirective(tile = this.player && this.currentLevel ? getTile(this.currentLevel, this.player.x, this.player.y) : null, level = this.currentLevel) {
+    const onboardingMeta = getOnboardingVariantMeta(this);
     if (!this.player || !level) {
       return {
         phase: "town_prep",
@@ -13410,8 +16851,8 @@ class Game {
       if (this.isFirstTownRun() && !this.storyFlags.townServiceVisited) {
         return {
           phase: "town_prep",
-          primaryText: "Step onto one labeled town door once.",
-          supportText: "Then take the north road into the keep.",
+          primaryText: onboardingMeta.firstTownPrimary,
+          supportText: onboardingMeta.firstTownSupport,
           recommendedActionId: "town_service",
           routeCueText: "",
           dangerText: ""
@@ -13420,8 +16861,8 @@ class Game {
       if (this.isFirstTownRun()) {
         return {
           phase: "enter_keep",
-          primaryText: "Take the north road and enter the keep.",
-          supportText: "Ignore extra town prep for now. The first descent is next.",
+          primaryText: onboardingMeta.enterKeepPrimary,
+          supportText: onboardingMeta.enterKeepSupport,
           recommendedActionId: "stairs_down",
           routeCueText: "",
           dangerText: ""
@@ -13474,7 +16915,7 @@ class Game {
     const interaction = this.getObjectiveInteractionPromptData(objective, blockers);
     const unrevealedRoute = Math.max(0, (level.guidance?.objectiveRoute?.length || 0) - (level.guidance?.revealedRouteSteps || 0));
     const searchHint = this.currentDepth === 1 && !level.guidance?.objectiveSeen && unrevealedRoute > 0
-      ? "Search once to extend the marked route."
+      ? onboardingMeta.objectiveSearchHint
       : "";
 
     if (onObjectiveMarker) {
@@ -13876,7 +17317,7 @@ class Game {
       y: marker.y,
       propId: eventDef.propId,
       layer: "fixture",
-      light: eventDef.eventType !== "rescue"
+      light: ["relicPedestal", "shrineSeal", "bloodAltar", "ghostMerchant", "well", "beaconFocus"].includes(eventDef.propId)
     });
     [
       { x: room.x + 1, y: room.y + 1 },
@@ -14643,7 +18084,8 @@ class Game {
   }
 
   getArmorValue() {
-    let armor = this.getArmorValueForStats(this.player.stats);
+    const stats = this.getActorStats(this.player);
+    let armor = this.getArmorValueForStats(stats);
     Object.values(this.player.equipment).forEach((item) => {
       if (item && item.armor) {
         armor += getItemArmor(item);
@@ -14695,24 +18137,21 @@ class Game {
   getAttackValue() {
     const weapon = this.player.equipment.weapon;
     const base = weapon ? getItemPower(weapon) : 2;
-    return this.getAttackValueForStats(this.player.stats, base) + this.getMeleeAccuracyBonus();
+    return this.getAttackValueForStats(this.getActorStats(this.player), base) + this.getMeleeAccuracyBonus();
   }
 
   getDamageRange() {
     const weapon = this.player.equipment.weapon;
     const base = weapon ? getItemPower(weapon) : 2;
-    return this.getDamageRangeForStats(this.player.stats, base);
+    return this.getDamageRangeForStats(this.getActorStats(this.player), base);
   }
 
   getEvadeValue() {
-    let evade = this.getEvadeValueForStats(this.player.stats);
-    evade -= getEncumbranceTier(this.player) * 2;
+    let evade = this.getEvadeValueForStats(this.getActorStats(this.player));
+    evade -= this.getEncumbranceTier() * 2;
     Object.values(this.player.equipment).forEach((item) => {
       if (item && item.dexPenalty) {
         evade -= item.dexPenalty;
-      }
-      if (item && item.dexBonus) {
-        evade += getItemDexBonus(item);
       }
     });
     evade += getBuildEvadeBonus(this);
@@ -14721,7 +18160,7 @@ class Game {
 
   getSearchPower() {
     const gearBonus = Object.values(this.player.equipment).reduce((sum, item) => sum + (item ? getItemSearchBonus(item) : 0), 0);
-    return this.getSearchPowerForStats(this.player.stats, this.player.level) + getBuildSearchBonus(this) + gearBonus;
+    return this.getSearchPowerForStats(this.getActorStats(this.player), this.player.level) + getBuildSearchBonus(this) + gearBonus;
   }
 
   getLightRadius() {
@@ -14738,7 +18177,12 @@ class Game {
   }
 
   getEncumbranceTier() {
-    return getEncumbranceTier(this.player);
+    const baseTier = getEncumbranceTier(this.player);
+    const activeContract = this.getActiveContract(true);
+    if (activeContract?.id === "greedy_burden" && baseTier > 0) {
+      return Math.min(2, baseTier + 1);
+    }
+    return baseTier;
   }
 
   getSpellDamageBonus(defender, damageType = "magic") {
@@ -14753,38 +18197,70 @@ class Game {
     return Object.values(this.player.equipment).reduce((sum, item) => sum + (item ? getItemOvercastRelief(item) : 0), 0);
   }
 
+  getPlayerMoveSpeed() {
+    if (!this.player) {
+      return 100;
+    }
+    let speed = this.getMoveSpeedForStats(this.getActorStats(this.player));
+    const encumbrance = this.getEncumbranceTier();
+    if (encumbrance === 1) {
+      speed -= 10;
+    } else if (encumbrance >= 2) {
+      speed -= 22;
+    }
+    if (this.player.relics?.includes("fleet_boots")) {
+      speed += 10;
+    }
+    if ((this.player.slowed || 0) > 0) {
+      speed = Math.round(speed * 0.5);
+    }
+    return clamp(speed, 45, 140);
+  }
+
+  consumePlayerMoveTurnBudget() {
+    if (!this.player) {
+      return 1;
+    }
+    const speed = this.player.moveSpeed || this.getPlayerMoveSpeed();
+    const moveCost = 10000 / Math.max(45, speed);
+    this.player.moveTurnBudget = (this.player.moveTurnBudget || 0) + moveCost;
+    const monsterActions = Math.floor(this.player.moveTurnBudget / 100);
+    this.player.moveTurnBudget -= monsterActions * 100;
+    return monsterActions;
+  }
+
   recalculateDerivedStats() {
+    const stats = this.getActorStats(this.player);
     const bonusMana = Object.values(this.player.equipment).reduce((sum, item) => sum + (item ? getItemManaBonus(item) : 0), 0);
-    const maxMana = this.getMaxManaForStats(this.player.stats, this.player.className, bonusMana + getBuildMaxManaBonus(this), this.getPlayerManaBase(this.player));
-    const maxHp = this.getMaxHpForStats(this.player.stats, this.player.level, this.player.className, this.player.constitutionLoss || 0, this.getPlayerHpBase(this.player) + getBuildMaxHpBonus(this));
+    const maxMana = this.getMaxManaForStats(stats, this.player.className, bonusMana + getBuildMaxManaBonus(this), this.getPlayerManaBase(this.player));
+    const maxHp = this.getMaxHpForStats(stats, this.player.level, this.player.className, this.player.constitutionLoss || 0, this.getPlayerHpBase(this.player) + getBuildMaxHpBonus(this));
     const hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 1;
     const manaRatio = this.player.maxMana > 0 ? this.player.mana / this.player.maxMana : 1;
+    this.player.effectiveStats = stats;
     this.player.maxHp = maxHp;
     this.player.maxMana = maxMana;
     this.player.hp = Math.max(1, Math.round(this.player.maxHp * hpRatio));
     this.player.mana = Math.max(0, Math.round(this.player.maxMana * manaRatio));
+    this.player.moveSpeed = this.getPlayerMoveSpeed();
     this.player.lightRadius = this.getLightRadius();
   }
 
   tryMovePlayer(dx, dy) {
     if ((this.player.held || 0) > 0) {
+      this.resetMovementCadence({ clearHeld: false });
       this.log("You strain against a holding spell and fail to move.", "warning");
-      this.endTurn();
-      return;
-    }
-    if ((this.player.slowed || 0) > 0 && this.turn % 2 === 0) {
-      this.player.slowed -= 1;
-      this.log("You struggle to move under a slowing effect.", "warning");
       this.endTurn();
       return;
     }
     const nx = this.player.x + dx;
     const ny = this.player.y + dy;
     if (!inBounds(this.currentLevel, nx, ny)) {
+      this.resetMovementCadence({ clearHeld: false });
       return;
     }
     const monster = actorAt(this.currentLevel, nx, ny);
     if (monster) {
+      this.resetMovementCadence({ clearHeld: false });
       this.attack(this.player, monster);
       this.endTurn();
       return;
@@ -14792,6 +18268,7 @@ class Game {
 
     const tile = getTile(this.currentLevel, nx, ny);
     if (!tile.walkable) {
+      this.resetMovementCadence({ clearHeld: false });
       if (tile.kind === "sign") {
         this.log(tile.label, "warning");
         this.render();
@@ -14801,6 +18278,7 @@ class Game {
 
     this.player.x = nx;
     this.player.y = ny;
+    this.noteSuccessfulMove();
     this.trackFirstPlayerMove(nx, ny);
     this.flashTile(nx, ny, "#ffd36b", 120, { alpha: 0.12, decorative: true });
     onPlayerMove(this);
@@ -14808,22 +18286,26 @@ class Game {
     const current = getTile(this.currentLevel, nx, ny);
     this.handleTileEntry(current);
     if (current.kind === "stairDown") {
+      this.resetMovementCadence();
       this.useStairs("down");
       return;
     }
     if (current.kind === "stairUp") {
+      this.resetMovementCadence();
       this.useStairs("up");
       return;
     }
     this.pickupHere(true, true);
     if (this.pendingPickupPrompt) {
+      this.resetMovementCadence();
       this.render();
       return;
     }
     if (current.kind === "buildingDoor" && current.service) {
+      this.resetMovementCadence();
       this.openTownService(current.service);
     }
-    this.endTurn();
+    this.endTurn({ monsterActions: this.consumePlayerMoveTurnBudget() });
   }
 
   handleTileEntry(tile) {
@@ -14982,7 +18464,7 @@ class Game {
     if (!this.player || this.mode !== "game") {
       return;
     }
-    const radius = this.getSearchRadiusForStats(this.player.stats);
+    const radius = this.getSearchRadiusForStats(this.getActorStats(this.player));
     const searchPower = this.getSearchPower();
     let found = 0;
     for (let y = this.player.y - radius; y <= this.player.y + radius; y += 1) {
@@ -15006,50 +18488,55 @@ class Game {
   }
 
   focusMap() {
-    this.mapDrawerOpen = true;
-    this.refreshChrome();
-    if (this.mapCanvas) {
+    if (this.mapDrawer) {
+      this.mapDrawerOpen = true;
+      this.refreshChrome();
+    }
+    if (this.mapCanvas && this.layoutMode !== "desktop") {
       this.mapCanvas.scrollIntoView({ block: "center", behavior: "smooth" });
     }
+    this.mapCanvas?.focus?.();
   }
 
   pollGamepad() {
-    const intent = this.gamepadInput.poll(this.mode);
+    const intent = this.gamepadInput.poll(this.mode, this.getMovementRepeatInterval());
     if (!intent) {
       this.refreshChrome();
-      return;
+      return false;
     }
     this.setInputSource("gamepad");
     this.refreshChrome();
     if (intent.type === "move") {
       this.handleMovementIntent(intent.dx, intent.dy);
-      return;
+      return true;
     }
     if (intent.type === "target") {
       this.moveTargetCursor(intent.dx, intent.dy);
-      return;
+      return true;
     }
     if (intent.type === "ui-move") {
       this.handleUiNavigationIntent(intent.dx, intent.dy);
-      return;
+      return true;
     }
     if (intent.type === "ui-tab-prev") {
       this.handleUiTabIntent(-1);
-      return;
+      return true;
     }
     if (intent.type === "ui-tab-next") {
       this.handleUiTabIntent(1);
-      return;
+      return true;
     }
     if (intent.type === "ui-scroll") {
       this.handleUiScrollIntent(intent.delta);
-      return;
+      return true;
     }
     if (intent.type === "dock") {
+      this.resetMovementCadence({ clearHeld: false });
       this.triggerDockSlot(intent.slot);
-      return;
+      return true;
     }
     if (intent.type === "ui-confirm") {
+      this.resetMovementCadence({ clearHeld: false });
       if (this.mode === "target") {
         this.confirmTargetSelection();
       } else if (this.mode === "modal" || this.mode === "creation" || this.mode === "title" || this.mode === "levelup") {
@@ -15060,21 +18547,19 @@ class Game {
           this.beginAdventure();
         }
       }
-      return;
+      return true;
     }
     if (intent.type === "ui-back") {
-      if (this.mode === "target") {
-        this.cancelTargetMode();
-      } else if (this.pendingPickupPrompt) {
-        this.cancelPendingPickup();
-      } else if ((this.mode === "modal" || this.mode === "creation") && !this.isPlayerDead()) {
-        this.closeModal();
-      }
-      return;
+      this.resetMovementCadence({ clearHeld: false });
+      this.handleControllerBackAction();
+      return true;
     }
     if (intent.type === "action") {
+      this.resetMovementCadence({ clearHeld: false });
       this.handleAction(intent.action, intent.tab ? { dataset: { tab: intent.tab } } : null);
+      return true;
     }
+    return false;
   }
 
   getUiNavigationRoot() {
@@ -15185,6 +18670,44 @@ class Game {
     return primaryDistance + crossDistance * 1.8 + rowPenalty + colPenalty - (sameZone ? 18 : 0);
   }
 
+  getGridDirectionalUiTarget(activeMeta, candidates, dx, dy) {
+    if (!activeMeta || activeMeta.row === null || activeMeta.col === null || candidates.length === 0) {
+      return null;
+    }
+    const withGrid = candidates.filter((candidate) => candidate.row !== null && candidate.col !== null);
+    if (withGrid.length === 0) {
+      return null;
+    }
+
+    const scoreCandidate = (candidate) => {
+      const rowDelta = candidate.row - activeMeta.row;
+      const colDelta = candidate.col - activeMeta.col;
+      if (dx !== 0) {
+        const primary = colDelta * dx;
+        if (primary <= 0) {
+          return Number.POSITIVE_INFINITY;
+        }
+        return primary * 100 + Math.abs(rowDelta) * 10 + Math.abs(colDelta);
+      }
+      const primary = rowDelta * dy;
+      if (primary <= 0) {
+        return Number.POSITIVE_INFINITY;
+      }
+      return primary * 100 + Math.abs(colDelta) * 10 + Math.abs(rowDelta);
+    };
+
+    let best = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+    withGrid.forEach((candidate) => {
+      const score = scoreCandidate(candidate);
+      if (score < bestScore) {
+        best = candidate.element;
+        bestScore = score;
+      }
+    });
+    return best;
+  }
+
   findDirectionalUiTarget(active, dx, dy) {
     const focusables = this.getUiNavigableElements();
     if (!focusables.length) {
@@ -15207,6 +18730,10 @@ class Game {
       candidates
     ];
     for (const group of groups) {
+      const gridTarget = this.getGridDirectionalUiTarget(activeMeta, group, dx, dy);
+      if (gridTarget) {
+        return gridTarget;
+      }
       let best = null;
       let bestScore = Number.POSITIVE_INFINITY;
       group.forEach((candidate) => {
@@ -15277,9 +18804,30 @@ class Game {
     return this.modalRoot ? this.modalRoot.querySelector(".modal") : null;
   }
 
+  getModalScrollHost() {
+    const modal = this.getModalElement();
+    if (!modal) {
+      return null;
+    }
+    return modal.querySelector(".modal-body") || modal;
+  }
+
   getFocusKeyCandidates(focusTarget) {
     const raw = Array.isArray(focusTarget) ? focusTarget : [focusTarget];
     return [...new Set(raw.filter((key) => typeof key === "string" && key.length > 0))];
+  }
+
+  getUtilityModalReturnOptions(returnFocusKey = "") {
+    if (this.modalSurfaceKey !== "utility-menu" || !returnFocusKey) {
+      return {};
+    }
+    return {
+      closeLabel: "Back to Menu",
+      modalReturnContext: {
+        originSurface: "utility-menu",
+        returnFocusKey
+      }
+    };
   }
 
   findUiElementByFocusKey(focusKey) {
@@ -15291,7 +18839,7 @@ class Game {
       .find((element) => element.dataset.focusKey === focusKey && element.offsetParent !== null && !element.disabled) || null;
   }
 
-  getElementOffsetInModal(element, modal = this.getModalElement()) {
+  getElementOffsetInModal(element, modal = this.getModalScrollHost()) {
     if (!element || !modal || !modal.contains(element)) {
       return null;
     }
@@ -15301,7 +18849,7 @@ class Game {
   }
 
   captureModalRefreshState(surfaceKey) {
-    const modal = this.getModalElement();
+    const modal = this.getModalScrollHost();
     if (!modal || !surfaceKey || surfaceKey !== this.modalSurfaceKey) {
       return null;
     }
@@ -15318,7 +18866,7 @@ class Game {
     if (typeof targetOffset !== "number") {
       return null;
     }
-    const modal = this.getModalElement();
+    const modal = this.getModalScrollHost();
     const focusables = this.getUiNavigableElements().filter((element) => !modal || modal.contains(element));
     if (focusables.length === 0) {
       return null;
@@ -15383,12 +18931,12 @@ class Game {
     if (!(element instanceof HTMLElement)) {
       return null;
     }
-    return element.closest(".pack-list-panel, .message-log, .journal-log, .modal, .modal-root");
+    return element.closest(".pack-list-panel, .message-log, .journal-log, .modal-body, .modal, .modal-root");
   }
 
   handleUiScrollIntent(delta) {
     const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const host = this.getScrollHostForElement(active) || this.getModalElement() || this.modalRoot;
+    const host = this.getScrollHostForElement(active) || this.getModalScrollHost() || this.modalRoot;
     if (!host || typeof host.scrollBy !== "function") {
       return;
     }
@@ -15433,10 +18981,11 @@ class Game {
         this.quickSaveButton,
         this.quickLoadButton,
         this.mapToggleButton,
+        this.spellTrayToggleButton,
         document.getElementById("utility-menu-button")
       ].filter(Boolean),
       "top-band",
-      4
+      5
     );
     if (this.mapCanvas) {
       this.mapCanvas.tabIndex = 0;
@@ -15446,8 +18995,10 @@ class Game {
       this.mapCanvas.dataset.navCol = "0";
     }
     this.assignNavMetadata(Array.from(this.actionBar?.querySelectorAll("button") || []), "action-bar", 4);
+    this.assignNavMetadata(Array.from(root.querySelectorAll("#spell-tray button")), "spell-tray", this.layoutMode === "desktop" ? 1 : 2);
     this.assignNavMetadata(Array.from(this.touchControls?.querySelectorAll("button") || []), "touch-pad", 3);
     this.assignNavMetadata(Array.from(root.querySelectorAll(".title-actions button")), "title-actions", 3);
+    this.assignNavMetadata(Array.from(root.querySelectorAll("[data-role='title-music-toggle']")), "title-music", 1);
     const creationName = root.querySelector("#hero-name");
     const creationActions = Array.from(root.querySelectorAll("[data-focus-key='creation:back'], [data-focus-key='creation:begin']"));
     if (creationName) {
@@ -15508,8 +19059,16 @@ class Game {
     this.assignNavMetadata(Array.from(root.querySelectorAll(".hub-tabs .hub-tab")), "hub-tabs", 3);
     this.assignNavMetadata(Array.from(root.querySelectorAll(".pack-paperdoll .paper-slot")), "equipment", 2);
     const packFilters = Array.from(root.querySelectorAll(".pack-filter-row .hub-filter-chip"));
+    const magicFilters = Array.from(root.querySelectorAll(".magic-filter-row .hub-filter-chip"));
+    const spellLearnFilters = Array.from(root.querySelectorAll(".spell-learn-filter-row .hub-filter-chip"));
+    const shopPanels = Array.from(root.querySelectorAll(".shop-panel-row .hub-filter-chip"));
+    const journalSections = Array.from(root.querySelectorAll(".journal-section-row .hub-filter-chip"));
     const packItems = Array.from(root.querySelectorAll(".pack-group-list .pack-item-row"));
     this.assignNavMetadata(packFilters, "inventory-filters", 4);
+    this.assignNavMetadata(magicFilters, "magic-filters", 4);
+    this.assignNavMetadata(spellLearnFilters, "spell-learn-filters", 4);
+    this.assignNavMetadata(shopPanels, "shop-panels", 2);
+    this.assignNavMetadata(journalSections, "journal-sections", 4);
     this.assignNavMetadata(packItems, "inventory-list", 1);
     if (packItems[0]) {
       packFilters.forEach((element) => {
@@ -15519,12 +19078,58 @@ class Game {
         element.dataset.navUp = packFilters[0].dataset.focusKey;
       });
     }
-    this.assignNavMetadata(Array.from(root.querySelectorAll(".pack-inspector-panel .pack-ready-chip, .pack-inspector-panel .menu-button, .pack-inspector-panel .tiny-button")), "inspector-actions", 2);
-    this.assignNavMetadata(Array.from(root.querySelectorAll(".magic-grid .menu-button")), "spell-grid", 2);
+    this.assignNavMetadata(Array.from(root.querySelectorAll(".pack-inspector-panel .pack-ready-chip, .pack-inspector-panel .menu-button, .pack-inspector-panel .tiny-button, .pack-inspector-panel [data-action='toggle-sale-mark']")), "inspector-actions", 2);
+    this.assignNavMetadata(Array.from(root.querySelectorAll(".magic-grid button")), "spell-grid", 2);
+    const magicGridButtons = Array.from(root.querySelectorAll(".magic-grid button"));
+    if (magicGridButtons[0]) {
+      magicFilters.forEach((element) => {
+        element.dataset.navDown = magicGridButtons[0].dataset.focusKey;
+      });
+    }
+    this.assignNavMetadata(Array.from(root.querySelectorAll(".spell-learn-grid .spell-learn-card")), "spell-learn-grid", 2);
+    const spellLearnCards = Array.from(root.querySelectorAll(".spell-learn-grid .spell-learn-card"));
+    if (spellLearnCards[0]) {
+      spellLearnFilters.forEach((element) => {
+        element.dataset.navDown = spellLearnCards[0].dataset.focusKey;
+      });
+      spellLearnCards.forEach((element) => {
+        if (spellLearnFilters[0]) {
+          element.dataset.navUp = spellLearnFilters[0].dataset.focusKey;
+        }
+      });
+    }
     this.assignNavMetadata(Array.from(root.querySelectorAll(".journal-log")), "journal-log", 1);
     this.assignNavMetadata(Array.from(root.querySelectorAll(".utility-row .menu-button")), "journal-actions", 4);
+    const journalLogs = Array.from(root.querySelectorAll(".journal-log"));
+    if (journalLogs[0]) {
+      journalSections.forEach((element) => {
+        element.dataset.navDown = journalLogs[0].dataset.focusKey || "journal-log";
+      });
+    }
+    if (journalSections[0]) {
+      journalLogs.forEach((element) => {
+        element.dataset.navUp = journalSections[0].dataset.focusKey;
+      });
+    }
     this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='shop-buy']")), "shop-buy", 1);
-    this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='shop-sell']")), "shop-sell", 1);
+    const shopSellControls = Array.from(root.querySelectorAll("[data-action='shop-sell'], [data-action='toggle-sale-mark'][data-shop-sell-row='true']"));
+    this.assignNavMetadata(shopSellControls, "shop-sell", 1);
+    const shopBuyButtons = Array.from(root.querySelectorAll("[data-action='shop-buy']"));
+    const shopSellButtons = shopSellControls;
+    if (shopBuyButtons[0]) {
+      shopPanels.forEach((element) => {
+        if (element.dataset.panel === "buy") {
+          element.dataset.navDown = shopBuyButtons[0].dataset.focusKey;
+        }
+      });
+    }
+    if (shopSellButtons[0]) {
+      shopPanels.forEach((element) => {
+        if (element.dataset.panel === "sell") {
+          element.dataset.navDown = shopSellButtons[0].dataset.focusKey;
+        }
+      });
+    }
     this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='service-use']")), "services", 1);
     this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='setting-toggle']")), "settings", 1);
     this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='bank-deposit'], [data-action='bank-withdraw'], [data-action='town-rumor'], [data-action='town-unlock']")), "bank-actions", 4);
@@ -15577,10 +19182,12 @@ class Game {
     const {
       preserveScroll = false,
       focusTarget = null,
-      fallbackFocus = true
+      fallbackFocus = true,
+      closeLabel = "Close",
+      modalReturnContext = null
     } = options;
     this.mode = "modal";
-    this.showSimpleModal("Settings", `
+    this.showSimpleModal("Device Settings", `
       <div class="section-block text-block">Travel settings are stored on this device.</div>
       <div class="shop-row">
         <div><strong>Touch Controls</strong><div class="muted">Show the on-screen movement pad when not hidden.</div></div>
@@ -15591,8 +19198,12 @@ class Game {
         <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="controllerHintsEnabled" type="button">${this.settings.controllerHintsEnabled ? "On" : "Off"}</button></div>
       </div>
       <div class="shop-row">
-        <div><strong>Sound</strong><div class="muted">Simple effects only, no music by default.</div></div>
+        <div><strong>Sound Effects</strong><div class="muted">Combat, movement, and UI feedback.</div></div>
         <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="soundEnabled" type="button">${this.settings.soundEnabled ? "On" : "Off"}</button></div>
+      </div>
+      <div class="shop-row">
+        <div><strong>Music</strong><div class="muted">Optional soundtrack with title, town, and dungeon themes.</div></div>
+        <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="musicEnabled" type="button">${this.settings.musicEnabled ? "On" : "Off"}</button></div>
       </div>
       <div class="shop-row">
         <div><strong>Effect Intensity</strong><div class="muted">Choose how animated combat and board effects should feel.</div></div>
@@ -15610,7 +19221,183 @@ class Game {
       surfaceKey: "settings",
       preserveScroll,
       focusTarget,
-      fallbackFocus
+      fallbackFocus,
+      closeLabel,
+      modalReturnContext
+    });
+  }
+
+  showCharacterSheet(options = {}) {
+    if (!this.player) {
+      return;
+    }
+    const {
+      preserveScroll = false,
+      focusTarget = null,
+      fallbackFocus = true,
+      closeLabel = "Close",
+      modalReturnContext = null
+    } = options;
+    const player = this.player;
+    const stats = this.getActorStats(player);
+    const baseStats = player.stats || stats;
+    const bonuses = this.getEquipmentStatBonuses(player);
+    const hpRatio = player.maxHp > 0 ? player.hp / player.maxHp : 1;
+    const manaRatio = player.maxMana > 0 ? player.mana / player.maxMana : 1;
+    const burdenUi = this.getBurdenUiState();
+    const expProgress = this.getLevelProgress(player);
+    const [damageLow, damageHigh] = this.getDamageRange();
+    const activeContract = this.getActiveContract(true) || this.getActiveContract(false);
+    const conditionTags = [];
+    if ((player.held || 0) > 0) {
+      conditionTags.push(`Held ${player.held}`);
+    }
+    if ((player.slowed || 0) > 0) {
+      conditionTags.push(`Slowed ${player.slowed}`);
+    }
+    if ((player.guardBrokenTurns || 0) > 0) {
+      conditionTags.push(`Guard broken ${player.guardBrokenTurns}`);
+    }
+    if ((player.arcaneWardTurns || 0) > 0) {
+      conditionTags.push(`Arcane ward ${player.arcaneWardTurns}`);
+    }
+    if ((player.resistFireTurns || 0) > 0) {
+      conditionTags.push(`Fire ward ${player.resistFireTurns}`);
+    }
+    if ((player.resistColdTurns || 0) > 0) {
+      conditionTags.push(`Cold ward ${player.resistColdTurns}`);
+    }
+    if ((player.lightBuffTurns || 0) > 0) {
+      conditionTags.push(`Light ${player.lightBuffTurns}`);
+    }
+    if (burdenUi.state !== "safe") {
+      conditionTags.push(burdenUi.label);
+    }
+    const attributeRows = [
+      ["Strength", "str"],
+      ["Dexterity", "dex"],
+      ["Constitution", "con"],
+      ["Intelligence", "int"]
+    ].map(([label, key]) => {
+      const base = baseStats[key] || 0;
+      const effective = stats[key] || 0;
+      const bonus = bonuses[key] || 0;
+      const detail = bonus === 0
+        ? `${base} base`
+        : `${base} base, ${bonus > 0 ? "+" : ""}${bonus} gear`;
+      return `
+        <div class="character-sheet-row">
+          <strong>${label}</strong>
+          <span class="muted">${escapeHtml(detail)}</span>
+          <span>${effective}</span>
+        </div>
+      `;
+    }).join("");
+    const combatRows = [
+      ["Attack", this.getAttackValue()],
+      ["Damage", `${damageLow}-${damageHigh}`],
+      ["Armor", this.getArmorValue()],
+      ["Evade", this.getEvadeValue()],
+      ["Guard", this.getGuardValue()],
+      ["Ward", this.getWardValue()]
+    ].map(([label, value]) => `
+      <div class="character-sheet-row">
+        <strong>${escapeHtml(label)}</strong>
+        <span class="muted">Current total</span>
+        <span>${escapeHtml(String(value))}</span>
+      </div>
+    `).join("");
+    const fieldRows = [
+      ["Search", this.getSearchPower()],
+      ["Move Speed", `${player.moveSpeed}%`],
+      ["Light Radius", player.lightRadius],
+      ["Fire Resist", this.getFireResistValue()],
+      ["Cold Resist", this.getColdResistValue()],
+      ["Load", `${burdenUi.weight} / ${burdenUi.capacity}`],
+      ["Gold", `${player.gold} gp`],
+      ["Spells Known", player.spellsKnown.length]
+    ].map(([label, value]) => `
+      <div class="character-sheet-row">
+        <strong>${escapeHtml(label)}</strong>
+        <span class="muted">Run state</span>
+        <span>${escapeHtml(String(value))}</span>
+      </div>
+    `).join("");
+
+    this.mode = "modal";
+    this.showSimpleModal("Character Sheet", `
+      <div class="character-sheet">
+        <section class="character-sheet-hero">
+          <div>
+            <div class="field-label">Adventurer</div>
+            <div class="character-sheet-name">${escapeHtml(player.name)}</div>
+            <div class="character-sheet-subtitle">${escapeHtml(`${player.race} ${player.className}`)}</div>
+            <div class="character-sheet-subtitle">${escapeHtml(`${this.currentDepth === 0 ? "Town" : `Depth ${this.currentDepth}`} | Level ${player.level} | Turn ${this.turn}`)}</div>
+            <div class="character-sheet-subtitle">${escapeHtml(activeContract ? `Active contract: ${activeContract.name}` : "Active contract: none armed")}</div>
+          </div>
+          <div class="character-sheet-tags">
+            ${conditionTags.length > 0
+              ? conditionTags.map((tag) => `<span class="pill">${escapeHtml(tag)}</span>`).join("")
+              : `<span class="pill">Stable</span>`}
+          </div>
+        </section>
+
+        <section class="character-sheet-grid">
+          <div class="rail-stat-pill tone-health">
+            <span>Health</span>
+            <strong>${Math.floor(player.hp)} / ${player.maxHp}</strong>
+            <div class="rail-meter hp"><span style="width:${clamp(Math.round(hpRatio * 100), 0, 100)}%"></span></div>
+            <div class="character-sheet-meter-note">${clamp(Math.round(hpRatio * 100), 0, 100)}% ready</div>
+          </div>
+          <div class="rail-stat-pill tone-mana">
+            <span>Mana</span>
+            <strong>${Math.floor(player.mana)} / ${player.maxMana}</strong>
+            <div class="rail-meter mana"><span style="width:${clamp(Math.round(manaRatio * 100), 0, 100)}%"></span></div>
+            <div class="character-sheet-meter-note">${clamp(Math.round(manaRatio * 100), 0, 100)}% reserve</div>
+          </div>
+          <div class="rail-stat-pill tone-meta">
+            <span>Experience</span>
+            <strong>${expProgress.exp} / ${expProgress.nextThreshold}</strong>
+            <div class="rail-meter xp"><span style="width:${expProgress.percent}%"></span></div>
+            <div class="character-sheet-meter-note">${expProgress.remaining} to next level</div>
+          </div>
+          <div class="rail-stat-pill tone-load burden-${burdenUi.state}">
+            <span>Burden</span>
+            <strong>${burdenUi.weight} / ${burdenUi.capacity}</strong>
+            <div class="rail-meter burden burden-${burdenUi.state}"><span style="width:${burdenUi.percent}%"></span></div>
+            <div class="character-sheet-meter-note">${escapeHtml(burdenUi.label)}</div>
+          </div>
+        </section>
+
+        <section class="character-sheet-section">
+          <div class="field-label">Attributes</div>
+          <div class="character-sheet-card">
+            ${attributeRows}
+          </div>
+        </section>
+
+        <section class="character-sheet-columns">
+          <div class="character-sheet-section">
+            <div class="field-label">Combat</div>
+            <div class="character-sheet-card">
+              ${combatRows}
+            </div>
+          </div>
+          <div class="character-sheet-section">
+            <div class="field-label">Field</div>
+            <div class="character-sheet-card">
+              ${fieldRows}
+            </div>
+          </div>
+        </section>
+      </div>
+    `, {
+      surfaceKey: "character-sheet",
+      preserveScroll,
+      focusTarget,
+      fallbackFocus,
+      closeLabel,
+      modalReturnContext
     });
   }
 
@@ -15627,6 +19414,10 @@ class Game {
     }
     this.audio.updateSettings(this.settings);
     saveSettings(this.settings);
+    this.syncSurfaceMusic();
+    if (setting === "musicEnabled" && this.settings.musicEnabled) {
+      this.audio.resumeMusic();
+    }
     this.refreshChrome();
     this.showSettingsModal({
       preserveScroll: true,
@@ -15634,19 +19425,103 @@ class Game {
     });
   }
 
+  isTitleMusicSurface() {
+    return !this.player && (
+      this.mode === "title"
+      || this.mode === "creation"
+      || this.modalSurfaceKey === "title"
+      || this.modalSurfaceKey === "creation"
+      || this.modalSurfaceKey === "save-slots:load"
+    );
+  }
+
+  getCurrentMusicTrack() {
+    if (!this.settings.musicEnabled) {
+      return "";
+    }
+    if (this.isTitleMusicSurface()) {
+      return TITLE_SCREEN_ASSETS.music;
+    }
+    if (!this.player) {
+      return "";
+    }
+    return this.currentDepth === 0 ? AMBIENT_MUSIC_ASSETS.town : AMBIENT_MUSIC_ASSETS.dungeon;
+  }
+
+  syncSurfaceMusic() {
+    this.audio.syncMusic(this.getCurrentMusicTrack());
+  }
+
+  getMusicToggleLabel() {
+    return this.audio.isMusicPlaying() ? "Mute Music" : "Play Music";
+  }
+
+  getMusicToggleNote() {
+    return this.audio.isMusicPlaying()
+      ? "Music is playing and will switch between title, town, and dungeon themes automatically."
+      : "Music is available here, but it will stay off until you press Play Music.";
+  }
+
+  syncMusicToggleUi(root = this.modalRoot) {
+    if (!(root instanceof HTMLElement)) {
+      return;
+    }
+    const label = this.getMusicToggleLabel();
+    const note = this.getMusicToggleNote();
+    root.querySelectorAll("[data-role='title-music-toggle']").forEach((element) => {
+      element.textContent = label;
+      element.setAttribute("aria-pressed", this.audio.isMusicPlaying() ? "true" : "false");
+    });
+    root.querySelectorAll("[data-role='title-music-note']").forEach((element) => {
+      element.textContent = note;
+    });
+  }
+
+  toggleMusicPreference() {
+    const shouldEnable = !this.audio.isMusicPlaying();
+    this.settings.musicEnabled = shouldEnable;
+    this.audio.updateSettings(this.settings);
+    saveSettings(this.settings);
+    this.syncSurfaceMusic();
+    if (shouldEnable) {
+      this.audio.resumeMusic();
+    }
+    this.syncMusicToggleUi();
+    this.refreshChrome();
+  }
+
   startTargetMode(options) {
+    this.setModalVisibility(false);
     this.modalRoot.classList.add("hidden");
     this.modalRoot.innerHTML = "";
+    this.pendingSpell = options.spellId || this.pendingSpell || null;
+    if (options.type === "spell") {
+      this.spellTrayOpen = true;
+    }
     this.targetMode = {
       type: options.type,
       name: options.name,
       range: options.range || 8,
       allowFloor: options.allowFloor || false,
+      spellId: options.spellId || "",
+      targetingMode: options.targetingMode || "single",
+      manaCost: options.manaCost || 0,
+      overcast: Boolean(options.overcast),
+      previewColor: options.previewColor || options.effectColor || "#ffd36b",
+      effectColor: options.effectColor || "#ffd36b",
+      projectileStyle: options.projectileStyle || "arcane",
+      roleLabel: options.roleLabel || "spell",
+      invalidReason: "",
       callback: options.callback,
       cursor: options.cursor || findInitialTargetCursor(this, options.range || 8)
     };
+    const preview = this.getActiveSpellTargetPreview();
+    if (preview) {
+      this.targetMode.invalidReason = preview.reason || "";
+    }
     this.mode = "target";
-    this.log(`Target ${options.name}. Confirm to fire, cancel to abort.`, "warning");
+    this.log(`Set ${options.name}. Confirm to cast, cancel to abort.`, "warning");
+    this.refreshChrome();
     this.render();
   }
 
@@ -15656,6 +19531,10 @@ class Game {
     }
     this.targetMode.cursor.x = clamp(this.targetMode.cursor.x + dx, 0, this.currentLevel.width - 1);
     this.targetMode.cursor.y = clamp(this.targetMode.cursor.y + dy, 0, this.currentLevel.height - 1);
+    const preview = this.getActiveSpellTargetPreview();
+    if (preview) {
+      this.targetMode.invalidReason = preview.reason || "";
+    }
     this.render();
   }
 
@@ -15664,6 +19543,24 @@ class Game {
       return;
     }
     const cursor = { x: this.targetMode.cursor.x, y: this.targetMode.cursor.y };
+    const spellPreview = this.getActiveSpellTargetPreview();
+    if (this.targetMode.type === "spell" && spellPreview) {
+      if (!spellPreview.valid) {
+        this.targetMode.invalidReason = spellPreview.reason || "That cast is not ready.";
+        this.render();
+        return;
+      }
+      const callback = this.targetMode.callback;
+      const targetActor = spellPreview.targetActor || actorAt(this.currentLevel, cursor.x, cursor.y);
+      this.targetMode = null;
+      this.mode = "game";
+      this.setModalVisibility(false);
+      this.refreshChrome();
+      this.renderBoard();
+      callback(targetActor, cursor, spellPreview);
+      this.render();
+      return;
+    }
     const range = this.targetMode.range;
     const targetActor = actorAt(this.currentLevel, cursor.x, cursor.y);
     const withinRange = distance(this.player, cursor) <= range;
@@ -15679,18 +19576,31 @@ class Game {
     const callback = this.targetMode.callback;
     this.targetMode = null;
     this.mode = "game";
+    this.setModalVisibility(false);
+    this.refreshChrome();
     this.renderBoard();
     callback(targetActor, cursor);
     this.render();
   }
 
-  cancelTargetMode() {
+  cancelTargetMode(options = {}) {
     if (!this.targetMode) {
       return;
     }
+    const {
+      silent = false,
+      keepTrayOpen = false
+    } = options;
     this.targetMode = null;
     this.mode = "game";
-    this.log("Targeting cancelled.", "warning");
+    this.setModalVisibility(false);
+    if (!silent) {
+      this.log("Targeting cancelled.", "warning");
+    }
+    if (keepTrayOpen) {
+      this.spellTrayOpen = true;
+    }
+    this.refreshChrome();
     this.render();
   }
 
@@ -16375,13 +20285,19 @@ class Game {
 
   showPickupPrompt(item, turnPending = false) {
     const burden = this.getPickupBurdenPreview(item);
-    const equipped = item.slot ? this.player.equipment[item.slot] : null;
-    const canQuickEquip = Boolean(item.slot && (item.kind === "weapon" || item.kind === "armor") && !(equipped && equipped.cursed));
+    const equipTarget = item.slot ? this.getEquipmentSlotForItem(item) : null;
+    const equipped = equipTarget?.targetSlot ? this.player.equipment[equipTarget.targetSlot] : null;
+    const canQuickEquip = Boolean(item.slot && (item.kind === "weapon" || item.kind === "armor") && !equipTarget?.blockedByCurse && !(equipped && equipped.cursed));
     const compareNote = equipped
       ? `Currently worn: ${this.describeItemReadout(equipped)}`
+      : equipTarget?.targetSlot
+        ? `Open ${this.getPackSlotDefinition(equipTarget.targetSlot).label} slot.`
+        : equipTarget?.blockedByCurse
+          ? `All ${this.getPackSlotDefinition(item.slot).label.toLowerCase()} slots are locked by curses.`
       : item.slot
         ? `Open ${this.getPackSlotDefinition(item.slot).label} slot.`
         : "This item will sit in your pack.";
+    const semanticEntry = buildInventoryItemSemantics(this, item, -1);
     const burdenLabel = burden.afterUi.state !== burden.beforeUi.state
       ? burden.afterUi.state === "overloaded"
         ? "This will overload your carry limit."
@@ -16403,6 +20319,7 @@ class Game {
           <div class="pickup-triage-title">${escapeHtml(getItemName(item))}</div>
           <div class="pickup-triage-note">${escapeHtml(describeItem(item))}</div>
         </div>
+        ${this.getPackRowTagMarkup(semanticEntry)}
         <div class="pickup-triage-grid">
           <div class="mini-panel"><strong>Type</strong><br>${escapeHtml(item.slot ? this.getPackSlotDefinition(item.slot).label : classifyItem(item))}</div>
           <div class="mini-panel"><strong>Weight</strong><br>${item.weight || 0}</div>
@@ -16500,7 +20417,7 @@ class Game {
     for (const item of items.slice()) {
       if (item.kind === "gold") {
         removeFromArray(this.currentLevel.items, item);
-        const bonus = this.player.equipment.amulet && this.player.equipment.amulet.goldBonus ? this.player.equipment.amulet.goldBonus : 0;
+        const bonus = Object.values(this.player.equipment || {}).reduce((sum, equippedItem) => sum + (equippedItem?.goldBonus || 0), 0);
         const total = Math.round(item.amount * (1 + bonus));
         this.player.gold += total;
         this.flashTile(this.player.x, this.player.y, "#ebcf60", 160, { alpha: 0.18, rise: true });
@@ -16524,6 +20441,9 @@ class Game {
   }
 
   addItemToInventory(item) {
+    if (item) {
+      item.markedForSale = Boolean(item.markedForSale);
+    }
     this.player.inventory.push(item);
   }
 
@@ -16540,6 +20460,7 @@ class Game {
       item.identified = true;
       if (!this.player.spellsKnown.includes(item.spell)) {
         this.player.spellsKnown.push(item.spell);
+        this.addSpellToTrayIfSpace(item.spell);
         this.log(`You learn ${SPELLS[item.spell].name}.`, "good");
       } else {
         this.log("That spell is already known.", "warning");
@@ -16791,13 +20712,17 @@ class Game {
       return;
     }
     const { openHub = true } = options;
-    const existing = this.player.equipment[item.slot];
-    if (existing && existing.cursed) {
-      existing.identified = true;
-      this.log(`${getItemName(existing, true)} is cursed and will not come off.`, "bad");
+    const equipTarget = this.getEquipmentSlotForItem(item);
+    const existing = equipTarget.targetSlot ? this.player.equipment[equipTarget.targetSlot] : null;
+    if (equipTarget.blockedByCurse || (existing && existing.cursed)) {
+      const blockedItem = existing || equipTarget.entries.find((entry) => entry.item?.cursed)?.item || null;
+      if (blockedItem) {
+        blockedItem.identified = true;
+      }
+      this.log(`${getItemName(blockedItem, true)} is cursed and will not come off.`, "bad");
       if (openHub) {
         this.showHubModal("pack", {
-          selection: { type: "slot", value: item.slot },
+          selection: { type: "slot", value: equipTarget.entries.find((entry) => entry.item?.cursed)?.slot || equipTarget.entries[0]?.slot || item.slot },
           preserveScroll: true,
           focusTarget: this.getPackActionFocusKey("use", Number(index))
         });
@@ -16806,18 +20731,23 @@ class Game {
       return;
     }
     if (existing) {
+      existing.markedForSale = false;
       this.player.inventory.push(existing);
     }
-    this.player.equipment[item.slot] = item;
+    if (!equipTarget.targetSlot) {
+      return;
+    }
+    this.player.equipment[equipTarget.targetSlot] = item;
     item.identified = true;
+    item.markedForSale = false;
     removeAt(this.player.inventory, Number(index));
     this.recalculateDerivedStats();
     this.log(`You equip ${getItemName(item, true)}.${item.cursed ? " It bites into you with a cursed grip." : ""}`, item.cursed ? "bad" : "good");
     if (openHub) {
       this.showHubModal("pack", {
-        selection: { type: "slot", value: item.slot },
+        selection: { type: "slot", value: equipTarget.targetSlot },
         preserveScroll: true,
-        focusTarget: this.getPackActionFocusKey("unequip", item.slot)
+        focusTarget: this.getPackActionFocusKey("unequip", equipTarget.targetSlot)
       });
     }
     this.render();
@@ -16830,6 +20760,7 @@ class Game {
     }
     item.x = this.player.x;
     item.y = this.player.y;
+    item.markedForSale = false;
     this.currentLevel.items.push(item);
     removeAt(this.player.inventory, Number(index));
     this.log(`You drop ${getItemName(item, true)}.`, "warning");
@@ -16842,6 +20773,38 @@ class Game {
         : this.getPackSlotFocusKey(nextSelection.value)
     });
     this.render();
+  }
+
+  toggleInventorySaleMark(index, forcedValue = null) {
+    const item = this.player.inventory[Number(index)];
+    if (!item) {
+      return;
+    }
+    if (item.kind === "quest") {
+      this.log("Quest items cannot be marked for sale.", "warning");
+      return;
+    }
+    const nextValue = typeof forcedValue === "boolean" ? forcedValue : !item.markedForSale;
+    if (item.markedForSale === nextValue) {
+      return;
+    }
+    item.markedForSale = nextValue;
+    this.log(`${getItemName(item, true)} ${item.markedForSale ? "marked for sale" : "removed from the sale pile"}.`, item.markedForSale ? "good" : "warning");
+    if (this.mode === "modal" && this.activeHubTab === "pack") {
+      this.showHubModal("pack", {
+        selection: { type: "inventory", value: Number(index) },
+        preserveScroll: true,
+        focusTarget: this.getPackActionFocusKey("mark", Number(index))
+      });
+    } else if (this.mode === "modal" && this.pendingShop) {
+      this.showShopModal(this.pendingShop.id, this.pendingShop, {
+        preserveScroll: true,
+        focusTarget: this.getShopSellFocusKey(Number(index)),
+        panel: "sell"
+      });
+    } else {
+      this.render();
+    }
   }
 
   unequipSlot(slot) {
@@ -16861,6 +20824,7 @@ class Game {
       return;
     }
     this.player.equipment[slot] = null;
+    item.markedForSale = false;
     this.player.inventory.push(item);
     this.recalculateDerivedStats();
     this.log(`You stow ${getItemName(item, true)} in your pack.`, "good");
@@ -16877,6 +20841,8 @@ class Game {
     if (!spell) {
       return;
     }
+    this.pendingSpell = spellId;
+    this.spellTrayOpen = true;
     const spellCost = getSpellCost(this, spell);
     const overcast = this.player.mana < spellCost;
     if (this.player.mana < spellCost) {
@@ -16894,12 +20860,14 @@ class Game {
     }
     if (spell.target === "self") {
       this.emitCastCircle(this.player.x, this.player.y, spell.effectColor || "#ffca73");
+      this.emitCastFlare(this.player.x, this.player.y, spell.effectColor || "#ffca73", this.getSpellProjectileStyle(spell));
       if (spell.cast(this, this.player)) {
         this.recordTelemetry("spell_cast", {
           spellId,
           overcast
         });
         this.audio.play("cast");
+        this.spellTrayOpen = false;
         if (spell.id === "runeOfReturn") {
           this.render();
           return;
@@ -16913,18 +20881,33 @@ class Game {
       type: "spell",
       name: spell.name,
       range: spell.range || 8,
-      callback: (target, cursor) => {
+      allowFloor: Boolean(spell.allowFloorTarget),
+      spellId,
+      targetingMode: this.getSpellTargetingMode(spell),
+      manaCost: spellCost,
+      overcast,
+      previewColor: spell.previewColor || spell.effectColor || "#ffca73",
+      effectColor: spell.effectColor || "#ffca73",
+      projectileStyle: this.getSpellProjectileStyle(spell),
+      roleLabel: this.getSpellRoleLabel(spell),
+      callback: (target, cursor, preview = null) => {
         this.emitCastCircle(this.player.x, this.player.y, spell.effectColor || "#ffca73");
-        spell.cast(this, this.player, target || cursor);
+        this.emitCastFlare(this.player.x, this.player.y, spell.effectColor || "#ffca73", this.getSpellProjectileStyle(spell));
         if (target || spell.allowFloorTarget) {
-          this.playProjectile(this.player, cursor, spell.effectColor || "#ffca73");
+          const projectileTarget = preview?.center || cursor;
+          this.playProjectile(this.player, projectileTarget, spell.effectColor || "#ffca73", {
+            style: this.getSpellProjectileStyle(spell)
+          });
         }
+        spell.cast(this, this.player, target || cursor, preview);
         this.recordTelemetry("spell_cast", {
           spellId,
           overcast,
-          targetId: target?.id || ""
+          targetId: target?.id || "",
+          hitCount: preview?.hitCount || (target ? 1 : 0)
         });
         this.audio.play("cast");
+        this.spellTrayOpen = false;
         this.closeModal();
         this.endTurn();
       }
@@ -16983,7 +20966,8 @@ class Game {
     this.log(`Purchased ${getItemName(item, true)} for ${price} gold.`, "good");
     this.showShopModal(shopId, SHOPS[shopId], {
       preserveScroll: true,
-      focusTarget: this.getShopBuyFocusKey(shopId, itemId)
+      focusTarget: this.getShopBuyFocusKey(shopId, itemId),
+      panel: "buy"
     });
     this.render();
   }
@@ -17015,11 +20999,54 @@ class Game {
     if (this.pendingShop) {
       this.showShopModal(this.pendingShop.id, this.pendingShop, {
         preserveScroll: true,
-        focusTarget: this.getShopSellFocusKey(Number(index))
+        focusTarget: this.getShopSellFocusKey(Number(index)),
+        panel: "sell"
       });
     } else {
       this.closeModal();
     }
+    this.render();
+  }
+
+  sellMarkedItems() {
+    if (!this.pendingShop) {
+      return;
+    }
+    const sellableEntries = this.player.inventory
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item?.markedForSale)
+      .filter(({ item }) => this.pendingShop.id === "junk" || shopAcceptsItem(this.pendingShop.id, item));
+    if (sellableEntries.length === 0) {
+      this.log("Nothing marked for sale matches this shop.", "warning");
+      return;
+    }
+    let totalGold = 0;
+    sellableEntries
+      .sort((a, b) => b.index - a.index)
+      .forEach(({ item, index }) => {
+        const price = getShopSellPrice(this, item, this.pendingShop?.id || "");
+        totalGold += price;
+        this.player.gold += price;
+        item.identified = true;
+        item.markedForSale = false;
+        this.recordTelemetry("shop_sell", {
+          shopId: this.pendingShop?.id || "unknown",
+          itemId: item.id || item.kind || "item",
+          itemKind: item.kind || "",
+          price
+        });
+        if (this.pendingShop.id !== "junk") {
+          this.shopState[this.pendingShop.id].buyback.unshift(item.id);
+          this.shopState[this.pendingShop.id].buyback = this.shopState[this.pendingShop.id].buyback.slice(0, 8);
+        }
+        removeAt(this.player.inventory, index);
+      });
+    this.log(`Sold ${sellableEntries.length} marked item${sellableEntries.length === 1 ? "" : "s"} for ${totalGold} gold.`, "good");
+    this.showShopModal(this.pendingShop.id, this.pendingShop, {
+      preserveScroll: true,
+      focusTarget: "shop:sell-marked",
+      panel: "sell"
+    });
     this.render();
   }
 
@@ -17066,8 +21093,10 @@ class Game {
     const unknownCount = countUnknownItems(this.player);
     const affordableUnlock = getAvailableTownUnlocks(this).find((unlockDef) => this.player.gold >= unlockDef.cost);
     const canBuyRumor = (this.player.runCurrencies?.rumorTokens || 0) > 0 || this.player.gold >= getRumorPrice(this);
+    const intent = this.getNextRunIntent();
+    const nextRunFocus = intent.primaryGoal?.label || this.getNextRunFocusLines().find(Boolean) || "";
     if (this.storyFlags?.postReturnBankPrompt) {
-      return "Bank first. Review your last return, arm a contract if needed, then decide whether this adventurer goes back north.";
+      return nextRunFocus || "Bank first. Review your last return, arm a contract if needed, then decide whether this adventurer goes back north.";
     }
     if (this.player.constitutionLoss > 0 || this.player.hp < this.player.maxHp || this.player.mana < this.player.maxMana) {
       return "Temple first if you want a clean second descent. Recovery preserves more value than gambling on a weak re-entry.";
@@ -17098,15 +21127,37 @@ class Game {
       });
       return;
     }
-    if (activeContract.id === "scholar_road") {
+    if (activeContract.id === "scholar_road" || activeContract.id === "route_debt") {
       this.levels.slice(1).forEach((level) => {
         if (!level?.guidance) {
           return;
         }
-        level.guidance.searchRevealChunk = Math.max(level.guidance.searchRevealChunk || 0, (level.guidance.searchRevealChunk || 0) + 4);
+        const revealBonus = activeContract.id === "route_debt" ? 6 : 4;
+        level.guidance.searchRevealChunk = Math.max(level.guidance.searchRevealChunk || 0, (level.guidance.searchRevealChunk || 0) + revealBonus);
       });
-      this.player.maxHp = Math.max(10, this.player.maxHp - 4);
+      if (activeContract.id === "route_debt") {
+        this.grantRumorToken?.(1);
+      }
+      this.player.maxHp = Math.max(10, this.player.maxHp - (activeContract.id === "route_debt" ? 5 : 4));
       this.player.hp = Math.min(this.player.hp, this.player.maxHp);
+      return;
+    }
+    if (activeContract.id === "ration_run") {
+      this.addItemToInventory(createTownItem("healingPotion"));
+      this.addItemToInventory(createTownItem("mappingScroll"));
+      return;
+    }
+    if (activeContract.id === "sealed_return") {
+      this.addItemToInventory(createTownItem("runeScroll"));
+      this.grantRumorToken?.(1);
+      this.player.maxHp = Math.max(10, this.player.maxHp - 3);
+      this.player.hp = Math.min(this.player.hp, this.player.maxHp);
+      return;
+    }
+    if (activeContract.id === "last_light") {
+      this.addItemToInventory(createTownItem("healingPotion"));
+      this.addItemToInventory(createTownItem("manaPotion"));
+      this.addItemToInventory(createTownItem("torchCharm"));
     }
   }
 
@@ -17138,13 +21189,127 @@ class Game {
     return getRecommendedContract(this);
   }
 
+  getAvailableCommendations() {
+    return getAvailableCommendations(this);
+  }
+
+  getDurableTownUnlocks() {
+    return getDurableTownUnlocks(this);
+  }
+
+  getCampaignArchive(limit = 5) {
+    return getCampaignArchive(this, limit);
+  }
+
   getPersistenceArchive(limit = 5) {
-    const archive = [...(this.runSummaryHistory || [])].slice(-limit).reverse();
-    return archive;
+    if (Array.isArray(this.runSummaryHistory) && this.runSummaryHistory.length > 0) {
+      return [...this.runSummaryHistory].slice(-limit).reverse();
+    }
+    return this.getCampaignArchive(limit);
   }
 
   getLatestPersistenceSummary() {
     return this.getPersistenceArchive(1)[0] || this.lastRunSummary || null;
+  }
+
+  getTownCarryForwardSummary() {
+    const unlocks = Object.values(TOWN_UNLOCK_DEFS).filter((unlockDef) => this.getDurableTownUnlocks()[unlockDef.id]);
+    if (unlocks.length === 0) {
+      return "Town improvements carried forward: none yet.";
+    }
+    const names = unlocks.map((unlockDef) => unlockDef.name);
+    return `Town improvements carried forward: ${names.join(", ")}.`;
+  }
+
+  getNextRunIntent(classId = this.player?.classId || this.selectedClass) {
+    const durableTownUnlocks = this.getDurableTownUnlocks();
+    const nextTownUnlock = getAvailableTownUnlocks(this)[0] || null;
+    const onHand = Math.floor(this.player?.gold || 0);
+    const contractModel = this.getContractViewModel();
+    const recommendedContract = contractModel.all.find((contract) => contract.id === contractModel.recommendedId) || null;
+    const mastery = this.getClassMasteryViewModel(classId);
+    const commendationGoal = getNextCommendationGoal(this, classId);
+    const motivators = [];
+
+    if (nextTownUnlock) {
+      const gap = Math.max(0, nextTownUnlock.cost - onHand);
+      motivators.push({
+        type: "town",
+        label: gap === 0
+          ? `Fund ${nextTownUnlock.name} now.`
+          : `${gap} gp funds ${nextTownUnlock.name}.`,
+        detail: nextTownUnlock.description
+      });
+    } else {
+      const fundedCount = Object.values(durableTownUnlocks).filter(Boolean).length;
+      motivators.push({
+        type: "town",
+        label: fundedCount > 0 ? "All current town projects are funded." : "Fund the first town project when you can.",
+        detail: this.getTownCarryForwardSummary()
+      });
+    }
+
+    if (recommendedContract) {
+      motivators.push({
+        type: "contract",
+        label: recommendedContract.active
+          ? `${recommendedContract.name} is already armed.`
+          : recommendedContract.unlocked
+            ? `Arm ${recommendedContract.name}.`
+            : `${recommendedContract.name} stays locked.`,
+        detail: recommendedContract.active || recommendedContract.unlocked
+          ? (recommendedContract.recommendationReason || recommendedContract.description)
+          : recommendedContract.unlockHint
+      });
+    }
+
+    motivators.push({
+      type: mastery.nextReward ? "mastery" : "commendation",
+      label: mastery.nextReward
+        ? `${mastery.className}: ${mastery.nextReward.triggerLabel} unlocks ${mastery.nextReward.name}.`
+        : commendationGoal.text,
+      detail: mastery.nextReward
+        ? mastery.nextReward.description
+        : (COMMENDATION_DEFS[commendationGoal.id]?.summary || "Current commendation set is complete.")
+    });
+
+    let cta = {
+      actionId: "bank",
+      label: "Review Bank Plan",
+      text: "Review the bank plan before the next descent.",
+      progressText: motivators[0]?.label || ""
+    };
+    if (nextTownUnlock && onHand >= nextTownUnlock.cost) {
+      cta = {
+        actionId: `town_unlock:${nextTownUnlock.id}`,
+        label: `Fund ${nextTownUnlock.name}`,
+        text: `Fund ${nextTownUnlock.name} now.`,
+        progressText: nextTownUnlock.description
+      };
+    } else if (recommendedContract?.unlocked && !recommendedContract.active) {
+      cta = {
+        actionId: "contract_recommended",
+        label: `Arm ${recommendedContract.name}`,
+        text: `Arm ${recommendedContract.name} before the next run.`,
+        progressText: recommendedContract.recommendationReason || recommendedContract.description
+      };
+    } else if ((this.player?.runCurrencies?.rumorTokens || 0) > 0 || onHand >= getRumorPrice(this)) {
+      cta = {
+        actionId: "town_rumor",
+        label: (this.player?.runCurrencies?.rumorTokens || 0) > 0 ? "Spend Rumor Token" : "Buy Intel",
+        text: "Secure next-floor intel before heading north again.",
+        progressText: getTownIntel(this).nextRumor?.text || "No clear rumor posted for the next floor."
+      };
+    }
+
+    return {
+      primaryGoal: motivators[0] || null,
+      secondaryGoal: motivators[1] || null,
+      tertiaryGoal: motivators[2] || null,
+      motivators: motivators.slice(0, 3),
+      cta,
+      progressText: motivators.map((entry) => entry.label).join(" | ")
+    };
   }
 
   getLatestPermanentUnlock() {
@@ -17158,6 +21323,38 @@ class Game {
     return changes.length > 0 ? changes.join(", ") : "No permanent change recorded.";
   }
 
+  getNextRunFocusLines(classId = this.player?.classId || this.selectedClass) {
+    if (!classId) {
+      return [];
+    }
+    return this.getNextRunIntent(classId).motivators
+      .map((entry) => [entry?.label, entry?.detail].filter(Boolean).join(" "))
+      .filter(Boolean)
+      .slice(0, 3);
+  }
+
+  getNextRunFocusMarkup(options = {}) {
+    const {
+      label = "One More Run",
+      classId = this.player?.classId || this.selectedClass
+    } = options;
+    const lines = this.getNextRunFocusLines(classId);
+    if (lines.length === 0) {
+      return `
+        <div class="section-block">
+          <div class="field-label">${escapeHtml(label)}</div>
+          <div class="text-block muted">No next-run goals are surfaced yet.</div>
+        </div>
+      `;
+    }
+    return `
+      <div class="section-block">
+        <div class="field-label">${escapeHtml(label)}</div>
+        <div class="text-block">${lines.map((line) => escapeHtml(line)).join("<br><br>")}</div>
+      </div>
+    `;
+  }
+
   getRunSummaryArchiveMarkup(limit = 5) {
     const summaries = this.getPersistenceArchive(limit);
     if (summaries.length === 0) {
@@ -17168,7 +21365,7 @@ class Game {
         <div class="stat-line"><span>${escapeHtml(summary.outcome === "death" ? "Death" : "Return")}</span><strong>Depth ${summary.extractedDepth}</strong></div>
         <div class="text-block">
           Objective: ${escapeHtml(summary.firstObjectiveType || "unknown")}<br>
-          Greed: ${summary.greedCount} | Value: ${summary.returnValue} gp<br>
+          Greed: ${summary.greedCount} | Elite kills: ${summary.eliteKills || 0} | Value: ${summary.returnValue} gp<br>
           ${escapeHtml(this.describePersistentChanges(summary))}
         </div>
       </div>
@@ -17270,22 +21467,100 @@ class Game {
 
   getGreedGoldMultiplier() {
     const activeContract = this.getActiveContract(true);
+    if (activeContract?.id === "greedy_burden") {
+      return 1.55;
+    }
     return activeContract?.id === "greed_ledger" ? 1.4 : 1;
   }
 
   getGreedDangerBonus() {
     const activeContract = this.getActiveContract(true);
-    return activeContract?.id === "greed_ledger" ? 1 : 0;
+    if (activeContract?.id === "greed_ledger") {
+      return 1;
+    }
+    if (activeContract?.id === "greedy_burden") {
+      return 2;
+    }
+    if (activeContract?.id === "sealed_return") {
+      return 1;
+    }
+    return 0;
   }
 
   getGreedRumorBonus() {
     const activeContract = this.getActiveContract(true);
-    return activeContract?.id === "greed_ledger" ? 1 : 0;
+    return activeContract?.id === "greed_ledger" || activeContract?.id === "greedy_burden" ? 1 : 0;
   }
 
   getSearchRevealBonus() {
     const activeContract = this.getActiveContract(true);
+    if (activeContract?.id === "route_debt") {
+      return 6;
+    }
     return activeContract?.id === "scholar_road" ? 4 : 0;
+  }
+
+  getContractPaceDangerBonus(source = "") {
+    const activeContract = this.getActiveContract(true);
+    if (activeContract?.id === "route_debt" && source === "search") {
+      return 1;
+    }
+    if (activeContract?.id === "ration_run" && ["wait", "rest", "search"].includes(source)) {
+      return 1;
+    }
+    if (activeContract?.id === "last_light" && ["wait", "rest", "search"].includes(source)) {
+      return 2;
+    }
+    return 0;
+  }
+
+  getContractEliteWaveChanceBonus() {
+    const activeContract = this.getActiveContract(true);
+    if (activeContract?.id === "trophy_path") {
+      return 0.26;
+    }
+    return activeContract?.id === "hunters_call" ? 0.18 : 0;
+  }
+
+  getEliteRewardGoldBonus() {
+    const activeContract = this.getActiveContract(true);
+    if (activeContract?.id === "trophy_path") {
+      return 90;
+    }
+    return activeContract?.id === "hunters_call" ? 60 : 0;
+  }
+
+  getEliteRewardRumorBonus() {
+    const activeContract = this.getActiveContract(true);
+    return activeContract?.id === "hunters_call" || activeContract?.id === "trophy_path" ? 1 : 0;
+  }
+
+  getTownSellBonusMultiplier() {
+    const activeContract = this.getActiveContract(true);
+    return activeContract?.id === "greedy_burden" ? 1.15 : 1;
+  }
+
+  onEliteKillProgress(monster) {
+    if (!monster?.elite) {
+      return;
+    }
+    const goldBonus = this.getEliteRewardGoldBonus();
+    if (goldBonus > 0) {
+      this.player.gold += goldBonus;
+      this.log(`Contract payout: +${goldBonus} gold for bringing down ${monster.name}.`, "good");
+    }
+    const rumorBonus = this.getEliteRewardRumorBonus();
+    if (rumorBonus > 0) {
+      this.grantRumorToken?.(rumorBonus);
+      this.log(`Contract payout: +${rumorBonus} rumor token${rumorBonus === 1 ? "" : "s"} from the elite kill.`, "good");
+    }
+    if (unlockContract(this, "hunters_call")) {
+      this.runPersistenceChanges?.contractUnlocks.push("Hunter's Call");
+      this.recordTelemetry("contract_unlocked", {
+        contractId: "hunters_call"
+      });
+      this.log("Contract unlocked: Hunter's Call. Review it in the bank before the next run.", "good");
+    }
   }
 
   onObjectiveResolved(objectiveId = this.currentLevel?.floorObjective?.id || "") {
@@ -17321,6 +21596,17 @@ class Game {
   recordTownReturnSummary(level, fromDepth = 0) {
     const masteryUnlock = advanceClassMastery(this, "extract");
     const unlockedContracts = [];
+    const pushUnlockedContract = (contractId, label) => {
+      if (!unlockContract(this, contractId)) {
+        return false;
+      }
+      this.runPersistenceChanges?.contractUnlocks.push(label);
+      this.recordTelemetry("contract_unlocked", {
+        contractId
+      });
+      unlockedContracts.push(label);
+      return true;
+    };
     if (masteryUnlock) {
       this.runPersistenceChanges?.masteryUnlocks.push({
         classId: this.player?.classId || "",
@@ -17335,13 +21621,19 @@ class Game {
         trigger: "extract"
       });
     }
-    if (unlockContract(this, "scholar_road")) {
-      this.runPersistenceChanges?.contractUnlocks.push("Scholar's Road");
-      this.recordTelemetry("contract_unlocked", {
-        contractId: "scholar_road"
-      });
-      unlockedContracts.push("Scholar's Road");
+    pushUnlockedContract("scholar_road", "Scholar's Road");
+    if ((this.telemetry?.activeRun?.searchCount || 0) >= 3) {
+      pushUnlockedContract("ration_run", "Ration Run");
     }
+    if ((this.telemetry?.activeRun?.greedCount || 0) === 0) {
+      pushUnlockedContract("sealed_return", "Sealed Return");
+    }
+    if ((this.telemetry?.activeRun?.restCount || 0) === 0 && (this.telemetry?.activeRun?.waitCount || 0) <= 2) {
+      pushUnlockedContract("last_light", "Last Light");
+    }
+    const carriedCurse = Boolean((this.player?.inventory || []).some((item) => item?.cursed))
+      || Boolean(Object.values(this.player?.equipment || {}).some((item) => item?.cursed))
+      || (this.player?.constitutionLoss || 0) > 0;
     const persistentChanges = [
       ...((this.runPersistenceChanges?.masteryUnlocks || []).map((entry) => `Mastery: ${entry.name}`)),
       ...((this.runPersistenceChanges?.contractUnlocks || []).map((entry) => `Contract: ${entry}`))
@@ -17350,6 +21642,7 @@ class Game {
       extractedDepth: fromDepth || this.currentDepth,
       cause: level?.floorObjective?.id || "",
       persistentChanges,
+      carriedCurse,
       masteryAdvance: masteryUnlock
         ? {
             classId: this.player?.classId || "",
@@ -17360,6 +21653,24 @@ class Game {
         : null,
       unlockedContracts
     });
+    recordCampaignSummary(this, summary);
+    const commendationUnlocks = evaluateRunCommendations(this, summary);
+    if (commendationUnlocks.length > 0) {
+      this.runPersistenceChanges?.commendationUnlocks.push(...commendationUnlocks);
+      commendationUnlocks.forEach((entry) => {
+        if (entry.contractId) {
+          const contractName = CONTRACT_DEFS[entry.contractId]?.name || entry.contractId;
+          if (!unlockedContracts.includes(contractName)) {
+            unlockedContracts.push(contractName);
+          }
+        }
+        this.recordTelemetry("commendation_unlocked", {
+          commendationId: entry.id,
+          contractId: entry.contractId || ""
+        });
+      });
+    }
+    summary.commendationUnlocks = [...commendationUnlocks];
     summary.persistentChanges = persistentChanges;
     summary.masteryAdvance = masteryUnlock
       ? {
@@ -17370,6 +21681,10 @@ class Game {
         }
       : null;
     summary.unlockedContracts = [...unlockedContracts];
+    if (commendationUnlocks.length > 0) {
+      const commendationChanges = commendationUnlocks.map((entry) => `Commendation: ${entry.name}`);
+      summary.persistentChanges = [...summary.persistentChanges, ...commendationChanges];
+    }
     this.lastRunSummary = summary;
     if (masteryUnlock) {
       this.log(`Mastery unlocked: ${masteryUnlock.name}. ${masteryUnlock.description}`, "good");
@@ -17377,10 +21692,14 @@ class Game {
     if (unlockedContracts.length > 0) {
       this.log(`Contract unlocked: ${unlockedContracts.join(", ")}. Review it in the bank before starting the next run.`, "good");
     }
+    if (commendationUnlocks.length > 0) {
+      this.log(`Commendation unlocked: ${commendationUnlocks.map((entry) => entry.name).join(", ")}.`, "good");
+    }
     return {
       summary,
       masteryUnlock,
-      unlockedContracts
+      unlockedContracts,
+      commendationUnlocks
     };
   }
 
@@ -17390,6 +21709,9 @@ class Game {
     const summary = recordRunSummary(this, "death", {
       extractedDepth: this.currentDepth,
       cause: this.deathContext?.cause || "Unknown",
+      carriedCurse: Boolean((this.player?.inventory || []).some((item) => item?.cursed))
+        || Boolean(Object.values(this.player?.equipment || {}).some((item) => item?.cursed))
+        || (this.player?.constitutionLoss || 0) > 0,
       persistentChanges: [
         ...((this.runPersistenceChanges?.masteryUnlocks || []).map((entry) => `Mastery: ${entry.name}`)),
         ...((this.runPersistenceChanges?.contractUnlocks || []).map((entry) => `Contract: ${entry}`))
@@ -17397,6 +21719,7 @@ class Game {
       masteryAdvance: latestMastery,
       unlockedContracts
     });
+    recordCampaignSummary(this, summary);
     this.lastRunSummary = summary;
     return summary;
   }
@@ -17413,6 +21736,12 @@ class Game {
       ? `${extras.masteryUnlock.name}. ${extras.masteryUnlock.description}`
       : this.getClassMasterySummary(this.player?.classId);
     const activeContract = this.getActiveContract(true);
+    const townMeta = this.getTownMetaSummary();
+    const nextRunIntent = this.getNextRunIntent(this.player?.classId);
+    const carryForward = this.getTownCarryForwardSummary();
+    const commendationText = extras.commendationUnlocks?.length > 0
+      ? extras.commendationUnlocks.map((entry) => `${entry.name} (${entry.rewardLabel})`).join(" | ")
+      : "No new commendation unlock this return.";
     this.recordTelemetry("return_summary_opened", {
       outcome: summary.outcome,
       extractedDepth: summary.extractedDepth
@@ -17431,7 +21760,7 @@ class Game {
         <div class="field-label">Run Build</div>
         <div class="text-block">
           First objective: ${escapeHtml(summary.firstObjectiveType || "unknown")}<br>
-          Searches: ${summary.searchCount} | Greed rooms: ${summary.greedCount} | Return value: ${summary.returnValue} gp<br><br>
+          Searches: ${summary.searchCount} | Greed rooms: ${summary.greedCount} | Elite kills: ${summary.eliteKills || 0} | Return value: ${summary.returnValue} gp<br><br>
           What mattered: objective clear turn ${summary.firstObjectiveClearTurn ?? "?"}, deepest depth ${summary.deepestDepth}, active contract ${escapeHtml(activeContract?.name || "none")}
         </div>
       </div>
@@ -17447,8 +21776,26 @@ class Game {
         <div class="text-block">
           Mastery: ${escapeHtml(masteryText)}<br><br>
           Contracts: ${escapeHtml(unlockedText)}<br><br>
-          Active next-run contract: ${escapeHtml(this.getActiveContract(false)?.name || "No contract armed")}
+          Commendations: ${escapeHtml(commendationText)}<br><br>
+          Active next-run contract: ${escapeHtml(this.getActiveContract(false)?.name || "No contract armed")}<br><br>
+          ${escapeHtml(carryForward)}
         </div>
+      </div>
+      <div class="section-block">
+        <div class="field-label">Next Step</div>
+        <div class="text-block">
+          ${escapeHtml(townMeta.recommendedActionLabel)}<br><br>
+          ${escapeHtml(townMeta.recommendedAction)}<br><br>
+          ${escapeHtml(townMeta.recommendedReason)}
+        </div>
+      </div>
+      <div class="section-block">
+        <div class="field-label">Why Run Again</div>
+        <div class="text-block">${nextRunIntent.motivators.map((entry) => escapeHtml(`${entry.label} ${entry.detail}`)).join("<br><br>")}</div>
+      </div>
+      <div class="modal-actions">
+        <button class="menu-button primary" data-action="open-bank" data-focus-key="return-summary:bank" type="button">Open Bank Plan</button>
+        <button class="menu-button" data-action="close-modal" data-focus-key="return-summary:continue" type="button">Continue</button>
       </div>
     `, {
       surfaceKey: "return-summary"
@@ -17772,6 +22119,10 @@ class Game {
     return buildTownMetaSummary(this);
   }
 
+  getValidationSummary() {
+    return buildValidationSummary(this);
+  }
+
   isFirstTownRun() {
     return Boolean(this.player && this.currentDepth === 0 && (this.player.deepestDepth || 0) === 0);
   }
@@ -17780,6 +22131,7 @@ class Game {
     if (!this.isFirstTownRun() || this.storyFlags.townServiceVisited) {
       return false;
     }
+    const onboardingMeta = getOnboardingVariantMeta(this);
     this.storyFlags.townServiceVisited = true;
     this.storyFlags.firstTownGuidance = "keep";
     this.markOnboarding("visit_town_door");
@@ -17788,11 +22140,11 @@ class Game {
       : service === "sage"
         ? "Sage"
         : SHOPS[service]?.name || "Town service";
-    this.log(`${label} checked. Town support is live for this adventurer. The north road is next.`, "good");
+    this.log(`${label} checked. Town support is live for this adventurer. ${onboardingMeta.enterKeepPrimary}`, "good");
     return true;
   }
 
-  showBriefingModal() {
+  showBriefingModal(options = {}) {
     if (!this.player) {
       return;
     }
@@ -17800,13 +22152,10 @@ class Game {
       this.showStoryScene("intro");
       return;
     }
-    this.mode = "modal";
-    this.showSimpleModal("Briefing", `
-      <div class="section-block text-block"><strong>${escapeHtml(this.getCurrentChapterObjective())}</strong></div>
-      <div class="section-block text-block">${escapeHtml(this.getActiveBriefingText())}</div>
-      ${this.currentDepth === 0 ? `<div class="section-block text-block muted">${escapeHtml(this.storyFlags.townServiceVisited ? "Town checked. Follow the north road when ready." : "Step onto one labeled town door, then follow the north road into the keep.")}</div>` : ""}
-    `, {
-      surfaceKey: "briefing"
+    this.showHubModal("journal", {
+      preserveScroll: this.mode === "modal",
+      focusTarget: this.getJournalSectionFocusKey("mission"),
+      journalSection: "mission"
     });
   }
 
@@ -17814,10 +22163,11 @@ class Game {
     if (!this.player || !this.currentLevel || !tile) {
       return null;
     }
+    const onboardingMeta = getOnboardingVariantMeta(this);
     if (this.isFirstTownRun() && !this.storyFlags.townServiceVisited) {
       return {
         label: "Town Task",
-        detail: "Step onto any labeled town door once. Then take the north road.",
+        detail: onboardingMeta.townDoorPrompt,
         tone: "warning"
       };
     }
@@ -17857,6 +22207,161 @@ class Game {
       return { label: "Sit", detail: "Press U to use the throne.", tone: "warning" };
     }
     return null;
+  }
+
+  restoreUiFocus(focusKey) {
+    const candidates = this.getFocusKeyCandidates(focusKey);
+    this.applyControllerNavigationMetadata();
+    for (const key of candidates) {
+      const nextFocus = this.findUiElementByFocusKey(key);
+      if (nextFocus) {
+        this.focusUiElement(nextFocus);
+        return true;
+      }
+    }
+    if (candidates.length > 0) {
+      this.controllerFocusKey = null;
+    }
+    return false;
+  }
+
+  getCurrentUiFocusKey() {
+    return this.getActiveUiActionableElement()?.dataset?.focusKey || this.controllerFocusKey || null;
+  }
+
+  openSpellTray() {
+    if (!this.player || this.mode === "title" || this.mode === "creation" || this.mode === "levelup") {
+      return false;
+    }
+    const pinned = this.getPinnedSpellIds();
+    if (this.player.spellsKnown.length <= 0) {
+      this.log("No spells are known.", "warning");
+      this.render();
+      return false;
+    }
+    if (pinned.length <= 0) {
+      this.log("No spells are pinned to the tray. Open the Book to add one.", "warning");
+      this.render();
+      return false;
+    }
+    if (this.mode !== "target" && this.spellTrayOpen) {
+      this.closeSpellTray();
+      return false;
+    }
+    this.spellTrayOpen = true;
+    this.pendingSpell = this.pendingSpell && this.player.spellsKnown.includes(this.pendingSpell)
+      ? this.pendingSpell
+      : pinned[0];
+    this.refreshChrome();
+    this.render();
+    return true;
+  }
+
+  closeSpellTray() {
+    this.spellTrayOpen = false;
+    if (this.mode === "target" && this.targetMode?.type === "spell") {
+      this.cancelTargetMode();
+      return;
+    }
+    this.refreshChrome();
+    this.render();
+  }
+
+  shouldShowSpellTray() {
+    return Boolean(
+      this.spellTray
+      && this.player
+      && this.getPinnedSpellIds().length > 0
+      && this.mode !== "title"
+      && this.mode !== "creation"
+      && this.mode !== "modal"
+      && this.mode !== "levelup"
+      && (this.spellTrayOpen || (this.mode === "target" && this.targetMode?.type === "spell"))
+    );
+  }
+
+  getSpellTrayMarkup() {
+    const spellIds = this.getPinnedSpellIds();
+    const activeSpellId = this.targetMode?.spellId || this.getSpellTraySelectionId();
+    const activeSpell = SPELLS[activeSpellId];
+    const preview = this.targetMode?.type === "spell" ? this.getActiveSpellTargetPreview() : null;
+    const focusState = activeSpell
+      ? this.mode === "target" && preview
+        ? (preview.valid
+          ? `Will hit ${preview.hitCount} foe${preview.hitCount === 1 ? "" : "s"}${preview.targetingMode === "blast" ? " in the blast" : ""}.`
+          : preview.reason || "Move the cursor to a better cast.")
+        : activeSpell.target === "self"
+          ? `${getSpellCategoryLabel(activeSpell)} spell. Self cast resolves immediately.`
+          : `${getSpellCategoryLabel(activeSpell)} | ${this.getSpellTargetingLabel(activeSpell)} | ${activeSpell.description}`
+      : "No spell selected.";
+    const focusTone = this.mode === "target" && preview && !preview.valid ? "invalid" : "valid";
+    const rows = spellIds.map((spellId) => {
+      const spell = SPELLS[spellId];
+      if (!spell) {
+        return "";
+      }
+      const manaCost = getSpellCost(this, spell);
+      const overcast = this.player.mana < manaCost;
+      const active = activeSpellId === spellId;
+      const categoryLabel = getSpellCategoryLabel(spell);
+      return `
+        <button class="spell-tray-card${active ? " active" : ""}${overcast ? " warning" : ""}" data-action="spell-select" data-double-action="spell-cast" data-surface="tray" data-spell="${spellId}" data-focus-key="spell-tray:${spellId}" type="button">
+          <span class="spell-tray-card-head">
+            <span class="spell-tray-card-title">${escapeHtml(spell.name)}</span>
+            <span class="spell-tray-card-cost">${manaCost} mana${overcast ? " / overcast" : ""}</span>
+          </span>
+          <span class="spell-tray-card-badges">
+            <span class="spell-badge accent">${escapeHtml(categoryLabel)}</span>
+            <span class="spell-badge">${escapeHtml(capitalize(spell.school || "spell"))}</span>
+            <span class="spell-badge subtle">${escapeHtml(this.getSpellTargetingLabel(spell))}</span>
+          </span>
+          <span class="spell-tray-card-copy">${escapeHtml(spell.description)}</span>
+        </button>
+      `;
+    }).join("");
+
+    return `
+      <div class="spell-tray-shell${this.mode === "target" ? " targeting" : ""}">
+        <div class="spell-tray-header">
+          <div>
+            <div class="spell-tray-kicker">Field Casting</div>
+            <div class="spell-tray-title">Spell Tray ${spellIds.length > 0 ? `(${spellIds.length}/${this.getSpellTrayLimit()})` : ""}</div>
+          </div>
+        </div>
+        <div class="spell-tray-summary ${focusTone}">
+          <div class="spell-tray-summary-head">
+            <strong>${escapeHtml(activeSpell?.name || "Spell ready")}</strong>
+            <span>${escapeHtml(activeSpell ? `${getSpellCost(this, activeSpell)} mana | ${getSpellCategoryLabel(activeSpell)} | ${this.getSpellTargetingLabel(activeSpell)}` : "")}</span>
+          </div>
+          <div class="spell-tray-summary-copy">${escapeHtml(focusState)}</div>
+          <div class="spell-tray-summary-actions">
+            <button class="tiny-button" data-action="spell-cast" data-spell="${activeSpellId}" data-focus-key="${this.getSpellCastFocusKey(activeSpellId, "tray")}" type="button"${activeSpell ? "" : " disabled"}>Cast</button>
+            <button class="tiny-button" data-action="open-hub" data-tab="magic" data-focus-key="spell-tray:book" type="button">Book</button>
+            <button class="tiny-button" data-action="spell-tray-close" data-focus-key="spell-tray:close" type="button">Hide</button>
+          </div>
+          ${this.mode === "target" && activeSpell ? `<div class="spell-tray-summary-note">Confirm cast or tap a valid tile. Cancel keeps the board clear.</div>` : ""}
+        </div>
+        <div class="spell-tray-grid">${rows}</div>
+      </div>
+    `;
+  }
+
+  syncSpellTray() {
+    if (!this.spellTray) {
+      return;
+    }
+    if (!this.shouldShowSpellTray()) {
+      this.spellTray.classList.add("hidden");
+      this.spellTray.innerHTML = "";
+      this.lastSpellTrayMarkup = "";
+      return;
+    }
+    const markup = this.getSpellTrayMarkup();
+    if (this.lastSpellTrayMarkup !== markup) {
+      this.spellTray.innerHTML = markup;
+      this.lastSpellTrayMarkup = markup;
+    }
+    this.spellTray.classList.remove("hidden");
   }
 
   syncContextChip() {
@@ -18224,6 +22729,12 @@ class Game {
       return;
     }
 
+    const groupedOptions = getSpellCategoryDefs().map((category) => ({
+      ...category,
+      spells: options.filter((spell) => getSpellCategoryKey(spell) === category.key)
+    })).filter((group) => group.spells.length > 0);
+    const filterDefs = this.getSpellFilterDefsForEntries(options);
+    const activeFilter = filterDefs.some((entry) => entry.key === this.activeSpellLearnFilter) ? this.activeSpellLearnFilter : "all";
     this.mode = "levelup";
     this.setModalVisibility(true);
     this.modalRoot.innerHTML = `
@@ -18232,14 +22743,27 @@ class Game {
         <div class="section-block text-block">
           ${escapeHtml(this.player.name)} has reached level ${this.player.level}. Choose ${this.pendingSpellChoices > 1 ? "a spell for this level and then choose another." : "a new spell to learn."}
         </div>
-        <div class="spell-learn-grid">
-          ${options.map((spell) => `
-            <button class="spell-learn-card" data-action="learn-spell" data-spell="${spell.id}" data-focus-key="learn-spell:${spell.id}" type="button">
-              <span class="spell-learn-tier">${escapeHtml(`${spell.classAffinity === "shared" ? "Shared" : capitalize(spell.classAffinity || "shared")} · Tier ${spell.tier || 1}`)}</span>
-              <span class="spell-learn-name">${escapeHtml(spell.name)}</span>
-              <span class="spell-learn-meta">${escapeHtml(`${spell.school || "spell"} · ${spell.target === "monster" ? `Range ${spell.range || 1}` : "Self cast"} · ${getSpellCost(this, spell)} mana`)}</span>
-              <span class="spell-learn-copy">${escapeHtml(spell.description)}</span>
-            </button>
+        ${this.getSpellFilterChipsMarkup(activeFilter, "spell-learn-filter", (key) => this.getSpellLearnFilterFocusKey(key), "spell-learn-filter-row", filterDefs)}
+        <div class="spell-learn-groups">
+          ${groupedOptions.map((group) => `
+            ${activeFilter !== "all" && activeFilter !== group.key ? "" : `
+            <section class="spell-learn-group">
+              <div class="magic-category-heading">
+                <div class="magic-category-title">${escapeHtml(group.label)}</div>
+                <div class="magic-category-count">${group.spells.length}</div>
+              </div>
+              <div class="spell-learn-grid">
+                ${group.spells.map((spell) => `
+                  <button class="spell-learn-card" data-action="learn-spell" data-spell="${spell.id}" data-focus-key="learn-spell:${spell.id}" type="button">
+                    <span class="spell-learn-tier">${escapeHtml(`${group.label} | ${spell.classAffinity === "shared" ? "Shared" : capitalize(spell.classAffinity || "shared")} | Tier ${spell.tier || 1}`)}</span>
+                    <span class="spell-learn-name">${escapeHtml(spell.name)}</span>
+                    <span class="spell-learn-meta">${escapeHtml(`${capitalize(spell.school || "spell")} | ${spell.target === "monster" ? `Range ${spell.range || 1}` : "Self cast"} | ${getSpellCost(this, spell)} mana`)}</span>
+                    <span class="spell-learn-copy">${escapeHtml(spell.description)}</span>
+                  </button>
+                `).join("")}
+              </div>
+            </section>
+            `}
           `).join("")}
         </div>
       </div>
@@ -18259,6 +22783,7 @@ class Game {
     }
 
     this.player.spellsKnown.push(spellId);
+    this.addSpellToTrayIfSpace(spellId);
     this.pendingSpellChoices = Math.max(0, this.pendingSpellChoices - 1);
     this.log(`${this.player.name} learns ${spell.name}.`, "good");
 
@@ -18293,7 +22818,10 @@ class Game {
       surfaceKey = null,
       preserveScroll = false,
       focusTarget = null,
-      fallbackFocus = true
+      fallbackFocus = true,
+      closeLabel = "Close",
+      closeFocusKey = "modal:close",
+      modalReturnContext = null
     } = options;
     this.setModalVisibility(true);
     const previousState = preserveScroll ? this.captureModalRefreshState(surfaceKey) : null;
@@ -18301,15 +22829,21 @@ class Game {
     const fragment = template.content.cloneNode(true);
     fragment.getElementById("generic-modal-title").textContent = title;
     fragment.getElementById("generic-modal-body").innerHTML = bodyHtml;
+    const closeButton = fragment.querySelector('[data-action="close-modal"]');
+    if (closeButton) {
+      closeButton.textContent = closeLabel;
+      closeButton.dataset.focusKey = closeFocusKey;
+    }
     this.modalRoot.innerHTML = "";
     this.modalRoot.appendChild(fragment);
     this.modalRoot.classList.remove("hidden");
     this.modalSurfaceKey = surfaceKey;
+    this.modalReturnContext = modalReturnContext;
     this.recordTelemetry("modal_opened", {
       surface: surfaceKey || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
     });
     this.applyControllerNavigationMetadata();
-    const nextModal = this.getModalElement();
+    const nextModal = this.getModalScrollHost();
     if (nextModal && previousState) {
       nextModal.scrollTop = previousState.scrollTop;
     }
@@ -18331,25 +22865,136 @@ class Game {
     `).join("");
   }
 
+  getEquipmentBaseSlot(slot = "") {
+    if (slot.startsWith("ring")) {
+      return "ring";
+    }
+    if (slot.startsWith("amulet")) {
+      return "amulet";
+    }
+    return slot;
+  }
+
+  ensureEquipmentAliases(player = this.player) {
+    const equipment = player?.equipment;
+    if (!equipment) {
+      return;
+    }
+    const defineAlias = (legacySlot, targetSlot) => {
+      Object.defineProperty(equipment, legacySlot, {
+        configurable: true,
+        enumerable: false,
+        get: () => equipment[targetSlot] || null,
+        set: (value) => {
+          equipment[targetSlot] = value || null;
+        }
+      });
+    };
+    defineAlias("ring", "ring1");
+    defineAlias("amulet", "amulet1");
+  }
+
+  getEquipmentFamilySlots(slot = "") {
+    const baseSlot = this.getEquipmentBaseSlot(slot);
+    if (baseSlot === "ring") {
+      return ["ring1", "ring2", "ring3", "ring4"];
+    }
+    if (baseSlot === "amulet") {
+      return ["amulet1", "amulet2"];
+    }
+    return baseSlot ? [baseSlot] : [];
+  }
+
+  getEquipmentEntriesForSlot(slot = "") {
+    return this.getEquipmentFamilySlots(slot).map((entrySlot) => ({
+      slot: entrySlot,
+      item: this.player?.equipment?.[entrySlot] || null
+    }));
+  }
+
+  getEquipmentSlotForItem(item) {
+    if (!item?.slot) {
+      return {
+        targetSlot: "",
+        entries: [],
+        emptyEntries: [],
+        occupiedEntries: [],
+        swappableEntries: [],
+        blockedByCurse: false
+      };
+    }
+    const entries = this.getEquipmentEntriesForSlot(item.slot);
+    const emptyEntries = entries.filter((entry) => !entry.item);
+    const occupiedEntries = entries.filter((entry) => Boolean(entry.item));
+    const swappableEntries = occupiedEntries.filter((entry) => !entry.item.cursed);
+    const targetEntry = emptyEntries[0] || swappableEntries[0] || null;
+    return {
+      targetSlot: targetEntry?.slot || "",
+      targetEntry,
+      entries,
+      emptyEntries,
+      occupiedEntries,
+      swappableEntries,
+      blockedByCurse: !targetEntry && occupiedEntries.length > 0
+    };
+  }
+
   getPackSlotDefinitions() {
     return [
       { slot: "cloak", label: "Cloak", emptyText: "Back slot for cloaks and wraps.", area: "cloak" },
       { slot: "head", label: "Head", emptyText: "Helms, hoods, and crowns.", area: "head" },
-      { slot: "amulet", label: "Amulet", emptyText: "Charms worn at the neck.", area: "amulet" },
+      { slot: "amulet1", label: "Amulet I", emptyText: "First neck slot for charms and talismans.", area: "amulet1" },
+      { slot: "amulet2", label: "Amulet II", emptyText: "Second neck slot for charms and talismans.", area: "amulet2" },
       { slot: "weapon", label: "Weapon", emptyText: "Your main striking hand.", area: "weapon" },
       { slot: "body", label: "Armor", emptyText: "Chest armor and robes.", area: "armor" },
       { slot: "offhand", label: "Offhand", emptyText: "Shield or focus carried opposite the weapon.", area: "offhand" },
-      { slot: "ring", label: "Ring", emptyText: "One active ring slot.", area: "ring" },
+      { slot: "ring1", label: "Ring I", emptyText: "First active ring slot.", area: "ring1" },
+      { slot: "ring2", label: "Ring II", emptyText: "Second active ring slot.", area: "ring2" },
+      { slot: "ring3", label: "Ring III", emptyText: "Third active ring slot.", area: "ring3" },
+      { slot: "ring4", label: "Ring IV", emptyText: "Fourth active ring slot.", area: "ring4" },
       { slot: "feet", label: "Feet", emptyText: "Boots and travel footwear.", area: "feet" }
     ];
   }
 
   getPackSlotDefinition(slot) {
-    return this.getPackSlotDefinitions().find((entry) => entry.slot === slot) || { slot, label: capitalize(slot), emptyText: "Unused slot.", area: slot };
+    const exact = this.getPackSlotDefinitions().find((entry) => entry.slot === slot);
+    if (exact) {
+      return exact;
+    }
+    const baseSlot = this.getEquipmentBaseSlot(slot);
+    const familyEntry = this.getPackSlotDefinitions().find((entry) => this.getEquipmentBaseSlot(entry.slot) === baseSlot);
+    if (familyEntry) {
+      return {
+        ...familyEntry,
+        slot,
+        label: capitalize(baseSlot)
+      };
+    }
+    return { slot, label: capitalize(slot), emptyText: "Unused slot.", area: slot };
   }
 
   getHubTabFocusKey(tabId) {
     return `hub:tab:${tabId}`;
+  }
+
+  getJournalSectionFocusKey(sectionId) {
+    return `journal:section:${sectionId}`;
+  }
+
+  getJournalSectionDefs() {
+    return [
+      { id: "current", label: "Current" },
+      { id: "mission", label: "Mission" },
+      { id: "guide", label: "Rules" },
+      { id: "chronicle", label: "Chronicle" }
+    ];
+  }
+
+  getResolvedJournalSection(sectionId = this.activeJournalSection) {
+    const fallback = this.getJournalSectionDefs()[0]?.id || "current";
+    return this.getJournalSectionDefs().some((section) => section.id === sectionId)
+      ? sectionId
+      : fallback;
   }
 
   getPackItemFocusKey(index) {
@@ -18372,6 +23017,10 @@ class Game {
     return `shop:buy:${shopId}:${itemId}`;
   }
 
+  getShopPanelFocusKey(panel) {
+    return `shop:panel:${panel}`;
+  }
+
   getShopSellFocusKey(index) {
     return `shop:sell:${index}`;
   }
@@ -18392,6 +23041,7 @@ class Game {
     if (!selection) {
       return;
     }
+    this.hoveredPackSelection = null;
     if (selection.type === "slot") {
       this.activePackSelection = { type: "slot", value: selection.value };
       return;
@@ -18424,15 +23074,15 @@ class Game {
 
   getCompatibleInventoryIndexes(slot) {
     return this.player.inventory.reduce((matches, item, index) => {
-      if (item.slot === slot) {
+      if (this.getEquipmentBaseSlot(item.slot || "") === this.getEquipmentBaseSlot(slot)) {
         matches.push(index);
       }
       return matches;
     }, []);
   }
 
-  getPackSelectionModel() {
-    const selection = this.resolvePackSelection();
+  getPackSelectionModelFor(selectionInput) {
+    const selection = selectionInput?.type ? selectionInput : this.resolvePackSelection();
     if (selection.type === "slot") {
       const slotDef = this.getPackSlotDefinition(selection.value);
       const item = this.player.equipment[selection.value] || null;
@@ -18460,6 +23110,10 @@ class Game {
     };
   }
 
+  getPackSelectionModel() {
+    return this.getPackSelectionModelFor(this.resolvePackSelection());
+  }
+
   getPackItemActionLabel(item) {
     if (!item) {
       return "Use";
@@ -18484,6 +23138,9 @@ class Game {
     const bits = [];
     if (semanticEntry?.recommendation) {
       bits.push(semanticEntry.recommendation);
+    }
+    if (semanticEntry?.categoryLabel) {
+      bits.push(semanticEntry.categoryLabel);
     }
     bits.push(item.slot ? this.getPackSlotDefinition(item.slot).label : semanticEntry?.kindLabel || item.kindLabel || classifyItem(item));
     if (item.kind === "weapon") {
@@ -18528,6 +23185,9 @@ class Game {
     if (item.cursed) {
       bits.push("Cursed");
     }
+    if (item.markedForSale) {
+      bits.push("Marked");
+    }
     const undeadBonus = getItemBonusVsUndead(item);
     if (undeadBonus > 0) {
       bits.push(`Vs Undead +${undeadBonus}`);
@@ -18542,6 +23202,70 @@ class Game {
       bits.push("No buyer yet");
     }
     return bits.join(" • ");
+  }
+
+  getPackRowTagMarkup(entry) {
+    if (!entry) {
+      return "";
+    }
+    const tags = [
+      `<span class="item-chip category-chip">${escapeHtml(entry.categoryLabel || "Item")}</span>`,
+      ...((entry.scanTags || []).slice(0, 3).map((tag) => `<span class="item-chip semantic-chip">${escapeHtml(capitalize(tag.replace(/-/g, " ")))}</span>`))
+    ];
+    return `<div class="pack-item-tags">${tags.join("")}</div>`;
+  }
+
+  getPackHoverPreviewSummary(model, semanticEntry = null) {
+    if (!model) {
+      return "";
+    }
+    if (model.selection.type === "slot") {
+      if (!model.item) {
+        return model.compatibleIndexes.length > 0
+          ? `${model.compatibleIndexes.length} carried item${model.compatibleIndexes.length === 1 ? "" : "s"} fit this slot.`
+          : "No carried item fits this slot right now.";
+      }
+      return buildEquipmentSlotSummary(this, model.slotDef, model.compatibleIndexes.length).reason;
+    }
+    if (model.comparison?.blockedByCurse) {
+      return `All ${this.getPackSlotDefinition(model.item.slot).label.toLowerCase()} slots are locked by curses.`;
+    }
+    if (model.comparison?.fitsEmptySlot) {
+      return `Fits empty ${this.getPackSlotDefinition(model.comparison.targetSlot).label} slot.`;
+    }
+    if (model.comparison?.deltas?.length > 0) {
+      return model.comparison.deltas.slice(0, 2).map((delta) => delta.text).join(" | ");
+    }
+    return semanticEntry?.reason || describeItem(model.item);
+  }
+
+  getPackHoverPreviewMarkup(previewModel, inventoryModel) {
+    if (!previewModel || this.isSamePackSelection(previewModel.selection, this.resolvePackSelection())) {
+      return "";
+    }
+    const previewEntry = previewModel.selection.type === "inventory"
+      ? inventoryModel.entries.find((entry) => entry.index === previewModel.selection.value) || null
+      : null;
+    const previewTitle = previewModel.item
+      ? getItemName(previewModel.item)
+      : previewModel.slotDef?.label || "Preview";
+    const previewSummary = this.getPackHoverPreviewSummary(previewModel, previewEntry);
+    const previewTags = previewModel.item
+      ? this.getItemBadgeMarkup(previewModel.item, previewEntry, previewModel)
+      : `<span class="item-chip">${escapeHtml(previewModel.slotDef?.label || "Slot")}</span>`;
+    return `
+      <div class="pack-hover-preview">
+        <div class="pack-hover-preview-head">
+          <div>
+            <div class="pack-hover-preview-kicker">Hover Preview</div>
+            <div class="pack-hover-preview-title">${escapeHtml(previewTitle)}</div>
+          </div>
+          <div class="pack-hover-preview-note">Preview only. Select to act.</div>
+        </div>
+        <div class="pack-item-badges">${previewTags}</div>
+        <div class="pack-hover-preview-copy">${escapeHtml(previewSummary)}</div>
+      </div>
+    `;
   }
 
   buildComparisonDelta(label, delta, invert = false) {
@@ -18561,43 +23285,59 @@ class Game {
     if (!item || !item.slot) {
       return {
         equipped: null,
+        targetSlot: "",
+        slotEntries: [],
+        emptySlots: [],
+        fitsEmptySlot: false,
+        blockedByCurse: false,
+        comparisons: [],
         deltas: [],
         weightDelta: 0,
         encumbrancePreview: this.describeBurdenPreview(0)
       };
     }
 
-    const equipped = this.player.equipment[item.slot] || null;
-    if (!equipped) {
-      const weightDelta = item.weight || 0;
-      return {
-        equipped: null,
-        deltas: [],
-        weightDelta,
-        encumbrancePreview: this.describeBurdenPreview(weightDelta)
-      };
-    }
-
-    const deltas = [
-      this.buildComparisonDelta("Attack", getItemPower(item) - getItemPower(equipped)),
-      this.buildComparisonDelta("Armor", getItemArmor(item) - getItemArmor(equipped)),
-      this.buildComparisonDelta("Accuracy", getItemAccuracyBonus(item) - getItemAccuracyBonus(equipped)),
-      this.buildComparisonDelta("Crit", getItemCritBonus(item) - getItemCritBonus(equipped)),
-      this.buildComparisonDelta("Guard", getItemGuardBonus(item) - getItemGuardBonus(equipped)),
-      this.buildComparisonDelta("Ward", getItemWardBonus(item) - getItemWardBonus(equipped)),
-      this.buildComparisonDelta("Mana", getItemManaBonus(item) - getItemManaBonus(equipped)),
-      this.buildComparisonDelta("Dex", getItemDexBonus(item) - getItemDexBonus(equipped)),
-      this.buildComparisonDelta("Sight", getItemLightBonus(item) - getItemLightBonus(equipped)),
-      this.buildComparisonDelta("Search", getItemSearchBonus(item) - getItemSearchBonus(equipped)),
-      this.buildComparisonDelta("Fire Resist", getItemFireResist(item) - getItemFireResist(equipped)),
-      this.buildComparisonDelta("Cold Resist", getItemColdResist(item) - getItemColdResist(equipped)),
-      this.buildComparisonDelta("Weight", (item.weight || 0) - (equipped.weight || 0), true)
-    ].filter(Boolean);
-
-    const weightDelta = (item.weight || 0) - (equipped.weight || 0);
+    const equipTarget = this.getEquipmentSlotForItem(item);
+    const comparisons = equipTarget.entries
+      .filter((entry) => entry.item)
+      .map((entry) => ({
+        slot: entry.slot,
+        label: this.getPackSlotDefinition(entry.slot).label,
+        equipped: entry.item,
+        deltas: [
+          this.buildComparisonDelta("Attack", getItemPower(item) - getItemPower(entry.item)),
+          this.buildComparisonDelta("Armor", getItemArmor(item) - getItemArmor(entry.item)),
+          this.buildComparisonDelta("Accuracy", getItemAccuracyBonus(item) - getItemAccuracyBonus(entry.item)),
+          this.buildComparisonDelta("Crit", getItemCritBonus(item) - getItemCritBonus(entry.item)),
+          this.buildComparisonDelta("Guard", getItemGuardBonus(item) - getItemGuardBonus(entry.item)),
+          this.buildComparisonDelta("Ward", getItemWardBonus(item) - getItemWardBonus(entry.item)),
+          this.buildComparisonDelta("Mana", getItemManaBonus(item) - getItemManaBonus(entry.item)),
+          this.buildComparisonDelta("Str", getItemStrBonus(item) - getItemStrBonus(entry.item)),
+          this.buildComparisonDelta("Dex", getItemDexBonus(item) - getItemDexBonus(entry.item)),
+          this.buildComparisonDelta("Con", getItemConBonus(item) - getItemConBonus(entry.item)),
+          this.buildComparisonDelta("Int", getItemIntBonus(item) - getItemIntBonus(entry.item)),
+          this.buildComparisonDelta("Sight", getItemLightBonus(item) - getItemLightBonus(entry.item)),
+          this.buildComparisonDelta("Search", getItemSearchBonus(item) - getItemSearchBonus(entry.item)),
+          this.buildComparisonDelta("Fire Resist", getItemFireResist(item) - getItemFireResist(entry.item)),
+          this.buildComparisonDelta("Cold Resist", getItemColdResist(item) - getItemColdResist(entry.item)),
+          this.buildComparisonDelta("Weight", (item.weight || 0) - (entry.item.weight || 0), true)
+        ].filter(Boolean)
+      }));
+    const primaryComparison = comparisons.find((entry) => entry.slot === equipTarget.targetSlot) || comparisons[0] || null;
+    const equipped = primaryComparison?.equipped || null;
+    const weightDelta = equipped ? (item.weight || 0) - (equipped.weight || 0) : (item.weight || 0);
     return {
       equipped,
-      deltas,
+      targetSlot: equipTarget.targetSlot,
+      slotEntries: equipTarget.entries.map((entry) => ({
+        ...entry,
+        label: this.getPackSlotDefinition(entry.slot).label
+      })),
+      emptySlots: equipTarget.emptyEntries.map((entry) => entry.slot),
+      fitsEmptySlot: equipTarget.emptyEntries.length > 0,
+      blockedByCurse: equipTarget.blockedByCurse,
+      comparisons,
+      deltas: primaryComparison?.deltas || [],
       weightDelta,
       encumbrancePreview: this.describeBurdenPreview(weightDelta)
     };
@@ -18605,8 +23345,12 @@ class Game {
 
   getItemBadgeMarkup(item, semanticEntry = null, model = null) {
     const badges = [
+      `<span class="item-chip category-chip">${escapeHtml(semanticEntry?.categoryLabel || "Item")}</span>`,
       `<span class="item-chip kind-chip">${escapeHtml(item.kindLabel || semanticEntry?.kindLabel || classifyItem(item))}</span>`
     ];
+    (semanticEntry?.scanTags || []).forEach((tag) => {
+      badges.push(`<span class="item-chip semantic-chip">${escapeHtml(capitalize(tag.replace(/-/g, " ")))}</span>`);
+    });
     if (item.slot) {
       badges.push(`<span class="item-chip">Slot ${escapeHtml(this.getPackSlotDefinition(item.slot).label)}</span>`);
     }
@@ -18631,8 +23375,17 @@ class Game {
     if (getItemManaBonus(item)) {
       badges.push(`<span class="item-chip">Mana +${getItemManaBonus(item)}</span>`);
     }
+    if (getItemStrBonus(item)) {
+      badges.push(`<span class="item-chip">Str +${getItemStrBonus(item)}</span>`);
+    }
     if (getItemDexBonus(item)) {
       badges.push(`<span class="item-chip">Dex +${getItemDexBonus(item)}</span>`);
+    }
+    if (getItemConBonus(item)) {
+      badges.push(`<span class="item-chip">Con +${getItemConBonus(item)}</span>`);
+    }
+    if (getItemIntBonus(item)) {
+      badges.push(`<span class="item-chip">Int +${getItemIntBonus(item)}</span>`);
     }
     if (getItemLightBonus(item)) {
       badges.push(`<span class="item-chip">Sight +${getItemLightBonus(item)}</span>`);
@@ -18671,6 +23424,9 @@ class Game {
     if (item.cursed && item.identified) {
       badges.push(`<span class="item-chip bad-chip">Cursed</span>`);
     }
+    if (item.markedForSale) {
+      badges.push(`<span class="item-chip">Marked</span>`);
+    }
     return badges.join("");
   }
 
@@ -18695,19 +23451,28 @@ class Game {
           <div class="pack-group-title">${escapeHtml(group.label)}</div>
           <div class="pack-group-count">${group.items.reduce((sum, entry) => sum + entry.count, 0)}</div>
         </div>
-        <div class="pack-group-list">
-          ${group.items.map((entry) => `
-            <button class="pack-item-row${selectedIndex === entry.index || entry.isSelected ? " active" : ""}" data-action="inspect-pack-item" data-index="${entry.index}" data-focus-key="${this.getPackItemFocusKey(entry.index)}" type="button">
-              <span class="pack-item-head">
-                <span class="pack-item-name">${escapeHtml(getItemName(entry.item))}</span>
-                ${entry.count > 1 ? `<span class="pack-item-stack">x${entry.count}</span>` : ""}
-              </span>
-              <span class="pack-item-meta">${escapeHtml(this.getPackItemMeta(entry.item, entry))}</span>
-              <span class="pack-item-reason">${escapeHtml(entry.reason)}</span>
-              <span class="pack-item-note">${escapeHtml(this.getPackItemNote(entry.item, entry))}</span>
-            </button>
-          `).join("")}
-        </div>
+        ${group.sections.map((section) => `
+          <div class="pack-subgroup">
+            <div class="pack-subgroup-heading">
+              <div class="pack-subgroup-title">${escapeHtml(section.label)}</div>
+              <div class="pack-subgroup-count">${section.items.reduce((sum, entry) => sum + entry.count, 0)}</div>
+            </div>
+            <div class="pack-group-list">
+              ${section.items.map((entry) => `
+                <button class="pack-item-row${selectedIndex === entry.index || entry.isSelected ? " active" : ""}" data-action="inspect-pack-item" data-index="${entry.index}" data-focus-key="${this.getPackItemFocusKey(entry.index)}" data-pack-preview-type="inventory" data-pack-preview-value="${entry.index}" type="button">
+                  <span class="pack-item-head">
+                    <span class="pack-item-name">${escapeHtml(getItemName(entry.item))}</span>
+                    ${entry.count > 1 ? `<span class="pack-item-stack">x${entry.count}</span>` : ""}
+                  </span>
+                  <span class="pack-item-meta">${escapeHtml(this.getPackItemMeta(entry.item, entry))}</span>
+                  ${this.getPackRowTagMarkup(entry)}
+                  <span class="pack-item-reason">${escapeHtml(entry.reason)}</span>
+                  <span class="pack-item-note">${escapeHtml(this.getPackItemNote(entry.item, entry))}</span>
+                </button>
+              `).join("")}
+            </div>
+          </div>
+        `).join("")}
       </section>
     `).join("");
   }
@@ -18743,6 +23508,10 @@ class Game {
   getPackInspectorMarkup(model, inventoryModel) {
     const shopId = this.getCurrentPackShopContext();
     const selectedEntry = model.selection.type === "inventory" ? inventoryModel.selectedEntry : null;
+    const hoverPreviewModel = this.hoveredPackSelection && !this.isSamePackSelection(this.hoveredPackSelection, model.selection)
+      ? this.getPackSelectionModelFor(this.hoveredPackSelection)
+      : null;
+    const hoverPreviewMarkup = this.getPackHoverPreviewMarkup(hoverPreviewModel, inventoryModel);
     if (!model.item && model.selection.type === "slot") {
       const slotSummary = buildEquipmentSlotSummary(this, model.slotDef, model.compatibleIndexes.length);
       const compatibleRows = model.compatibleIndexes.length === 0
@@ -18757,6 +23526,7 @@ class Game {
       return `
         <section class="hub-section pack-inspector-panel">
           <div class="panel-title">Selected Slot</div>
+          ${hoverPreviewMarkup}
           <div class="pack-inspector-card">
             <div class="pack-inspector-kicker">${escapeHtml(slotSummary.recommendation)}</div>
             <div class="pack-inspector-title">Empty Slot</div>
@@ -18783,10 +23553,11 @@ class Game {
     }
 
     const item = model.item;
+    const detailEntry = selectedEntry || buildInventoryItemSemantics(this, item, -1, { shopId });
     const slotSummary = model.selection.type === "slot" ? buildEquipmentSlotSummary(this, model.slotDef, model.compatibleIndexes.length) : null;
     const recommendation = selectedEntry?.recommendation || slotSummary?.recommendation || "Keep";
     const reason = selectedEntry?.reason || slotSummary?.reason || describeItem(item);
-    const riskCallout = this.getSemanticRiskCallout(item, selectedEntry, model, slotSummary);
+    const riskCallout = this.getSemanticRiskCallout(item, detailEntry, model, slotSummary);
     const statLines = [
       item.kind === "weapon" ? `Attack ${getItemPower(item)}` : "",
       item.kind === "armor" ? `Armor ${getItemArmor(item)}` : "",
@@ -18795,7 +23566,10 @@ class Game {
       getItemGuardBonus(item) ? `Guard ${getItemGuardBonus(item)}` : "",
       getItemWardBonus(item) ? `Ward ${getItemWardBonus(item)}` : "",
       getItemManaBonus(item) ? `Mana +${getItemManaBonus(item)}` : "",
+      getItemStrBonus(item) ? `Str +${getItemStrBonus(item)}` : "",
       getItemDexBonus(item) ? `Dex +${getItemDexBonus(item)}` : "",
+      getItemConBonus(item) ? `Con +${getItemConBonus(item)}` : "",
+      getItemIntBonus(item) ? `Int +${getItemIntBonus(item)}` : "",
       getItemLightBonus(item) ? `Sight +${getItemLightBonus(item)}` : "",
       getItemSearchBonus(item) ? `Search +${getItemSearchBonus(item)}` : "",
       getItemFireResist(item) ? `Fire Resist ${getItemFireResist(item)}` : "",
@@ -18811,29 +23585,41 @@ class Game {
         <button class="menu-button pack-action-primary is-active" data-action="item-use" data-index="${model.selection.value}" data-focus-key="${this.getPackActionFocusKey("use", model.selection.value)}" type="button">${this.getPackItemActionLabel(item)}</button>
         ${shopId && selectedEntry?.sellHereTag
           ? `<button class="menu-button" data-action="shop-sell" data-index="${model.selection.value}" data-focus-key="${this.getShopSellFocusKey(model.selection.value)}" type="button">Sell</button>`
-          : ""}
+          : `<label class="mark-sale-toggle inspector-mark-toggle"><input type="checkbox" data-action="toggle-sale-mark" data-index="${model.selection.value}" data-focus-key="${this.getPackActionFocusKey("mark", model.selection.value)}" ${item.markedForSale ? "checked" : ""}><span>Mark For Sale</span></label>`}
         <button class="menu-button" data-action="item-drop" data-index="${model.selection.value}" data-focus-key="${this.getPackActionFocusKey("drop", model.selection.value)}" type="button">Drop</button>
       `
       : `
         <button class="menu-button pack-action-primary is-active" data-action="unequip-slot" data-slot="${model.selection.value}" data-focus-key="${this.getPackActionFocusKey("unequip", model.selection.value)}" type="button"${item.cursed ? " disabled" : ""}>Unequip</button>
       `;
 
-    const equippedSwap = model.selection.type === "inventory" && item.slot && this.player.equipment[item.slot]
-      ? `<div class="pack-inspector-note">Equips over ${escapeHtml(getItemName(this.player.equipment[item.slot], true))}.</div>`
+    const equippedSwap = model.selection.type === "inventory" && item.slot
+      ? model.comparison?.fitsEmptySlot
+        ? `<div class="pack-inspector-note">Fits empty ${escapeHtml(this.getPackSlotDefinition(model.comparison.targetSlot).label)} slot.</div>`
+        : model.comparison?.equipped
+          ? `<div class="pack-inspector-note">Equips over ${escapeHtml(getItemName(model.comparison.equipped, true))}.</div>`
+          : ""
       : "";
 
     const cursedNote = model.selection.type === "slot" && item.cursed
       ? `<div class="pack-inspector-note bad-note">${escapeHtml(getItemName(item, true))} is cursed and cannot be removed yet.</div>`
       : "";
 
-    const comparisonBlock = model.selection.type === "inventory" && model.comparison?.equipped
+    const comparisonBlock = model.selection.type === "inventory" && item.slot && (model.comparison?.comparisons?.length > 0 || model.comparison?.fitsEmptySlot || model.comparison?.blockedByCurse)
       ? `
         <div class="pack-comparison-card">
-          <div class="pack-comparison-title">Compare vs ${escapeHtml(getItemName(model.comparison.equipped, true))}</div>
+          <div class="pack-comparison-title">${model.comparison.fitsEmptySlot ? `Fits ${escapeHtml(this.getPackSlotDefinition(model.comparison.targetSlot).label)}` : model.comparison.equipped ? `Compare vs ${escapeHtml(getItemName(model.comparison.equipped, true))}` : "Accessory Fit"}</div>
           <div class="pack-comparison-list">
-            ${model.comparison.deltas.length > 0
-              ? model.comparison.deltas.map((entry) => `<div class="pack-comparison-row value-${entry.tone}">${escapeHtml(entry.text)}</div>`).join("")
-              : `<div class="pack-comparison-row muted">No practical change.</div>`}
+            ${model.comparison.blockedByCurse
+              ? `<div class="pack-comparison-row value-bad">All ${escapeHtml(this.getPackSlotDefinition(item.slot).label.toLowerCase())} slots are locked by curses.</div>`
+              : model.comparison.fitsEmptySlot
+                ? `<div class="pack-comparison-row value-good">No swap needed. ${escapeHtml(this.getPackSlotDefinition(model.comparison.targetSlot).label)} is open.</div>`
+                : ""}
+            ${model.comparison.comparisons?.map((entry) => `
+              <div class="pack-comparison-row"><strong>${escapeHtml(entry.label)}</strong>${entry.slot === model.comparison.targetSlot ? " · target" : ""}</div>
+              ${entry.deltas.length > 0
+                ? entry.deltas.map((delta) => `<div class="pack-comparison-row value-${delta.tone}">${escapeHtml(delta.text)}</div>`).join("")
+                : `<div class="pack-comparison-row muted">No practical change.</div>`}
+            `).join("") || ""}
           </div>
           <div class="pack-inspector-note ${model.encumbrancePreview.tone}">${escapeHtml(model.encumbrancePreview.text)}</div>
         </div>
@@ -18858,6 +23644,7 @@ class Game {
     return `
       <section class="hub-section pack-inspector-panel">
         <div class="panel-title">${model.selection.type === "slot" ? "Equipped Detail" : "Selected Item"}</div>
+        ${hoverPreviewMarkup}
         <div class="pack-inspector-card">
           <div class="pack-inspector-kicker">${escapeHtml(recommendation)}</div>
           <div class="pack-inspector-title">${escapeHtml(getItemName(item))}</div>
@@ -18865,7 +23652,7 @@ class Game {
             <span class="pack-decision-chip">${escapeHtml(model.slotDef ? model.slotDef.label : selectedEntry?.kindLabel || classifyItem(item))}</span>
             <span class="pack-decision-reason">${escapeHtml(reason)}</span>
           </div>
-          <div class="pack-item-badges">${this.getItemBadgeMarkup(item, selectedEntry, model)}</div>
+          <div class="pack-item-badges">${this.getItemBadgeMarkup(item, detailEntry, model)}</div>
           ${riskCallout ? `<div class="pack-risk-callout">${escapeHtml(riskCallout)}</div>` : ""}
           <div class="pack-inspector-copy">${escapeHtml(describeItem(item))}</div>
           <div class="pack-stat-grid">
@@ -18887,7 +23674,7 @@ class Game {
     const tabs = [
       { id: "pack", label: "Pack" },
       { id: "magic", label: "Magic" },
-      { id: "journal", label: "Journal" }
+      { id: "journal", label: "Guide" }
     ];
     return `
       <div class="hub-tabs">
@@ -18921,11 +23708,11 @@ class Game {
     const buildSummary = inventoryModel.buildSummary;
     const paperdoll = this.getPackSlotDefinitions().map((slotDef) => {
       const item = this.player.equipment[slotDef.slot];
-      const compatibleCount = inventoryModel.entries.filter((entry) => entry.item.slot === slotDef.slot && entry.recommendation === "Equip").length;
+      const compatibleCount = inventoryModel.entries.filter((entry) => this.getEquipmentBaseSlot(entry.item.slot || "") === this.getEquipmentBaseSlot(slotDef.slot) && entry.recommendation === "Equip").length;
       const slotSummary = buildEquipmentSlotSummary(this, slotDef, compatibleCount);
       const isActive = model.selection.type === "slot" && model.selection.value === slotDef.slot;
       return `
-        <button class="paper-slot slot-${slotDef.area}${isActive ? " active" : ""}" data-action="inspect-slot" data-slot="${slotDef.slot}" data-focus-key="${this.getPackSlotFocusKey(slotDef.slot)}" type="button">
+        <button class="paper-slot slot-${slotDef.area}${isActive ? " active" : ""}" data-action="inspect-slot" data-slot="${slotDef.slot}" data-focus-key="${this.getPackSlotFocusKey(slotDef.slot)}" data-pack-preview-type="slot" data-pack-preview-value="${slotDef.slot}" type="button">
           <span class="paper-slot-label">${escapeHtml(slotDef.label)}</span>
           <span class="paper-slot-item">${item ? escapeHtml(getItemName(item)) : "Empty"}</span>
           <span class="paper-slot-quality">${escapeHtml(slotSummary.quality)}</span>
@@ -18975,25 +23762,67 @@ class Game {
   }
 
   getMagicHubMarkup() {
-    const rows = this.player.spellsKnown.length === 0
+    const pinnedSpellIds = this.getPinnedSpellIds();
+    const sortedSpellIds = this.getSortedKnownSpellIds(this.player.spellsKnown);
+    const selectedSpellId = this.targetMode?.spellId || this.pendingSpell || pinnedSpellIds[0] || sortedSpellIds[0] || "";
+    const filterDefs = this.getSpellFilterDefsForEntries(sortedSpellIds.map((spellId) => SPELLS[spellId]).filter(Boolean));
+    const activeFilter = filterDefs.some((entry) => entry.key === this.activeMagicFilter) ? this.activeMagicFilter : "all";
+    const rows = sortedSpellIds.length === 0
       ? `<div class="text-block">No spells are known.</div>`
-      : this.player.spellsKnown.map((spellId) => {
-        const spell = SPELLS[spellId];
-        const targetLabel = spell.target === "monster" ? `Range ${spell.range || 1}` : "Self cast";
-        const manaCost = getSpellCost(this, spell);
-        const overcast = this.player.mana < manaCost;
+      : getSpellCategoryDefs().map((category) => {
+        if (activeFilter !== "all" && activeFilter !== category.key) {
+          return "";
+        }
+        const spellIds = sortedSpellIds.filter((spellId) => getSpellCategoryKey(SPELLS[spellId]) === category.key);
+        if (spellIds.length === 0) {
+          return "";
+        }
         return `
-          <article class="magic-card">
-            <div class="magic-card-header">
-              <div class="magic-card-title">${escapeHtml(spell.name)}</div>
-              <div class="magic-card-cost${overcast ? " warning" : ""}">${manaCost} mana${overcast ? " / overcast" : ""}</div>
+          <section class="magic-category-group">
+            <div class="magic-category-heading">
+              <div class="magic-category-title">${escapeHtml(category.label)}</div>
+              <div class="magic-category-count">${spellIds.length}</div>
             </div>
-            <div class="magic-card-meta">${escapeHtml(`Tier ${spell.tier || 1} ${spell.school || "spell"} · ${targetLabel}`)}</div>
-            <div class="magic-card-copy">${escapeHtml(spell.description)}</div>
-            <div class="magic-card-actions">
-              <button class="menu-button pack-action-primary" data-action="spell-cast" data-spell="${spellId}" data-focus-key="hub:spell:${spellId}" type="button">Cast</button>
+            <div class="magic-grid">
+              ${spellIds.map((spellId) => {
+                const spell = SPELLS[spellId];
+                const manaCost = getSpellCost(this, spell);
+                const overcast = this.player.mana < manaCost;
+                const targetingLabel = this.getSpellTargetingLabel(spell);
+                const pinnedIndex = pinnedSpellIds.indexOf(spellId);
+                const isPinned = pinnedIndex >= 0;
+                const trayFull = pinnedSpellIds.length >= this.getSpellTrayLimit();
+                const isSelected = selectedSpellId === spellId;
+                const pinLabel = isPinned
+                  ? `Tray Slot ${pinnedIndex + 1}`
+                  : "Book Only";
+                return `
+                  <article class="magic-card${isSelected ? " active" : ""}${isPinned ? " pinned" : ""}">
+                    <button class="magic-card-select" data-action="spell-select" data-double-action="spell-cast" data-surface="book" data-spell="${spellId}" data-focus-key="${this.getSpellBookFocusKey(spellId)}" type="button">
+                      <div class="magic-card-header">
+                        <div class="magic-card-title">${escapeHtml(spell.name)}</div>
+                        <div class="magic-card-cost${overcast ? " warning" : ""}">${manaCost} mana${overcast ? " / overcast" : ""}</div>
+                      </div>
+                      <div class="magic-card-tags">
+                        <span class="spell-badge accent">${escapeHtml(category.label)}</span>
+                        <span class="spell-badge">${escapeHtml(capitalize(spell.school || "spell"))}</span>
+                        <span class="spell-badge subtle">${escapeHtml(targetingLabel)}</span>
+                      </div>
+                      <div class="magic-card-meta">${escapeHtml(`Tier ${spell.tier || 1} | ${capitalize(this.getSpellRoleLabel(spell))} | ${spell.target === "self" ? "Self cast" : `Range ${spell.range || 1}`}`)}</div>
+                      <div class="magic-card-copy">${escapeHtml(spell.description)}</div>
+                      <div class="magic-card-status">${escapeHtml(isSelected ? `${pinLabel} | Selected` : pinLabel)}</div>
+                    </button>
+                    <div class="magic-card-actions">
+                      <button class="menu-button pack-action-primary" data-action="spell-cast" data-spell="${spellId}" data-focus-key="${this.getSpellCastFocusKey(spellId)}" type="button">Cast</button>
+                      <button class="menu-button" data-action="spell-pin-toggle" data-spell="${spellId}" data-focus-key="hub:spell-pin:${spellId}" type="button"${!isPinned && trayFull ? " disabled" : ""}>${isPinned ? "Remove From Tray" : trayFull ? "Tray Full" : "Pin To Tray"}</button>
+                      <button class="menu-button" data-action="spell-pin-up" data-spell="${spellId}" data-focus-key="hub:spell-up:${spellId}" type="button"${!isPinned || pinnedIndex === 0 ? " disabled" : ""}>Move Up</button>
+                      <button class="menu-button" data-action="spell-pin-down" data-spell="${spellId}" data-focus-key="hub:spell-down:${spellId}" type="button"${!isPinned || pinnedIndex === pinnedSpellIds.length - 1 ? " disabled" : ""}>Move Down</button>
+                    </div>
+                  </article>
+                `;
+              }).join("")}
             </div>
-          </article>
+          </section>
         `;
       }).join("");
 
@@ -19002,18 +23831,21 @@ class Game {
         <div class="hub-summary hub-summary-compact">
           <div class="mini-panel"><strong>Mana</strong><br>${Math.floor(this.player.mana)} / ${this.player.maxMana}</div>
           <div class="mini-panel"><strong>Known</strong><br>${this.player.spellsKnown.length}</div>
-          <div class="mini-panel"><strong>Overcast</strong><br>${this.player.mana > 0 ? "Available" : "Risky"}</div>
+          <div class="mini-panel"><strong>Tray</strong><br>${pinnedSpellIds.length} / ${this.getSpellTrayLimit()}</div>
+          <div class="mini-panel"><strong>Casting</strong><br>${this.spellTrayOpen || this.mode === "target" ? "Field tray" : "Book view"}</div>
         </div>
         <section class="hub-section">
           <div class="panel-title">Spell Book</div>
-          <div class="text-block magic-intro">Self casts resolve immediately. Targeted spells switch to aiming mode.</div>
-          <div class="magic-grid">${rows}</div>
+          <div class="text-block magic-intro">Single-click selects a spell. Double-click or Cast starts it immediately. Spells are grouped by job so travel, identify, defense, and offense tools stay easy to scan on a phone. The field tray only shows pinned quick casts, so manage those tray slots here.</div>
+          ${this.getSpellFilterChipsMarkup(activeFilter, "magic-filter", (key) => this.getMagicFilterFocusKey(key), "magic-filter-row", filterDefs)}
+          <div class="magic-category-list">${rows}</div>
         </section>
       </div>
     `;
   }
 
   getJournalHubMarkup() {
+    const activeSection = this.getResolvedJournalSection();
     const townCycle = this.getTownCycleState();
     const reactions = this.getTownReactionLines();
     const milestoneSummary = this.getQuestMilestoneSummary();
@@ -19055,38 +23887,133 @@ class Game {
     const telemetryRecent = telemetryReview.recentEvents.length > 0
       ? telemetryReview.recentEvents.map((entry) => `<div class="log-line">[T${entry.turn} D${entry.depth}] ${escapeHtml(entry.text)}</div>`).join("")
       : "<div class='muted'>No run telemetry captured yet.</div>";
-
-    return `
-      <div class="hub-body">
-        <div class="hub-summary">
-          <div class="mini-panel"><strong>Depth</strong><br>${this.currentDepth}</div>
-          <div class="mini-panel"><strong>Turn</strong><br>${this.turn}</div>
-          <div class="mini-panel"><strong>Cycle</strong><br>${escapeHtml(this.getTownCycleLabel())}</div>
-          <div class="mini-panel"><strong>Explored</strong><br>${getExploredPercent(this.currentLevel)}%</div>
-          <div class="mini-panel"><strong>Deepest</strong><br>${this.player.deepestDepth}</div>
-        </div>
+    const sectionButtons = this.getJournalSectionDefs().map((section) => `
+      <button class="hub-filter-chip${section.id === activeSection ? " active" : ""}" data-action="journal-section" data-section="${section.id}" data-focus-key="${this.getJournalSectionFocusKey(section.id)}" type="button">${section.label}</button>
+    `).join("");
+    const townStateLine = this.currentDepth === 0
+      ? `${this.getTownCycleLabel()} | ${townCycle.stockSummary}`
+      : `Deepest ${this.player.deepestDepth} | ${this.currentLevel?.encounterSummary || "The floor is still quiet enough to read."}`;
+    const buildLine = buildSummary.length > 0
+      ? buildSummary.join(", ")
+      : "No perks or relics claimed yet.";
+    const currentSectionMarkup = `
+      <div class="field-guide-layout">
         <section class="hub-section">
-          <div class="panel-title">Story</div>
+          <div class="panel-title">Current Floor</div>
           <div class="text-block">
-            ${escapeHtml(currentChapter)}<br><br>
-            ${escapeHtml(activeBriefing)}<br><br>
-            ${escapeHtml(milestoneJournal)}
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Objective Loop</div>
-          <div class="text-block">
-            <strong>${escapeHtml(this.currentLevel.description)}</strong><br>
+            <strong>${escapeHtml(this.currentLevel.description)}</strong><br><br>
             ${escapeHtml(objectiveText)}<br><br>
-            ${escapeHtml(optionalText || questState)}<br><br>
-            ${escapeHtml(milestoneSummary)}${roomEvent ? `<br><br>${escapeHtml(`Signature room: ${roomEvent.label}. ${roomEvent.summary}`)}` : ""}
+            ${escapeHtml(optionalText || questState)}
+          </div>
+          <div class="modal-actions utility-row">
+            <button class="menu-button" data-action="open-hub" data-tab="pack" data-focus-key="journal:pack" type="button">Pack</button>
+            <button class="menu-button" data-action="open-hub" data-tab="magic" data-focus-key="journal:magic" type="button">Magic</button>
+            <button class="menu-button" data-action="view-map" data-focus-key="journal:map" type="button">Floor Map</button>
           </div>
         </section>
         <section class="hub-section">
           <div class="panel-title">Pressure</div>
           <div class="text-block">
-            ${escapeHtml(dangerText)}<br>
+            ${escapeHtml(dangerText)}<br><br>
             ${escapeHtml(this.currentLevel?.encounterSummary || "The floor is still quiet enough to read.")}
+          </div>
+        </section>
+        <section class="hub-section">
+          <div class="panel-title">Run Build</div>
+          <div class="text-block">
+            ${escapeHtml(buildLine)}<br><br>
+            ${escapeHtml(getObjectiveRewardPreview(this.currentLevel) || "No objective reward preview available.")}
+          </div>
+        </section>
+        <section class="hub-section">
+          <div class="panel-title">${this.currentDepth === 0 ? "Town State" : "Run State"}</div>
+          <div class="text-block">
+            ${escapeHtml(townStateLine)}<br><br>
+            ${escapeHtml(milestoneSummary)}
+            ${roomEvent ? `<br><br>${escapeHtml(`Signature room: ${roomEvent.label}. ${roomEvent.summary}`)}` : ""}
+          </div>
+        </section>
+      </div>
+    `;
+    const missionSectionMarkup = `
+      <div class="field-guide-layout">
+        <section class="hub-section">
+          <div class="panel-title">Mission Brief</div>
+          <div class="text-block">
+            <strong>${escapeHtml(currentChapter)}</strong><br><br>
+            ${escapeHtml(activeBriefing)}
+          </div>
+        </section>
+        <section class="hub-section">
+          <div class="panel-title">Objective Path</div>
+          <div class="text-block">
+            ${escapeHtml(milestoneJournal)}<br><br>
+            ${escapeHtml(questState)}
+          </div>
+        </section>
+        <section class="hub-section">
+          <div class="panel-title">Reward Stakes</div>
+          <div class="text-block">
+            ${escapeHtml(getObjectiveRewardPreview(this.currentLevel) || "No floor reward preview available.")}<br><br>
+            ${latestSummary
+              ? escapeHtml(`Last return: depth ${latestSummary.extractedDepth}, ${latestSummary.greedCount} greed room${latestSummary.greedCount === 1 ? "" : "s"}, ${latestSummary.returnValue} gp banked or carried.`)
+              : "No banked return summary yet."}
+          </div>
+        </section>
+      </div>
+    `;
+    const guideSectionMarkup = `
+      <div class="field-guide-layout">
+        <section class="hub-section help-panel">
+          <div class="panel-title">Core Loop</div>
+          <div class="text-block">
+            Start in town, prep the build, enter the keep, clear the floor objective, then decide whether to extract or push deeper.
+          </div>
+        </section>
+        <section class="hub-section help-panel">
+          <div class="panel-title">Where Info Lives</div>
+          <div class="text-block">
+            HUD handles tactical-now status. Pack handles gear and burden. Magic handles tray management and casting. Field Guide holds mission, rules, and run history.
+          </div>
+        </section>
+        <section class="hub-section help-panel">
+          <div class="panel-title">Controls</div>
+          <ul class="help-list">
+            <li><strong>Keyboard:</strong> Arrows or numpad move. F searches. U uses. I opens pack. S opens magic. M opens the map. R rests. Shift+R sleeps until restored.</li>
+            <li><strong>Controller:</strong> D-pad or left stick moves. A confirms or uses. B backs out of targeting and menus. X triggers the alternate action. Y opens pack. Start opens the run menu. Back toggles the map. LB or RB switch tabs. RT or the right stick scrolls long lists.</li>
+            <li><strong>Touch:</strong> Use the on-screen pad for fallback movement and the dock for your main actions.</li>
+          </ul>
+        </section>
+        <section class="hub-section help-panel">
+          <div class="panel-title">Dungeon Rules</div>
+          <ul class="help-list">
+            <li>Search reveals hidden doors, traps, and better routes.</li>
+            <li>Heavy burden lowers dodge and lets monsters press harder.</li>
+            <li>Targeted spells and wands need line of sight.</li>
+            <li>Resting and sleeping are noisy, and sleep breaks when a monster enters view.</li>
+            <li>Enemy intent icons warn about rushes, ranged shots, summons, and other dangerous turns before they land.</li>
+          </ul>
+        </section>
+      </div>
+    `;
+    const chronicleSectionMarkup = `
+      <div class="field-guide-layout">
+        <section class="hub-section">
+          <div class="panel-title">Discoveries</div>
+          <div class="text-block">
+            ${discoverySummary.length > 0
+              ? discoverySummary.map((line) => escapeHtml(line)).join("<br><br>")
+              : "No written fragments recovered yet."}
+          </div>
+        </section>
+        <section class="hub-section">
+          <div class="panel-title">Town Cycle</div>
+          <div class="text-block">
+            ${escapeHtml(this.getTownCycleLabel())}<br><br>
+            ${escapeHtml(townCycle.turnsUntilRefresh === 1 ? "Next market turnover in 1 turn." : `Next market turnover in ${townCycle.turnsUntilRefresh} turns.`)}<br><br>
+            ${escapeHtml(townCycle.stockSummary)}<br>
+            ${escapeHtml(townCycle.rumorSummary)}<br><br>
+            ${escapeHtml(featuredStockSummary || "No featured market picks are posted yet.")}
           </div>
         </section>
         <section class="hub-section">
@@ -19098,37 +24025,11 @@ class Game {
           </div>
         </section>
         <section class="hub-section">
-          <div class="panel-title">Town Cycle</div>
+          <div class="panel-title">Named Loot</div>
           <div class="text-block">
-            ${escapeHtml(this.getTownCycleLabel())}<br>
-            ${escapeHtml(townCycle.turnsUntilRefresh === 1 ? "Next market turnover in 1 turn." : `Next market turnover in ${townCycle.turnsUntilRefresh} turns.`)}<br><br>
-            ${escapeHtml(townCycle.stockSummary)}<br>
-            ${escapeHtml(townCycle.rumorSummary)}<br><br>
-            ${escapeHtml(featuredStockSummary || "No featured market picks are posted yet.")}
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Discoveries</div>
-          <div class="text-block">
-            ${discoverySummary.length > 0
-              ? discoverySummary.map((line) => escapeHtml(line)).join("<br><br>")
-              : "No written fragments recovered yet."}
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Run Build</div>
-          <div class="text-block">
-            ${buildSummary.length > 0 ? escapeHtml(buildSummary.join(", ")) : "No perks or relics claimed yet."}<br><br>
-            ${escapeHtml(getObjectiveRewardPreview(this.currentLevel) || "No objective reward preview available.")}
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Floor Rewards</div>
-          <div class="text-block">
-            ${escapeHtml(getObjectiveRewardPreview(this.currentLevel) || "No floor reward preview available.")}<br><br>
-            ${latestSummary
-              ? escapeHtml(`Last return: depth ${latestSummary.extractedDepth}, ${latestSummary.greedCount} greed room${latestSummary.greedCount === 1 ? "" : "s"}, ${latestSummary.returnValue} gp banked or carried.`)
-              : "No banked return summary yet."}
+            ${namedLootSummary.length > 0
+              ? namedLootSummary.map((line) => escapeHtml(line)).join("<br>")
+              : "No signature finds claimed yet."}
           </div>
         </section>
         <section class="hub-section">
@@ -19149,14 +24050,6 @@ class Game {
           </div>
         </section>
         <section class="hub-section">
-          <div class="panel-title">Named Loot</div>
-          <div class="text-block">
-            ${namedLootSummary.length > 0
-              ? namedLootSummary.map((line) => escapeHtml(line)).join("<br>")
-              : "No signature finds claimed yet."}
-          </div>
-        </section>
-        <section class="hub-section">
           <div class="panel-title">Chronicle</div>
           <div class="message-log journal-log">${renderChronicleMarkup(this, 12)}</div>
         </section>
@@ -19170,13 +24063,32 @@ class Game {
           </div>
           <div class="message-log journal-log">${telemetryRecent}</div>
         </section>
-        <section class="hub-section utility-row">
-          <button class="menu-button" data-action="save-game" data-focus-key="journal:save" type="button">Save</button>
-          <button class="menu-button" data-action="load-game" data-focus-key="journal:load" type="button">Load</button>
-          <button class="menu-button" data-action="export-telemetry" data-focus-key="journal:trace" type="button">Export Trace</button>
-          <button class="menu-button" data-action="settings" data-focus-key="journal:settings" type="button">Settings</button>
-          <button class="menu-button" data-action="help" data-focus-key="journal:help" type="button">Help</button>
+      </div>
+    `;
+    const activeSectionMarkup = activeSection === "mission"
+      ? missionSectionMarkup
+      : activeSection === "guide"
+        ? guideSectionMarkup
+        : activeSection === "chronicle"
+          ? chronicleSectionMarkup
+          : currentSectionMarkup;
+
+    return `
+      <div class="hub-body field-guide-body">
+        <div class="hub-summary hub-summary-compact">
+          <div class="mini-panel"><strong>Depth</strong><br>${this.currentDepth}</div>
+          <div class="mini-panel"><strong>Turn</strong><br>${this.turn}</div>
+          <div class="mini-panel"><strong>Objective</strong><br>${escapeHtml(objectiveText)}</div>
+          <div class="mini-panel"><strong>Pressure</strong><br>${escapeHtml(this.dangerLevel)}</div>
+        </div>
+        <section class="hub-section field-guide-kicker">
+          <div class="panel-title">Field Guide</div>
+          <div class="text-block">One support surface for the current floor, mission context, rules reference, and the long-form run record.</div>
         </section>
+        <div class="pack-filter-row journal-section-row">
+          ${sectionButtons}
+        </div>
+        ${activeSectionMarkup}
       </div>
     `;
   }
@@ -19189,10 +24101,14 @@ class Game {
       selection = null,
       preserveScroll = false,
       focusTarget = null,
-      fallbackFocus = true
+      fallbackFocus = true,
+      journalSection = null
     } = options;
     this.mode = "modal";
     this.activeHubTab = ["pack", "magic", "journal"].includes(defaultTab) ? defaultTab : "pack";
+    if (this.activeHubTab === "journal") {
+      this.activeJournalSection = this.getResolvedJournalSection(journalSection || this.activeJournalSection);
+    }
     this.recordTelemetry(this.activeHubTab === "magic"
       ? "magic_opened"
       : this.activeHubTab === "journal"
@@ -19201,6 +24117,8 @@ class Game {
     if (this.activeHubTab === "pack") {
       this.setPackSelection(selection || this.activePackSelection || this.getDefaultPackSelection());
       this.resolvePackSelection();
+    } else {
+      this.hoveredPackSelection = null;
     }
 
     const tabMarkup = this.getHubTabsMarkup(this.activeHubTab);
@@ -19213,7 +24131,7 @@ class Game {
     const title = this.activeHubTab === "magic"
       ? "Magic"
       : this.activeHubTab === "journal"
-        ? "Journal"
+        ? "Field Guide"
         : "Pack & Equipment";
 
     this.showSimpleModal(title, `
@@ -19237,15 +24155,34 @@ class Game {
     this.showHubModal("magic");
   }
 
+  getShopPanelTabsMarkup(activePanel = "buy") {
+    return `
+      <div class="pack-filter-row shop-panel-row">
+        <button class="hub-filter-chip${activePanel === "buy" ? " active" : ""}" data-action="shop-panel" data-panel="buy" data-focus-key="${this.getShopPanelFocusKey("buy")}" type="button">Buy</button>
+        <button class="hub-filter-chip${activePanel === "sell" ? " active" : ""}" data-action="shop-panel" data-panel="sell" data-focus-key="${this.getShopPanelFocusKey("sell")}" type="button">Sell</button>
+      </div>
+    `;
+  }
+
+  groupShopEntriesByCategory(entries = [], getCategoryKey) {
+    return getInventoryCategoryDefs().map((category) => ({
+      ...category,
+      entries: entries.filter((entry) => getCategoryKey(entry) === category.key)
+    })).filter((group) => group.entries.length > 0);
+  }
+
   showShopModal(shopId, shop, options = {}) {
     const {
       preserveScroll = false,
       focusTarget = null,
-      fallbackFocus = true
+      fallbackFocus = true,
+      panel = null
     } = options;
     this.mode = "modal";
+    const previousShopId = this.pendingShop?.id || "";
     this.pendingShop = { ...shop, id: shopId };
     this.pendingService = null;
+    this.activeShopPanel = panel || (previousShopId === shopId ? this.activeShopPanel : "buy");
     const townCycle = this.getTownCycleState();
     const reactions = this.getTownReactionLines(shopId);
     const returnSting = this.getTownReturnStingText();
@@ -19256,49 +24193,89 @@ class Game {
       .map((itemId) => ITEM_DEFS[itemId]?.name)
       .filter(Boolean)
       .join(", ");
-    const stockRows = liveStock.length === 0
+    const stockEntries = liveStock.map((itemId) => {
+      const item = createTownItem(itemId);
+      const semanticEntry = buildInventoryItemSemantics(this, item, -1, { shopId });
+      return {
+        itemId,
+        item,
+        semanticEntry,
+        price: getShopBuyPrice(this, item, shopId)
+      };
+    });
+    const stockGroups = this.groupShopEntriesByCategory(stockEntries, (entry) => entry.semanticEntry.categoryKey);
+    const stockRows = stockEntries.length === 0
       ? `<div class="text-block muted">The shelves are empty. Fresh stock arrives in ${escapeHtml(turnoverLabel)}.</div>`
-      : liveStock.map((itemId) => {
-        const item = createTownItem(itemId);
-        const price = getShopBuyPrice(this, item, shopId);
-        const disabled = this.player.gold < price ? "disabled" : "";
-        return `
-          <div class="shop-row">
-            <div>
-              <div><strong>${escapeHtml(getItemName(item, true))}</strong> <span class="muted">${price} gp</span></div>
-              <div class="muted">${escapeHtml(describeItem(item))}</div>
+      : stockGroups.map((group) => `
+        <div class="shop-sell-group">
+          <div class="field-label">${escapeHtml(group.label)}</div>
+          ${group.entries.map((entry) => `
+            <div class="shop-row">
+              <div>
+                <div><strong>${escapeHtml(getItemName(entry.item, true))}</strong> <span class="muted">${entry.price} gp</span></div>
+                <div class="muted">${escapeHtml(describeItem(entry.item))}</div>
+                ${this.getPackRowTagMarkup(entry.semanticEntry)}
+              </div>
+              <div class="actions">
+                <button class="tiny-button" data-action="shop-buy" data-shop="${shopId}" data-item="${entry.itemId}" data-focus-key="${this.getShopBuyFocusKey(shopId, entry.itemId)}" type="button"${this.player.gold < entry.price ? " disabled" : ""}>Buy</button>
+              </div>
             </div>
-            <div class="actions">
-              <button class="tiny-button" data-action="shop-buy" data-shop="${shopId}" data-item="${itemId}" data-focus-key="${this.getShopBuyFocusKey(shopId, itemId)}" type="button" ${disabled}>Buy</button>
-            </div>
-          </div>
-        `;
-      }).join("");
+          `).join("")}
+        </div>
+      `).join("");
 
     const sellModel = buildInventoryPresentationModel(this, {
       filter: "sell",
       selectedIndex: this.activePackSelection?.type === "inventory" ? this.activePackSelection.value : -1,
       shopId
     });
+    const markedSellEntries = this.player.inventory.filter((item) => item?.markedForSale && (shopId === "junk" || shopAcceptsItem(shopId, item)));
+    const markedSellValue = markedSellEntries.reduce((sum, item) => sum + getShopSellPrice(this, item, shopId), 0);
+    const sellEntries = sellModel.groups.flatMap((group) => group.sections.flatMap((section) => section.items));
+    const sellGroups = this.groupShopEntriesByCategory(sellEntries, (entry) => entry.categoryKey);
     const sellRows = sellModel.visibleCount === 0
       ? `<div class="text-block">Nothing here matches what this shop buys.</div>`
-      : sellModel.groups.map((group) => `
+      : sellGroups.map((group) => `
         <div class="shop-sell-group">
           <div class="field-label">${escapeHtml(group.label)}</div>
-          ${group.items.map((entry) => `
+          ${group.entries.map((entry) => `
             <div class="shop-row">
               <div>
                 <div><strong>${escapeHtml(getItemName(entry.item))}</strong>${entry.count > 1 ? ` <span class="muted">x${entry.count}</span>` : ""} <span class="muted">${getShopSellPrice(this, entry.item, shopId)} gp</span></div>
                 <div class="muted">${escapeHtml(entry.reason)}</div>
+                ${this.getPackRowTagMarkup(entry)}
                 <div class="muted">${escapeHtml(this.getPackItemNote(entry.item, entry))}</div>
               </div>
               <div class="actions">
+                <label class="mark-sale-toggle">
+                  <input type="checkbox" data-action="toggle-sale-mark" data-index="${entry.index}" data-shop-sell-row="true" data-focus-key="${this.getShopSellFocusKey(entry.index)}:mark" ${entry.item.markedForSale ? "checked" : ""}>
+                  <span>Mark</span>
+                </label>
                 <button class="tiny-button" data-action="shop-sell" data-index="${entry.index}" data-focus-key="${this.getShopSellFocusKey(entry.index)}" type="button">Sell</button>
               </div>
             </div>
           `).join("")}
         </div>
       `).join("");
+    const panelTabs = this.getShopPanelTabsMarkup(this.activeShopPanel);
+    const panelBody = this.activeShopPanel === "sell"
+      ? `
+        <div class="section-block">
+          <div class="field-label">Sell</div>
+          <div class="modal-actions utility-row">
+            <button class="menu-button" data-action="shop-sell-marked" data-focus-key="shop:sell-marked" type="button"${markedSellEntries.length === 0 ? " disabled" : ""}>Sell Marked${markedSellEntries.length > 0 ? ` (${markedSellEntries.length})` : ""}</button>
+            <button class="menu-button" data-action="open-hub" data-tab="pack" data-filter="sell" data-focus-key="shop:review-pack" type="button">Review Pack</button>
+          </div>
+          <div class="text-block muted">${escapeHtml(markedSellEntries.length > 0 ? `${markedSellEntries.length} marked item${markedSellEntries.length === 1 ? "" : "s"} will sell here for ${markedSellValue} gp.` : "Use the checkboxes to mark items, then sell the whole marked bundle here.")}</div>
+          ${sellRows}
+        </div>
+      `
+      : `
+        <div class="section-block">
+          <div class="field-label">Buy</div>
+          ${stockRows}
+        </div>
+      `;
 
     this.showSimpleModal(`${shop.name}`, `
       <div class="section-block text-block">${escapeHtml(shop.greeting)}</div>
@@ -19314,17 +24291,8 @@ class Game {
         <div class="section-block text-block">${escapeHtml(reactions.lines[0])}</div>
       ` : ""}
       ${returnSting ? `<div class="section-block text-block muted">${escapeHtml(returnSting)}</div>` : ""}
-      <div class="section-block">
-        <div class="field-label">Buy</div>
-        ${stockRows}
-      </div>
-      <div class="section-block">
-        <div class="field-label">Sell</div>
-        <div class="modal-actions utility-row">
-          <button class="menu-button" data-action="open-hub" data-tab="pack" data-filter="sell" data-focus-key="shop:review-pack" type="button">Review Pack</button>
-        </div>
-        ${sellRows}
-      </div>
+      ${panelTabs}
+      ${panelBody}
     `, {
       surfaceKey: `shop:${shopId}`,
       preserveScroll,
@@ -19431,7 +24399,7 @@ class Game {
     const investmentPreview = {
       supply_cache: "Next refresh: provisioner adds another emergency tool.",
       guild_license: "Next refresh: guild stock opens deeper books and charged tools.",
-      temple_favors: "Now: temple prices drop. Later: blood altars can appear below.",
+      temple_favors: "Now: temple prices drop. Later: blood altars, oath shrines, and pilgrim pools can appear below.",
       archive_maps: "Next intel pull gets cheaper and cursed caches can start appearing.",
       ghost_bargains: "Future floors can roll ghost merchants.",
       deep_contracts: "Future floors can roll vault rooms and stronger reward tables."
@@ -19449,6 +24417,7 @@ class Game {
       </div>
     `).join("");
     const intel = getTownIntel(this);
+    const townMeta = this.getTownMetaSummary();
     const masterySummary = this.getClassMasterySummary(this.player?.classId);
     const latestSummary = (this.runSummaryHistory || []).at(-1) || this.lastRunSummary;
     const contractModel = this.getContractViewModel();
@@ -19469,9 +24438,22 @@ class Game {
       ? intel.known.map((rumor) => `<div class="log-line">${escapeHtml(rumor.text)}</div>`).join("")
       : "<div class='muted'>No secured rumors yet.</div>";
     const prepAdvice = this.getTownPrepAdvice();
+    const nextRunIntent = this.getNextRunIntent(this.player?.classId);
+    const carryForward = this.getTownCarryForwardSummary();
     const recommendedText = contractModel.recommendedId
       ? `Recommended next run: ${contractModel.all.find((contract) => contract.id === contractModel.recommendedId)?.name || contractModel.recommendedId}. ${contractModel.recommendedReason}`
       : "No contract recommendation available.";
+    const recommendedTownActionButton = townMeta.recommendedActionId === "contract_recommended"
+      ? `<button class="menu-button primary" data-action="contract-arm-recommended" data-focus-key="bank:recommended-contract" type="button">${escapeHtml(townMeta.recommendedActionLabel)}</button>`
+      : townMeta.recommendedActionId?.startsWith("town_unlock:")
+        ? `<button class="menu-button primary" data-action="town-unlock" data-unlock="${townMeta.recommendedActionId.split(":")[1]}" data-focus-key="bank:recommended-unlock" type="button"${this.player.gold < (townMeta.nextUnlock?.cost || 0) ? " disabled" : ""}>${escapeHtml(townMeta.recommendedActionLabel)}</button>`
+        : townMeta.recommendedActionId === "town_rumor"
+          ? `<button class="menu-button primary" data-action="town-rumor" data-focus-key="bank:recommended-rumor" type="button">${escapeHtml(townMeta.recommendedActionLabel)}</button>`
+          : townMeta.recommendedActionId === "bank_withdraw"
+            ? `<button class="menu-button primary" data-action="bank-withdraw" data-focus-key="bank:recommended-withdraw" type="button">${escapeHtml(townMeta.recommendedActionLabel)}</button>`
+            : townMeta.recommendedActionId === "bank_deposit"
+              ? `<button class="menu-button primary" data-action="bank-deposit" data-focus-key="bank:recommended-deposit" type="button">${escapeHtml(townMeta.recommendedActionLabel)}</button>`
+              : "";
     this.showSimpleModal("Bank", `
       <div class="section-block text-block">${escapeHtml(STORY_NPCS.chronicler.name)} keeps the ledgers while ${escapeHtml(STORY_NPCS.steward.name)} turns banked gold into safer carry, forward intel, and funded leverage for this adventurer.</div>
       <div class="section-block text-block">
@@ -19492,6 +24474,18 @@ class Game {
       ${reactions.lines.length > 0 ? `<div class="section-block text-block">${escapeHtml(reactions.lines[0])}</div>` : ""}
       ${returnSting ? `<div class="section-block text-block muted">${escapeHtml(returnSting)}</div>` : ""}
       <div class="section-block text-block">${escapeHtml(prepAdvice)}</div>
+      <div class="section-block">
+        <div class="field-label">One More Run</div>
+        <div class="text-block">${nextRunIntent.motivators.map((entry) => escapeHtml(`${entry.label} ${entry.detail}`)).join("<br><br>")}</div>
+      </div>
+      <div class="section-block">
+        <div class="field-label">Recommended Next Action</div>
+        <div class="text-block">
+          ${escapeHtml(townMeta.recommendedAction)}<br><br>
+          ${escapeHtml(townMeta.recommendedReason)}
+        </div>
+        ${recommendedTownActionButton ? `<div class="modal-actions inline-modal-actions">${recommendedTownActionButton}</div>` : ""}
+      </div>
       <div class="modal-actions">
         <button class="menu-button" data-action="bank-deposit" data-focus-key="${this.getTownActionFocusKey("deposit")}" type="button">Deposit 100</button>
         <button class="menu-button" data-action="bank-withdraw" data-focus-key="${this.getTownActionFocusKey("withdraw")}" type="button">Withdraw 100</button>
@@ -19500,6 +24494,7 @@ class Game {
       </div>
       <div class="section-block">
         <div class="text-block">${escapeHtml(recommendedText)}</div><br>
+        <div class="text-block muted">${escapeHtml(carryForward)}</div><br>
         <div class="field-label">Next Floor Intel</div>
         ${nextRumor}
       </div>
@@ -19541,46 +24536,168 @@ class Game {
     });
   }
 
-  showHelpModal() {
-    this.mode = "modal";
-    this.showSimpleModal("Help", `
-      <div class="section-block text-block">
-        This mobile build is tuned for travel play: portrait layout, offline installability, paired controller support,
-        touch fallback, targeted spells, heavier dungeon pressure, and clearer combat feedback.
+  getSaveSlotLabel(slotId = 1) {
+    return `Slot ${slotId}`;
+  }
+
+  getSaveSlotSummaryMarkup(options = {}) {
+    const {
+      action = "load",
+      actionLabel = action === "save" ? "Save Here" : "Load",
+      buttonClass = "tiny-button",
+      focusPrefix = `save-slot:${action}`,
+      includeButtons = true
+    } = options;
+    const latestMeta = this.getSavedRunMeta();
+    return `
+      <div class="save-slot-list${buttonClass === "tiny-button" ? " compact" : ""}">
+        ${this.getAllSavedRunMeta().map(({ slotId, meta }) => {
+          const disabled = action === "save" ? !this.player : !meta;
+          const isActive = this.activeSaveSlotId === slotId;
+          const isLatest = latestMeta?.slotId === slotId;
+          const slotBadges = [
+            isActive ? `<span class="save-slot-badge active">Active</span>` : "",
+            isLatest ? `<span class="save-slot-badge">Latest</span>` : ""
+          ].filter(Boolean).join("");
+          const classLine = meta?.className ? ` | ${escapeHtml(meta.className)}` : "";
+          const raceLine = meta?.raceName ? ` | ${escapeHtml(meta.raceName)}` : "";
+          const timeLine = meta?.savedAt ? this.formatSaveStamp(meta.savedAt) : "";
+          const buttonLabel = action === "save"
+            ? (meta ? "Overwrite" : actionLabel)
+            : actionLabel;
+          return `
+            <section class="save-slot-card${isActive ? " active" : ""}">
+              <div class="save-slot-head">
+                <div class="save-slot-title-row">
+                  <strong class="save-slot-title">${this.getSaveSlotLabel(slotId)}</strong>
+                  ${slotBadges}
+                </div>
+                <div class="save-slot-name">${meta ? escapeHtml(meta.name) : "Empty slot"}</div>
+                <div class="save-slot-meta">${meta ? `Level ${meta.level} | Depth ${meta.depth}${classLine}${raceLine}` : action === "save" ? "No run saved here yet." : "No saved run in this slot."}</div>
+                ${timeLine ? `<div class="save-slot-meta">${escapeHtml(timeLine)}</div>` : ""}
+              </div>
+              ${includeButtons ? `
+                <div class="save-slot-actions">
+                  <button class="${buttonClass}" data-action="${action === "save" ? "save-game" : "load-game"}" data-save-slot="${slotId}" data-focus-key="${focusPrefix}:${slotId}" type="button"${disabled ? " disabled" : ""}>${buttonLabel}</button>
+                </div>
+              ` : ""}
+            </section>
+          `;
+        }).join("")}
       </div>
-      <div class="section-block">
-        <div class="field-label">Controls</div>
-        <div class="text-block">
-          Keyboard: arrows or numpad move, F searches, U uses, I opens pack, S opens spells, M opens the map, R rests briefly, Shift+R sleeps until restored<br>
-          Controller: D-pad or left stick moves focus, A confirms, B backs out, Y opens pack, Start opens the run menu, Back toggles the map, LB/RB switch hub tabs, and RT or the right stick scrolls long lists<br>
-          Touch: use the on-screen pad as fallback movement and the dock for your main actions
-      </div>
-      </div>
-      <div class="section-block">
-        <div class="field-label">Dungeon Notes</div>
-        <div class="text-block">
-          Search for hidden doors and traps. Heavy burden reduces dodge and lets monsters press harder.
-          Targeted spells and wands require line of sight. Resting and sleeping are noisy, and sleep breaks the moment a monster enters view. Enemy intent icons now telegraph rushes,
-          ranged shots, summons, and other ugly plans before they land.
+    `;
+  }
+
+  showSaveSlotsModal(mode = "load", options = {}) {
+    const { preserveScroll = false, focusTarget = null } = options;
+    const hasAnySave = this.getAllSavedRunMeta().some((entry) => Boolean(entry.meta));
+    const latestMeta = this.getSavedRunMeta();
+    const resolvedFocus = focusTarget
+      || (mode === "save"
+        ? `save-slots:save:${this.activeSaveSlotId || 1}`
+        : latestMeta
+          ? `save-slots:load:${latestMeta.slotId}`
+          : null);
+    const intro = mode === "save"
+      ? (this.player ? "Choose a slot for this run. Existing slots can be overwritten." : "No active run is available to save.")
+      : (hasAnySave ? "Choose which save slot to continue from." : "No saved runs are available yet.");
+    const musicControls = !this.player ? `
+      <div class="save-slot-music-banner">
+        <div class="title-audio-copy">
+          <div class="title-audio-label">Title Theme</div>
+          <div class="title-audio-note" data-role="title-music-note"></div>
         </div>
+        <button class="action-button title-audio-toggle" data-action="toggle-music" data-role="title-music-toggle" data-focus-key="save-slots:music" type="button">${escapeHtml(this.getMusicToggleLabel())}</button>
+      </div>
+    ` : "";
+    this.mode = "modal";
+    this.showSimpleModal(mode === "save" ? "Save Slots" : "Continue Run", `
+      <div class="section-block text-block">${escapeHtml(intro)}</div>
+      ${musicControls}
+      <div class="save-slot-modal">
+        ${this.getSaveSlotSummaryMarkup({
+          action: mode,
+          actionLabel: mode === "save" ? "Save Here" : "Continue",
+          buttonClass: "menu-button",
+          focusPrefix: `save-slots:${mode}`
+        })}
       </div>
     `, {
-      surfaceKey: "help"
+      surfaceKey: `save-slots:${mode}`,
+      preserveScroll,
+      focusTarget: resolvedFocus
+    });
+    this.syncMusicToggleUi();
+    this.syncSurfaceMusic();
+  }
+
+  showHelpModal(options = {}) {
+    if (this.player && this.mode !== "title") {
+      this.showHubModal("journal", {
+        preserveScroll: this.mode === "modal",
+        focusTarget: this.getJournalSectionFocusKey("guide"),
+        journalSection: "guide"
+      });
+      return;
+    }
+    this.mode = "modal";
+    this.showSimpleModal("How to Play", `
+      <div class="section-block help-panel">
+        <div class="field-label">Core Loop</div>
+        <div class="text-block">
+          Start in town, prep the build, enter the keep, clear the floor objective, then decide whether to extract or push deeper.
+        </div>
+      </div>
+      <div class="section-block help-panel">
+        <div class="field-label">Controls</div>
+        <ul class="help-list">
+          <li><strong>Keyboard:</strong> Arrows or numpad move. F searches. U uses. I opens pack. S opens magic. M opens the map. R rests. Shift+R sleeps until restored.</li>
+          <li><strong>Controller:</strong> D-pad or left stick moves. A confirms or uses. B backs out of targeting and menus. X triggers the alternate action. Y opens pack. Start opens the run menu. Back toggles the map. LB or RB switch tabs. RT or the right stick scrolls long lists.</li>
+          <li><strong>Touch:</strong> Use the on-screen pad for fallback movement and the dock for your main actions.</li>
+        </ul>
+      </div>
+      <div class="section-block help-panel">
+        <div class="field-label">Dungeon Rules</div>
+        <ul class="help-list">
+          <li>Search reveals hidden doors, traps, and better routes.</li>
+          <li>Heavy burden lowers dodge and lets monsters press harder.</li>
+          <li>Targeted spells and wands need line of sight.</li>
+          <li>Resting and sleeping are noisy, and sleep breaks when a monster enters view.</li>
+          <li>Enemy intent icons warn about rushes, ranged shots, summons, and other dangerous turns before they land.</li>
+        </ul>
+      </div>
+    `, {
+      surfaceKey: "help",
+      closeLabel: options.closeLabel || "Close",
+      modalReturnContext: options.modalReturnContext || null
     });
   }
 
-  showUtilityMenu() {
+  showUtilityMenu(options = {}) {
+    const {
+      focusTarget = null,
+      openerFocusKey = undefined
+    } = options;
+    const currentOpenerFocusKey = this.getCurrentUiFocusKey() || "utility-menu-button";
+    if (typeof openerFocusKey === "string") {
+      this.utilityMenuOpenerFocusKey = openerFocusKey || null;
+    } else if (currentOpenerFocusKey) {
+      this.utilityMenuOpenerFocusKey = currentOpenerFocusKey;
+    }
     this.mode = "modal";
     this.setModalVisibility(true);
     const template = document.getElementById("utility-menu-template");
     const fragment = template.content.cloneNode(true);
     const savedMeta = this.getSavedRunMeta();
+    const savedSlots = this.getAllSavedRunMeta();
+    const hasSavedRun = savedSlots.some((entry) => Boolean(entry.meta));
     const connected = this.gamepadInput.isConnected();
     const utilityRunSummary = fragment.getElementById("utility-run-summary");
     const utilitySaveSummary = fragment.getElementById("utility-save-summary");
     const utilityControlSummary = fragment.getElementById("utility-control-summary");
     const utilitySaveButton = fragment.getElementById("utility-save-button");
     const utilityLoadButton = fragment.getElementById("utility-load-button");
+    const utilityStatsButton = fragment.getElementById("utility-stats-button");
     const activeContract = this.getActiveContract(true) || this.getActiveContract(false);
     const latestSummary = this.getLatestPersistenceSummary();
     const latestUnlock = this.getLatestPermanentUnlock();
@@ -19603,18 +24720,28 @@ class Game {
       if (!savedMeta) {
         utilitySaveSummary.innerHTML = `
           <div class="utility-menu-title">No saved run</div>
-          <div class="utility-menu-meta">Your latest browser save will appear here.</div>
+          <div class="utility-menu-meta">Save slots appear here once you bank a run.</div>
           <div class="utility-menu-meta">${escapeHtml(latestSummary ? `Latest return: ${latestSummary.outcome} depth ${latestSummary.extractedDepth}, ${latestSummary.returnValue} gp value.` : "Latest return: none recorded yet.")}</div>
           <div class="utility-menu-meta">${escapeHtml(latestUnlock ? `Latest permanent unlock: ${latestUnlock}` : "Latest permanent unlock: none yet.")}</div>
+          ${this.getSaveSlotSummaryMarkup({
+            action: "load",
+            actionLabel: "Load",
+            focusPrefix: "utility:load-slot"
+          })}
         `;
       } else {
         const timeLabel = savedMeta.savedAt ? this.formatSaveStamp(savedMeta.savedAt) : null;
         utilitySaveSummary.innerHTML = `
           <div class="utility-menu-title">${escapeHtml(savedMeta.name)}</div>
-          <div class="utility-menu-meta">Level ${savedMeta.level} &middot; Depth ${savedMeta.depth}</div>
+          <div class="utility-menu-meta">${escapeHtml(this.getSaveSlotLabel(savedMeta.slotId || 1))} &middot; ${escapeHtml(`Level ${savedMeta.level} | Depth ${savedMeta.depth}`)}</div>
           ${timeLabel ? `<div class="utility-menu-meta">${escapeHtml(timeLabel)}</div>` : ""}
           <div class="utility-menu-meta">${escapeHtml(latestSummary ? `Latest return: ${latestSummary.outcome} depth ${latestSummary.extractedDepth}, ${latestSummary.returnValue} gp value.` : "Latest return: none recorded yet.")}</div>
           <div class="utility-menu-meta">${escapeHtml(latestUnlock ? `Latest permanent unlock: ${latestUnlock}` : "Latest permanent unlock: none yet.")}</div>
+          ${this.getSaveSlotSummaryMarkup({
+            action: "load",
+            actionLabel: "Load",
+            focusPrefix: "utility:load-slot"
+          })}
         `;
       }
     }
@@ -19622,7 +24749,7 @@ class Game {
     if (utilityControlSummary) {
       utilityControlSummary.innerHTML = `
         <div class="utility-menu-title">${connected ? "Controller ready" : "Touch active"}</div>
-        <div class="utility-menu-meta">${escapeHtml(connected ? `${this.gamepadInput.getControllerName()} | A Confirm | B Back | LB/RB Tabs | RT Scroll` : "Touch controls are available for movement and actions.")}</div>
+        <div class="utility-menu-meta">${escapeHtml(connected ? `${this.gamepadInput.getControllerName()} | A Confirm/Use | B Back | X Alt | Y Pack | RT Scroll` : "Touch controls are available for movement and actions.")}</div>
       `;
     }
 
@@ -19630,21 +24757,34 @@ class Game {
       utilitySaveButton.disabled = !this.player || this.mode === "title";
     }
     if (utilityLoadButton) {
-      utilityLoadButton.disabled = !savedMeta;
+      utilityLoadButton.disabled = !hasSavedRun;
+    }
+    if (utilityStatsButton) {
+      utilityStatsButton.disabled = !this.player;
     }
 
     this.modalRoot.innerHTML = "";
     this.modalRoot.appendChild(fragment);
     this.modalRoot.classList.remove("hidden");
     this.modalSurfaceKey = "utility-menu";
+    this.modalReturnContext = null;
     this.recordTelemetry("modal_opened", {
       surface: "utility-menu"
     });
     this.applyControllerNavigationMetadata();
+    const focusElement = this.resolveModalFocusTarget(focusTarget);
+    if (focusElement) {
+      this.focusUiElement(focusElement);
+      return;
+    }
     this.focusFirstUiElement();
   }
 
   closeModal() {
+    this.resetMovementCadence();
+    const closingSurfaceKey = this.modalSurfaceKey;
+    const modalReturnContext = this.modalReturnContext;
+    const openerFocusKey = this.utilityMenuOpenerFocusKey;
     if (this.modalSurfaceKey === "return-summary") {
       this.recordTelemetry("return_summary_closed", {
         outcome: this.lastRunSummary?.outcome || ""
@@ -19656,17 +24796,32 @@ class Game {
     this.modalRoot.classList.add("hidden");
     this.modalRoot.innerHTML = "";
     this.modalSurfaceKey = null;
+    this.modalReturnContext = null;
     this.pendingService = null;
     this.activeHubTab = "pack";
+    this.hoveredPackSelection = null;
     if (this.targetMode && this.mode !== "target") {
       this.targetMode = null;
     }
+    if (modalReturnContext?.originSurface === "utility-menu" && this.player) {
+      this.showUtilityMenu({
+        focusTarget: modalReturnContext.returnFocusKey,
+        openerFocusKey
+      });
+      return;
+    }
     if (!this.player) {
+      this.utilityMenuOpenerFocusKey = null;
       this.showTitleScreen();
       return;
     }
     if (this.player && this.player.hp > 0) {
       this.mode = "game";
+    }
+    if (closingSurfaceKey === "utility-menu") {
+      this.restoreUiFocus(openerFocusKey || "utility-menu-button");
+    } else if (this.controllerFocusKey && !this.findUiElementByFocusKey(this.controllerFocusKey)) {
+      this.controllerFocusKey = null;
     }
   }
 
@@ -19693,15 +24848,17 @@ class Game {
 
   render() {
     const previousFocusKey = this.mode === "modal" ? null : (this.getActiveUiActionableElement()?.dataset?.focusKey || this.controllerFocusKey || null);
+    this.syncSurfaceMusic();
     this.syncUtilityBar();
     this.renderBoard();
     this.renderMiniMap();
     this.renderPanels();
     this.renderEventTicker();
     this.renderActionBar();
+    this.syncSpellTray();
     this.syncContextChip();
     this.applyControllerNavigationMetadata();
-    if (previousFocusKey && this.lastInputSource === "gamepad") {
+    if (previousFocusKey && this.lastInputSource !== "pointer") {
       const nextFocus = this.findUiElementByFocusKey(previousFocusKey);
       if (nextFocus) {
         this.focusUiElement(nextFocus);
@@ -19719,8 +24876,14 @@ class Game {
     ctx.fillRect(0, 0, this.mapCanvas.width, this.mapCanvas.height);
 
     if (!this.currentLevel || !this.player) {
+      if (this.mapPanelLabel) {
+        this.mapPanelLabel.textContent = "Overworld Map";
+      }
+      if (this.mapPanelState) {
+        this.mapPanelState.textContent = "No active run";
+      }
       if (this.mapCaption) {
-        this.mapCaption.textContent = "No active map.";
+        this.mapCaption.textContent = "Create a character to begin.";
       }
       return;
     }
@@ -19825,27 +24988,23 @@ class Game {
     markPoint(unopenedOptional, "#c991ff", "#ead7ff", 5);
     markPoint(this.currentLevel.signatureReveal?.point, "#f0d27d", "#fff0c3", 5);
 
+    if (this.mapPanelLabel) {
+      this.mapPanelLabel.textContent = this.currentDepth === 0 ? "Overworld Map" : "Floor Survey";
+    }
+    if (this.mapPanelState) {
+      this.mapPanelState.textContent = this.currentDepth === 0
+        ? this.getTownCycleLabel()
+        : `Depth ${this.currentDepth}`;
+    }
     if (this.mapCaption) {
       const modeLabel = this.currentDepth === 0 ? this.getTownCycleLabel() : "Dungeon survey";
       const pressure = this.getPressureUiState();
-      const firstTownRun = this.currentDepth === 0 && (this.player.deepestDepth || 0) === 0;
-      const floorThesis = this.getFloorThesisText();
-      const directive = this.getLoopDirective();
-      const townReturnSting = this.getTownReturnStingText();
       this.mapCaption.innerHTML = `
         <div class="map-caption-row">
-          <span class="map-chip">Depth ${this.currentDepth}</span>
           <span class="map-chip">${escapeHtml(this.getCurrentAreaTitle())}</span>
-        </div>
-        <div class="map-caption-row">
           <span class="map-chip subtle">Explored ${getExploredPercent(this.currentLevel)}%</span>
           <span class="map-chip subtle">${escapeHtml(this.currentDepth > 0 ? pressure.label : modeLabel)}</span>
         </div>
-        ${this.currentDepth > 0 && floorThesis ? `<div class="map-caption-row"><span class="map-chip subtle">${escapeHtml(floorThesis)}</span></div>` : ""}
-        ${this.currentDepth > 0 && directive.primaryText ? `<div class="map-caption-row"><span class="map-chip subtle objective-chip">${escapeHtml(directive.primaryText)}</span></div>` : ""}
-        ${this.currentDepth > 0 && directive.supportText ? `<div class="map-caption-row"><span class="map-chip subtle">${escapeHtml(directive.supportText)}</span></div>` : ""}
-        ${this.currentDepth === 0 && townReturnSting ? `<div class="map-caption-row"><span class="map-chip subtle">${escapeHtml(townReturnSting)}</span></div>` : ""}
-        ${firstTownRun ? `<div class="map-caption-row"><span class="map-chip subtle">North road leads into the keep</span></div>` : ""}
       `;
     }
   }
@@ -19978,7 +25137,11 @@ class Game {
       .forEach((effect) => drawEffect(ctx, effect, view, time, effectProfile));
     drawPlayer(ctx, this.player, this.player.x - view.x, this.player.y - view.y, time, effectProfile);
     if (this.targetMode) {
-      drawTargetCursor(ctx, this.targetMode.cursor, view, this.player, time, effectProfile);
+      drawTargetCursor(ctx, this.targetMode.cursor, view, this.player, time, {
+        ...effectProfile,
+        targetPreview: this.getActiveSpellTargetPreview(),
+        targetMode: this.targetMode
+      });
     }
     ctx.restore();
 
@@ -19991,13 +25154,14 @@ class Game {
     drawBoardBurdenVignette(ctx, burdenRatio, time, effectProfile);
   }
 
-  playProjectile(from, to, color) {
+  playProjectile(from, to, color, options = {}) {
     this.addEffect({
       type: "projectileTrail",
       from: { x: from.x, y: from.y },
       to: { x: to.x, y: to.y },
       color,
-      duration: this.getReducedMotionActive() ? 120 : 210
+      style: options.style || "arcane",
+      duration: options.duration || (this.getReducedMotionActive() ? 120 : 210)
     });
   }
 
@@ -20101,30 +25265,30 @@ class Game {
       if (hpRatio < 0.35) {
         advice = "You are in the kill zone. Break contact, create space, or spend a tool immediately.";
         if (this.player.spellsKnown.length > 0) {
-          pushAction("open-hub", "Magic", "Spend control or damage now", true, "magic");
+          pushAction("open-spell-tray", "Magic", "Spend control or damage now", true, "magic");
         }
         pushAction("wait", "Hold", "Stabilize before moving", false);
       } else if (rangedThreats > 0) {
         advice = "Ranged pressure is active. Break line of sight with pillars, corners, or a fast disable.";
         if (this.player.spellsKnown.length > 0) {
-          pushAction("open-hub", "Magic", "Answer ranged pressure", true, "magic");
+          pushAction("open-spell-tray", "Magic", "Answer ranged pressure", true, "magic");
         }
         pushAction("wait", "Hold", "Do not overextend", false);
       } else if (chargeThreats > 0) {
         advice = "A visible charger is winding up. Sidestep or block the lane before it lands.";
         pushAction("wait", "Hold", "Let the lane clarify", false);
         if (this.player.spellsKnown.length > 0) {
-          pushAction("open-hub", "Magic", "Slow or burst the charger", true, "magic");
+          pushAction("open-spell-tray", "Magic", "Slow or burst the charger", true, "magic");
         }
       } else if (summonThreats > 0) {
         advice = "A summoner is online. Kill or disrupt it before the room fills in.";
         if (this.player.spellsKnown.length > 0) {
-          pushAction("open-hub", "Magic", "Pressure the summoner", true, "magic");
+          pushAction("open-spell-tray", "Magic", "Pressure the summoner", true, "magic");
         }
       } else {
         advice = "You are engaged. Win the current exchange before opening more of the map.";
         if (this.player.spellsKnown.length > 0) {
-          pushAction("open-hub", "Magic", "Take initiative", true, "magic");
+          pushAction("open-spell-tray", "Magic", "Take initiative", true, "magic");
         }
         pushAction("wait", "Hold", "Read the room", false);
       }
@@ -20185,6 +25349,10 @@ class Game {
   }
 
   refreshChrome() {
+    this.syncAdaptiveLayout();
+    if (this.appShell) {
+      this.appShell.classList.toggle("targeting-active", this.mode === "target" && Boolean(this.targetMode));
+    }
     this.syncUtilityBar();
     if (this.mapDrawer) {
       const showMap = this.mapDrawerOpen && Boolean(this.player);
@@ -20194,17 +25362,59 @@ class Game {
       this.mapToggleButton.disabled = !this.player;
       this.mapToggleButton.textContent = this.mapDrawerOpen && this.player ? "Hide Survey" : "Survey";
     }
+    if (this.spellTrayToggleButton) {
+      const hasSpellTray = Boolean(this.player && this.getPinnedSpellIds().length > 0);
+      const canShowToggle = hasSpellTray && !["title", "creation", "levelup"].includes(this.mode);
+      this.spellTrayToggleButton.classList.toggle("hidden", !canShowToggle);
+      this.spellTrayToggleButton.disabled = !canShowToggle;
+      this.spellTrayToggleButton.textContent = this.spellTrayOpen || (this.mode === "target" && this.targetMode?.type === "spell")
+        ? "Hide Magic"
+        : "Magic";
+    }
     if (this.touchControls) {
       const hiddenBySetting = !this.settings.touchControlsEnabled;
       const hiddenByController = this.settings.controllerHintsEnabled && this.gamepadInput.isConnected();
       this.touchControls.classList.toggle("hidden", hiddenBySetting || hiddenByController);
     }
+    this.syncSpellTray();
     syncSaveChrome(this);
     this.applyControllerNavigationMetadata();
   }
 
   getPressureUiState() {
     return getPressureStatus(this.currentLevel);
+  }
+
+  getViewportMetrics() {
+    const viewport = typeof window !== "undefined" ? window.visualViewport : null;
+    const width = Math.round(viewport?.width || window.innerWidth || 0);
+    const height = Math.round(viewport?.height || window.innerHeight || 0);
+    return { width, height };
+  }
+
+  getResponsiveLayoutMode() {
+    const { width, height } = this.getViewportMetrics();
+    const desktopWidth = width >= 1080;
+    const landscapeEnough = width >= Math.round(height * 1.12);
+    return desktopWidth && landscapeEnough ? "desktop" : "mobile";
+  }
+
+  syncAdaptiveLayout(force = false) {
+    const nextMode = this.getResponsiveLayoutMode();
+    const changed = this.layoutMode !== nextMode;
+    this.layoutMode = nextMode;
+    if (this.appShell) {
+      this.appShell.dataset.layout = nextMode;
+      this.appShell.dataset.input = this.gamepadInput.isConnected()
+        ? "controller"
+        : nextMode === "mobile"
+          ? "touch"
+          : "keyboard";
+    }
+    document.documentElement.dataset.layout = nextMode;
+    if ((force || changed) && this.player && this.mapDrawer) {
+      this.mapDrawerOpen = nextMode === "desktop";
+    }
   }
 
   getDirectionToPoint(point) {
@@ -20360,7 +25570,7 @@ class Game {
       if (connected) {
         this.controllerStatus.textContent = this.mode === "modal" || this.mode === "creation" || this.mode === "title" || this.mode === "levelup"
           ? "A Confirm  B Back  LB/RB Tabs  RT Scroll"
-          : "A Act  X Alt  Y Pack  Start Menu";
+          : "A Confirm/Use  B Back  X Alt  Y Pack";
       } else {
         this.controllerStatus.textContent = "Touch active";
       }
@@ -20372,7 +25582,7 @@ class Game {
       } else if (this.currentDepth === 0) {
         const firstTownRun = (this.player.deepestDepth || 0) === 0;
         this.pressureStatus.textContent = firstTownRun
-          ? (this.storyFlags.townServiceVisited ? "Go North" : "Visit Door")
+          ? (this.storyFlags.townServiceVisited ? "North Road" : "Services")
           : "Town Calm";
         this.pressureStatus.className = "utility-chip utility-chip-muted";
       } else {
@@ -20392,7 +25602,9 @@ class Game {
     }
   }
 
-  getSavedRunMeta() { return loadSavedRunMeta(); }
+  getAllSavedRunMeta() { return loadAllSavedRunMeta(); }
+
+  getSavedRunMeta(slotId = null) { return loadSavedRunMeta(slotId); }
 
   formatSaveStamp(isoString) { return formatSavedRunStamp(isoString); }
 
@@ -20414,11 +25626,20 @@ class Game {
     this.endTurn();
   }
 
-  performWait() { performWaitTurn(this); }
+  performWait() {
+    this.resetMovementCadence();
+    performWaitTurn(this);
+  }
 
-  restUntilSafe() { restUntilSafeTurn(this); }
+  restUntilSafe() {
+    this.resetMovementCadence();
+    restUntilSafeTurn(this);
+  }
 
-  sleepUntilRestored() { sleepUntilRestoredTurn(this); }
+  sleepUntilRestored() {
+    this.resetMovementCadence();
+    sleepUntilRestoredTurn(this);
+  }
 
   visibleEnemies() { return getVisibleEnemies(this); }
 
@@ -20456,9 +25677,16 @@ class Game {
 
   saveGame(options = {}) { saveGameState(this, options); }
 
-  loadGame() { loadGameState(this); }
+  loadGame(options = {}) {
+    this.resetMovementCadence();
+    loadGameState(this, options);
+    this.syncSurfaceMusic();
+  }
 
-  showTitleScreen() { showTitleModal(this); }
+  showTitleScreen() {
+    this.resetMovementCadence();
+    showTitleModal(this);
+  }
 
   showCreationModal(options = {}) { showCreationScreen(this, options); }
 

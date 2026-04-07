@@ -1,16 +1,16 @@
 import { TILE_SIZE, VIEW_SIZE } from "../core/constants.js";
-import { ACTOR_VISUALS, BOARD_PROP_VISUALS, getActorVisual, getBoardPropVisual, getTileVisual, ITEM_VISUAL_IDS, TILESET_VISUALS, TOWN_BUILDING_ASSETS, TOWN_TERRAIN_ASSETS } from "../data/assets.js";
+import { ACTOR_VISUALS, BOARD_PROP_VISUALS, ITEM_VISUALS, getActorVisual, getBoardPropVisual, getItemVisual, getTileVisual, ITEM_VISUAL_IDS, TILESET_VISUALS, TOWN_BUILDING_ASSETS, TOWN_TERRAIN_ASSETS } from "../data/assets.js";
 import { clamp, shadeColor } from "../core/utils.js";
 import { tileDef } from "../core/world.js";
 
 const TOWN_BUILDING_RENDER = {
-  general: { width: 0.78, height: 0.66, crop: 0.86, yOffset: 0.5 },
-  junk: { width: 0.72, height: 0.62, crop: 0.9, yOffset: 0.52 },
-  armory: { width: 0.8, height: 0.68, crop: 0.84, yOffset: 0.56 },
-  guild: { width: 0.62, height: 0.62, crop: 0.94, yOffset: 0.46 },
-  temple: { width: 0.84, height: 0.72, crop: 0.86, yOffset: 0.46 },
-  bank: { width: 0.82, height: 0.7, crop: 0.88, yOffset: 0.5 },
-  sage: { width: 0.56, height: 0.56, crop: 0.94, yOffset: 0.42 }
+  general: { width: 0.86, height: 1, crop: 1, yOffset: 0.08 },
+  junk: { width: 0.84, height: 0.98, crop: 1, yOffset: 0.08 },
+  armory: { width: 0.88, height: 1.02, crop: 1, yOffset: 0.06 },
+  guild: { width: 0.8, height: 0.98, crop: 1, yOffset: 0.04 },
+  temple: { width: 0.92, height: 1.02, crop: 1, yOffset: 0.04 },
+  bank: { width: 0.9, height: 1.18, crop: 1, yOffset: 0.02 },
+  sage: { width: 0.7, height: 0.86, crop: 1, yOffset: 0.04 }
 };
 
 const townTerrainImages = buildTownTerrainImages();
@@ -121,6 +121,9 @@ function buildImageCache() {
   Object.values(BOARD_PROP_VISUALS).forEach((visual) => {
     (visual.frames || []).forEach((frame) => sources.add(frame.src));
   });
+  Object.values(ITEM_VISUALS).forEach((visual) => {
+    (visual.frames || []).forEach((frame) => sources.add(frame.src));
+  });
   return Object.fromEntries([...sources].map((src) => [src, loadImage(src)]));
 }
 
@@ -179,6 +182,321 @@ function drawFrame(ctx, frame, dx, dy, width, height, options = {}) {
   return true;
 }
 
+function drawGlyphVisual(ctx, glyph, dx, dy, width, height, options = {}) {
+  if (!glyph) {
+    return false;
+  }
+  const x = Math.round(dx);
+  const y = Math.round(dy);
+  const w = Math.max(6, Math.round(width));
+  const h = Math.max(6, Math.round(height));
+  const midX = x + Math.round(w / 2);
+  const accent = options.tint || "#d6ccb8";
+  const dark = shadeColor(accent, -58);
+  const deep = shadeColor(accent, -78);
+  const light = shadeColor(accent, 18);
+  const bright = shadeColor(accent, 38);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  switch (glyph) {
+    case "rescueBanner":
+    case "routePennant":
+      ctx.fillStyle = "#6f5738";
+      ctx.fillRect(x + 1, y + 1, 2, h - 2);
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(x + 3, y + 2);
+      ctx.lineTo(x + w - 3, y + 4);
+      ctx.lineTo(x + Math.round(w * 0.62), y + Math.round(h * 0.48));
+      ctx.lineTo(x + w - 5, y + h - 4);
+      ctx.lineTo(x + 3, y + h - 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + Math.round(w * 0.55), y + Math.round(h * 0.38), 2, Math.max(3, Math.round(h * 0.28)));
+      break;
+    case "prisonerCell":
+      ctx.fillStyle = "#687280";
+      ctx.fillRect(x + 1, y + 2, w - 2, h - 4);
+      ctx.fillStyle = deep;
+      ctx.fillRect(x + 3, y + 4, w - 6, h - 8);
+      ctx.fillStyle = light;
+      for (let bar = x + 5; bar <= x + w - 5; bar += 4) {
+        ctx.fillRect(bar, y + 3, 1, h - 6);
+      }
+      ctx.fillRect(x + 3, y + 5, w - 6, 1);
+      ctx.fillRect(x + 3, y + h - 6, w - 6, 1);
+      ctx.fillStyle = accent;
+      ctx.fillRect(x + w - 6, y + Math.round(h / 2), 2, 3);
+      break;
+    case "broodNest":
+      ctx.fillStyle = deep;
+      ctx.beginPath();
+      ctx.ellipse(midX, y + h - 5, Math.round(w * 0.34), Math.round(h * 0.17), 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(midX - 3, y + h - 5, 4, Math.PI * 0.2, Math.PI * 1.4);
+      ctx.arc(midX + 3, y + h - 5, 4, Math.PI * 1.7, Math.PI * 0.8, true);
+      ctx.stroke();
+      ctx.fillStyle = light;
+      ctx.beginPath();
+      ctx.ellipse(midX - 4, y + h - 8, 2, 3, 0, 0, Math.PI * 2);
+      ctx.ellipse(midX + 1, y + h - 9, 2, 3, 0, 0, Math.PI * 2);
+      ctx.ellipse(midX + 5, y + h - 7, 2, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    case "shrineSeal":
+    case "routeSeal":
+    case "routeRitual":
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(midX, y + Math.round(h / 2), Math.max(4, Math.round(w * 0.28)), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = dark;
+      ctx.beginPath();
+      ctx.arc(midX, y + Math.round(h / 2), Math.max(2, Math.round(w * 0.15)), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = light;
+      ctx.fillRect(midX - 1, y + 2, 2, 3);
+      ctx.fillRect(midX - 1, y + h - 5, 2, 3);
+      ctx.fillRect(x + 2, y + Math.round(h / 2) - 1, 3, 2);
+      ctx.fillRect(x + w - 5, y + Math.round(h / 2) - 1, 3, 2);
+      if (glyph !== "routeSeal") {
+        ctx.fillStyle = bright;
+        ctx.fillRect(midX - 1, y + Math.round(h / 2) - 1, 2, 2);
+      }
+      break;
+    case "relicPedestal":
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + Math.round(w * 0.26), y + h - 5, Math.round(w * 0.48), 3);
+      ctx.fillStyle = light;
+      ctx.fillRect(x + Math.round(w * 0.32), y + Math.round(h * 0.46), Math.round(w * 0.36), Math.round(h * 0.3));
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 1);
+      ctx.lineTo(x + Math.round(w * 0.66), y + Math.round(h * 0.28));
+      ctx.lineTo(midX, y + Math.round(h * 0.45));
+      ctx.lineTo(x + Math.round(w * 0.34), y + Math.round(h * 0.28));
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case "loreBook":
+    case "spellbookItem":
+    case "routeJournal":
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + 3, y + 3, w - 6, h - 6);
+      ctx.fillStyle = accent;
+      ctx.fillRect(x + 5, y + 4, w - 8, h - 8);
+      ctx.fillStyle = light;
+      ctx.fillRect(midX - 1, y + 5, 2, h - 10);
+      ctx.fillRect(x + 7, y + 7, w - 14, 1);
+      ctx.fillRect(x + 7, y + 10, w - 14, 1);
+      break;
+    case "inscribedStone":
+    case "routeCairn":
+      ctx.fillStyle = dark;
+      if (glyph === "routeCairn") {
+        ctx.fillRect(midX - 4, y + h - 4, 8, 2);
+        ctx.fillRect(midX - 3, y + h - 7, 6, 2);
+        ctx.fillRect(midX - 2, y + h - 10, 4, 2);
+      } else {
+        ctx.fillRect(x + Math.round(w * 0.28), y + 2, Math.round(w * 0.44), h - 4);
+        ctx.fillStyle = light;
+        ctx.fillRect(x + Math.round(w * 0.34), y + 4, Math.round(w * 0.32), h - 8);
+        ctx.fillStyle = accent;
+        ctx.fillRect(midX - 1, y + 6, 2, h - 12);
+        ctx.fillRect(x + Math.round(w * 0.38), y + 8, Math.round(w * 0.24), 1);
+        ctx.fillRect(x + Math.round(w * 0.4), y + 12, Math.round(w * 0.2), 1);
+      }
+      break;
+    case "barricade":
+    case "routeBarricade":
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + 3, y + 4, w - 6, 3);
+      ctx.fillRect(x + 2, y + h - 7, w - 4, 3);
+      ctx.save();
+      ctx.translate(midX, y + Math.round(h / 2));
+      ctx.rotate(-0.42);
+      ctx.fillStyle = accent;
+      ctx.fillRect(-Math.round(w * 0.32), -2, Math.round(w * 0.64), 4);
+      ctx.rotate(0.84);
+      ctx.fillRect(-Math.round(w * 0.32), -2, Math.round(w * 0.64), 4);
+      ctx.restore();
+      break;
+    case "archiveStack":
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + 3, y + h - 5, w - 6, 3);
+      ctx.fillStyle = accent;
+      ctx.fillRect(x + 4, y + h - 9, w - 8, 3);
+      ctx.fillStyle = light;
+      ctx.fillRect(x + 6, y + h - 13, w - 10, 3);
+      ctx.fillStyle = bright;
+      ctx.fillRect(x + 6, y + 4, Math.round(w * 0.4), 4);
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + Math.round(w * 0.54), y + 6, Math.round(w * 0.22), 1);
+      break;
+    case "beaconFocus":
+    case "routeBeacon":
+      ctx.fillStyle = dark;
+      ctx.fillRect(midX - 2, y + Math.round(h * 0.42), 4, h - Math.round(h * 0.42) - 2);
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 2);
+      ctx.lineTo(x + Math.round(w * 0.72), y + Math.round(h * 0.42));
+      ctx.lineTo(x + Math.round(w * 0.58), y + Math.round(h * 0.58));
+      ctx.lineTo(x + Math.round(w * 0.42), y + Math.round(h * 0.58));
+      ctx.lineTo(x + Math.round(w * 0.28), y + Math.round(h * 0.42));
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = bright;
+      ctx.fillRect(midX - 1, y + 1, 2, 3);
+      break;
+    case "well":
+    case "routeWater":
+    case "flaskItem":
+      if (glyph === "flaskItem") {
+        ctx.fillStyle = dark;
+        ctx.fillRect(midX - 2, y + 2, 4, 3);
+        ctx.fillStyle = accent;
+        ctx.beginPath();
+        ctx.moveTo(midX - 4, y + 5);
+        ctx.lineTo(midX + 4, y + 5);
+        ctx.lineTo(midX + 6, y + h - 4);
+        ctx.lineTo(midX - 6, y + h - 4);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.fillStyle = dark;
+        ctx.fillRect(x + 4, y + Math.round(h * 0.58), w - 8, 3);
+        ctx.strokeStyle = light;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(midX, y + Math.round(h * 0.5), Math.max(4, Math.round(w * 0.26)), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = accent;
+        ctx.fillRect(midX - 4, y + Math.round(h * 0.44), 8, 3);
+      }
+      break;
+    case "routeTorch":
+      ctx.fillStyle = dark;
+      ctx.fillRect(midX - 1, y + 5, 2, h - 8);
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 1);
+      ctx.lineTo(midX + 4, y + 6);
+      ctx.lineTo(midX, y + 8);
+      ctx.lineTo(midX - 4, y + 6);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case "routeRune":
+    case "routeMark":
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + 3, y + h - 4);
+      ctx.lineTo(midX, y + 3);
+      ctx.lineTo(x + w - 3, y + h - 4);
+      ctx.stroke();
+      if (glyph === "routeRune") {
+        ctx.fillStyle = light;
+        ctx.fillRect(midX - 1, y + Math.round(h * 0.45), 2, 3);
+      }
+      break;
+    case "routeLamp":
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 1);
+      ctx.lineTo(midX, y + 4);
+      ctx.stroke();
+      ctx.fillStyle = accent;
+      ctx.fillRect(midX - 3, y + 4, 6, 6);
+      ctx.fillStyle = bright;
+      ctx.fillRect(midX - 1, y + 6, 2, 2);
+      break;
+    case "routeSupply":
+      ctx.fillStyle = dark;
+      ctx.fillRect(x + 4, y + 4, w - 8, h - 8);
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x + 4.5, y + 4.5, w - 9, h - 9);
+      ctx.beginPath();
+      ctx.moveTo(x + 6, y + 6);
+      ctx.lineTo(x + w - 6, y + h - 6);
+      ctx.moveTo(x + w - 6, y + 6);
+      ctx.lineTo(x + 6, y + h - 6);
+      ctx.stroke();
+      break;
+    case "routeTracks":
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.ellipse(midX - 3, y + Math.round(h * 0.38), 2, 3, -0.35, 0, Math.PI * 2);
+      ctx.ellipse(midX + 3, y + Math.round(h * 0.62), 2, 3, 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    case "shieldItem":
+      ctx.fillStyle = dark;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 2);
+      ctx.lineTo(x + w - 4, y + 5);
+      ctx.lineTo(x + w - 5, y + Math.round(h * 0.62));
+      ctx.lineTo(midX, y + h - 2);
+      ctx.lineTo(x + 5, y + Math.round(h * 0.62));
+      ctx.lineTo(x + 4, y + 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 4);
+      ctx.lineTo(x + w - 6, y + 6);
+      ctx.lineTo(x + w - 7, y + Math.round(h * 0.58));
+      ctx.lineTo(midX, y + h - 4);
+      ctx.lineTo(x + 7, y + Math.round(h * 0.58));
+      ctx.lineTo(x + 6, y + 6);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case "relicItem":
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(midX, y + 1);
+      ctx.lineTo(x + w - 5, y + Math.round(h * 0.34));
+      ctx.lineTo(midX + 1, y + h - 2);
+      ctx.lineTo(x + 5, y + Math.round(h * 0.34));
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = bright;
+      ctx.fillRect(midX - 1, y + 4, 2, Math.round(h * 0.42));
+      break;
+    default:
+      ctx.restore();
+      return false;
+  }
+
+  ctx.restore();
+  return true;
+}
+
+function drawConfiguredVisual(ctx, visual, dx, dy, width, height, time = 0, options = {}) {
+  if (!visual) {
+    return false;
+  }
+  if (visual.frames?.length) {
+    const frameIndex = visual.frames.length <= 1 ? 0 : Math.floor(time / 220) % visual.frames.length;
+    return drawFrame(ctx, visual.frames[frameIndex], dx, dy, width, height, options);
+  }
+  if (visual.glyph) {
+    return drawGlyphVisual(ctx, visual.glyph, dx, dy, width, height, options);
+  }
+  return false;
+}
+
 function drawSpriteVisual(ctx, visual, sx, sy, time = 0, options = {}) {
   if (!visual?.frames?.length) {
     return false;
@@ -220,6 +538,66 @@ function fillStipple(ctx, x, y, width, height, baseColor, speckColor, step = 5, 
       ctx.fillRect(px, py, 1, 1);
     }
   }
+}
+
+function drawTownCivicTile(ctx, tile, worldX, worldY, sx, sy, visible) {
+  const x = sx * TILE_SIZE;
+  const y = sy * TILE_SIZE;
+  const seed = tileHash(worldX, worldY, 13);
+  if (tile.kind !== "stone" && tile.kind !== "plaza") {
+    return false;
+  }
+
+  const stoneBase = visible ? (seed % 2 === 0 ? "#857a69" : "#7a7060") : "#4e473c";
+  const stoneSpeck = visible ? "#5e5548" : "#2f2a24";
+  const plazaBase = visible ? (seed % 2 === 0 ? "#c2b49a" : "#b7a98f") : "#6d6254";
+  const plazaSpeck = visible ? "#8b7f6b" : "#433c33";
+  const base = tile.kind === "plaza" ? plazaBase : stoneBase;
+  const speck = tile.kind === "plaza" ? plazaSpeck : stoneSpeck;
+
+  fillStipple(ctx, x, y, TILE_SIZE, TILE_SIZE, base, speck, 6, seed);
+  ctx.fillStyle = visible ? "rgba(255, 244, 218, 0.18)" : "rgba(255, 244, 218, 0.06)";
+  ctx.fillRect(x, y, TILE_SIZE, 1);
+  ctx.fillRect(x, y, 1, TILE_SIZE);
+  ctx.fillStyle = visible ? "rgba(56, 47, 38, 0.22)" : "rgba(16, 13, 10, 0.16)";
+  ctx.fillRect(x, y + TILE_SIZE - 1, TILE_SIZE, 1);
+  ctx.fillRect(x + TILE_SIZE - 1, y, 1, TILE_SIZE);
+
+  if (tile.kind === "plaza") {
+    ctx.strokeStyle = visible ? "rgba(95, 82, 62, 0.32)" : "rgba(32, 26, 21, 0.22)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 3.5, y + 3.5, TILE_SIZE - 7, TILE_SIZE - 7);
+    ctx.beginPath();
+    ctx.moveTo(x + TILE_SIZE / 2, y + 3);
+    ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE - 3);
+    ctx.moveTo(x + 3, y + TILE_SIZE / 2);
+    ctx.lineTo(x + TILE_SIZE - 3, y + TILE_SIZE / 2);
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = visible ? "rgba(67, 57, 47, 0.24)" : "rgba(22, 18, 15, 0.2)";
+    ctx.lineWidth = 1;
+    if (seed % 3 === 0) {
+      ctx.beginPath();
+      ctx.moveTo(x + 4, y + 1);
+      ctx.lineTo(x + 4, y + TILE_SIZE - 2);
+      ctx.moveTo(x + 12, y + 1);
+      ctx.lineTo(x + 12, y + TILE_SIZE - 2);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(x + 1, y + 7);
+      ctx.lineTo(x + TILE_SIZE - 2, y + 7);
+      ctx.moveTo(x + 1, y + 15);
+      ctx.lineTo(x + TILE_SIZE - 2, y + 15);
+      ctx.stroke();
+    }
+  }
+
+  if (!visible) {
+    ctx.fillStyle = "rgba(5, 8, 7, 0.28)";
+    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  }
+  return true;
 }
 
 function drawDungeonTerrainBase(ctx, tile, worldX, worldY, x, y, visible) {
@@ -357,6 +735,9 @@ function drawTownBuildingBase(ctx, building, tile, worldX, worldY, sx, sy, visib
 function drawTownTerrainTile(ctx, level, tile, worldX, worldY, sx, sy, visible) {
   if (!townTerrainImages || level.kind !== "town") {
     return false;
+  }
+  if (drawTownCivicTile(ctx, tile, worldX, worldY, sx, sy, visible)) {
+    return true;
   }
   let image = null;
   if (tile.kind === "grass") {
@@ -568,23 +949,23 @@ export function drawTownBuildings(ctx, level, view) {
     if (doorX < 0 || doorY < 0 || doorX >= VIEW_SIZE || doorY >= VIEW_SIZE) {
       continue;
     }
-    const label = building.name || building.service || "Service";
+    const label = building.label || building.name || building.service || "Service";
     ctx.save();
-    ctx.font = "700 9px Trebuchet MS";
-    const pillWidth = Math.min(building.w * TILE_SIZE - 10, Math.max(46, ctx.measureText(label).width + 16));
-    const pillX = doorX * TILE_SIZE + (TILE_SIZE - pillWidth) / 2;
-    const pillY = top * TILE_SIZE + 4;
+    ctx.font = "700 10px Trebuchet MS";
+    const pillWidth = Math.min(building.w * TILE_SIZE - 6, Math.max(62, ctx.measureText(label).width + 18));
+    const pillX = left * TILE_SIZE + (building.w * TILE_SIZE - pillWidth) / 2;
+    const pillY = top * TILE_SIZE + 2;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = anyVisible ? "rgba(17, 23, 28, 0.92)" : "rgba(17, 23, 28, 0.56)";
-    ctx.strokeStyle = anyVisible ? "rgba(242, 215, 166, 0.68)" : "rgba(242, 215, 166, 0.32)";
+    ctx.fillStyle = anyVisible ? "rgba(17, 23, 28, 0.94)" : "rgba(17, 23, 28, 0.66)";
+    ctx.strokeStyle = anyVisible ? "rgba(246, 224, 182, 0.82)" : "rgba(246, 224, 182, 0.42)";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(pillX, pillY, pillWidth, 14, 7);
+    ctx.roundRect(pillX, pillY, pillWidth, 16, 8);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = anyVisible ? "#f3ddb1" : "rgba(243, 221, 177, 0.7)";
-    ctx.fillText(label, pillX + pillWidth / 2, pillY + 7);
+    ctx.fillStyle = anyVisible ? "#fff0cf" : "rgba(255, 240, 207, 0.82)";
+    ctx.fillText(label, pillX + pillWidth / 2, pillY + 8);
     ctx.restore();
   }
 }
@@ -607,27 +988,26 @@ export function drawBoardProps(ctx, level, view, time = 0, options = {}) {
     if (level.kind !== "town" && !level.visible[prop.y * level.width + prop.x] && !prop.alwaysVisible) {
       return;
     }
-    if (visual.light) {
+    const glowEnabled = prop.light !== undefined ? prop.light : visual.light;
+    if (glowEnabled) {
       const cx = sx * TILE_SIZE + 12;
       const cy = sy * TILE_SIZE + 12;
       const pulse = reducedMotion ? 0.18 : 0.16 + (Math.sin((time + index * 45) / 170) + 1) * 0.05;
       const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, TILE_SIZE * 0.95);
-      glow.addColorStop(0, rgbaWithAlpha(visual.tint || "rgba(255, 199, 128, 0.36)", pulse));
+      glow.addColorStop(0, rgbaWithAlpha(prop.tint || visual.tint || "rgba(255, 199, 128, 0.36)", pulse));
       glow.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = glow;
       ctx.fillRect(sx * TILE_SIZE - 6, sy * TILE_SIZE - 6, TILE_SIZE + 12, TILE_SIZE + 12);
     }
-    const frames = visual.frames || [];
-    const frame = frames.length <= 1 ? frames[0] : frames[Math.floor(time / 220) % frames.length];
-    if (!frame) {
+    if (!visual.frames?.length && !visual.glyph) {
       return;
     }
     const lift = Math.round((visual.lift || 0) * TILE_SIZE);
     const scale = visual.scale || 0.68;
     const size = Math.round(TILE_SIZE * scale);
     const offset = Math.round((TILE_SIZE - size) / 2);
-    drawFrame(ctx, frame, sx * TILE_SIZE + offset, sy * TILE_SIZE + TILE_SIZE - size - 2 - lift, size, size, {
-      tint: visual.tint || ""
+    drawConfiguredVisual(ctx, visual, sx * TILE_SIZE + offset, sy * TILE_SIZE + TILE_SIZE - size - 2 - lift, size, size, time, {
+      tint: prop.tint || visual.tint || ""
     });
   });
   const corpses = Array.isArray(level?.corpses) ? level.corpses : [];
@@ -847,10 +1227,12 @@ export function drawItem(ctx, item, sx, sy, time = 0, options = {}) {
     || (item.kind === "charged" ? ITEM_VISUAL_IDS.defaultCharged : "")
     || (item.kind === "spellbook" ? ITEM_VISUAL_IDS.defaultSpellbook : "")
     || ITEM_VISUAL_IDS.defaultConsumable;
-  const frame = getTileVisual(itemVisualId, item.x || sx, item.y || sy);
+  const itemVisual = getItemVisual(itemVisualId);
   const itemSize = Math.round(TILE_SIZE * 0.62);
   const itemOffset = Math.round((TILE_SIZE - itemSize) / 2);
-  if (frame && drawFrame(ctx, frame, x + itemOffset, y + TILE_SIZE - itemSize - 3, itemSize, itemSize)) {
+  if (itemVisual && drawConfiguredVisual(ctx, itemVisual, x + itemOffset, y + TILE_SIZE - itemSize - 3, itemSize, itemSize, time, {
+    tint: itemVisual.tint || ""
+  })) {
     return;
   }
   const color = item.kind === "consumable" ? "#9f3256" : item.kind === "spellbook" ? "#7040a8" : item.kind === "quest" ? "#b7f0ff" : item.kind === "charged" ? "#63a4d2" : "#c4c4c4";
@@ -1131,10 +1513,34 @@ export function drawTargetCursor(ctx, cursor, view, source = null, time = 0, opt
     return;
   }
   const reducedMotion = Boolean(options.reducedMotion);
+  const targetPreview = options.targetPreview || null;
+  const previewValid = targetPreview ? targetPreview.valid : true;
+  const previewColor = targetPreview?.spell?.previewColor || targetPreview?.spell?.effectColor || "#ffd36b";
+  const cursorColor = previewValid ? previewColor : "#ff8f73";
   const pulse = reducedMotion ? 0.22 : 0.18 + (Math.sin(time / 110) + 1) * 0.08;
+  if (Array.isArray(targetPreview?.tiles) && targetPreview.tiles.length > 0) {
+    ctx.save();
+    targetPreview.tiles.forEach((tile) => {
+      const px = tile.x - view.x;
+      const py = tile.y - view.y;
+      if (px < 0 || py < 0 || px >= VIEW_SIZE || py >= VIEW_SIZE) {
+        return;
+      }
+      const isCenter = tile.x === cursor.x && tile.y === cursor.y;
+      ctx.fillStyle = cursorColor;
+      ctx.globalAlpha = (previewValid ? 0.12 : 0.08) + (isCenter ? 0.08 : 0);
+      ctx.fillRect(px * TILE_SIZE + 3, py * TILE_SIZE + 3, TILE_SIZE - 6, TILE_SIZE - 6);
+      ctx.strokeStyle = cursorColor;
+      ctx.globalAlpha = previewValid ? 0.36 : 0.28;
+      ctx.lineWidth = isCenter ? 2 : 1.5;
+      ctx.strokeRect(px * TILE_SIZE + 4, py * TILE_SIZE + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+    });
+    ctx.restore();
+  }
   if (source) {
     ctx.save();
-    ctx.strokeStyle = `rgba(255, 211, 107, ${reducedMotion ? 0.38 : 0.3 + pulse * 0.3})`;
+    ctx.strokeStyle = cursorColor;
+    ctx.globalAlpha = reducedMotion ? 0.38 : 0.3 + pulse * 0.3;
     ctx.lineWidth = 2;
     if (!reducedMotion) {
       ctx.setLineDash([6, 4]);
@@ -1147,11 +1553,44 @@ export function drawTargetCursor(ctx, cursor, view, source = null, time = 0, opt
     ctx.restore();
   }
   ctx.save();
-  ctx.fillStyle = `rgba(255, 211, 107, ${pulse})`;
-  ctx.fillRect(sx * TILE_SIZE + 5, sy * TILE_SIZE + 5, TILE_SIZE - 10, TILE_SIZE - 10);
-  ctx.strokeStyle = "#ffd36b";
+  const tileX = sx * TILE_SIZE;
+  const tileY = sy * TILE_SIZE;
+  const centerX = tileX + TILE_SIZE / 2;
+  const centerY = tileY + TILE_SIZE / 2;
+  ctx.strokeStyle = cursorColor;
   ctx.lineWidth = 2;
-  ctx.strokeRect(sx * TILE_SIZE + 2, sy * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+  ctx.strokeRect(tileX + 2, tileY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+  ctx.globalAlpha = reducedMotion ? 0.2 : 0.16 + pulse * 0.28;
+  ctx.strokeRect(tileX + 5, tileY + 5, TILE_SIZE - 10, TILE_SIZE - 10);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = cursorColor;
+  ctx.beginPath();
+  ctx.moveTo(centerX, tileY + 3);
+  ctx.lineTo(centerX, tileY + 8);
+  ctx.moveTo(centerX, tileY + TILE_SIZE - 8);
+  ctx.lineTo(centerX, tileY + TILE_SIZE - 3);
+  ctx.moveTo(tileX + 3, centerY);
+  ctx.lineTo(tileX + 8, centerY);
+  ctx.moveTo(tileX + TILE_SIZE - 8, centerY);
+  ctx.lineTo(tileX + TILE_SIZE - 3, centerY);
+  ctx.stroke();
+  ctx.fillStyle = cursorColor;
+  ctx.globalAlpha = reducedMotion ? 0.16 : 0.08 + pulse * 0.1;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, reducedMotion ? 2.5 : 2.5 + Math.sin(time / 140) * 0.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  if (targetPreview?.hitCount > 0) {
+    ctx.font = "bold 11px Trebuchet MS";
+    ctx.textAlign = "center";
+    ctx.fillStyle = cursorColor;
+    ctx.strokeStyle = "rgba(6, 8, 10, 0.82)";
+    ctx.lineWidth = 3;
+    const label = `${targetPreview.hitCount} HIT`;
+    ctx.strokeText(label, centerX, tileY - 4);
+    ctx.fillText(label, centerX, tileY - 4);
+    ctx.textAlign = "left";
+  }
   ctx.restore();
 }
 
@@ -1172,19 +1611,23 @@ export function drawEffect(ctx, effect, view, time = 0, options = {}) {
     ctx.globalAlpha = reducedMotion ? 0.58 : 0.88 - life * 0.2;
     ctx.strokeStyle = effect.color;
     ctx.lineWidth = options.intensity === "enhanced" ? 4 : 3;
+    if (effect.style === "lightning" && !reducedMotion) {
+      ctx.setLineDash([5, 3]);
+      ctx.lineDashOffset = -time / 18;
+    }
     ctx.beginPath();
     ctx.moveTo(startX, startY);
     ctx.lineTo(endX, endY);
     ctx.stroke();
     ctx.fillStyle = effect.color;
     ctx.beginPath();
-    ctx.arc(endX, endY, reducedMotion ? 3 : 2.5 + (1 - life) * 2, 0, Math.PI * 2);
+    ctx.arc(endX, endY, reducedMotion ? 3 : 2.5 + (1 - life) * (effect.style === "fire" ? 3 : 2), 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     return;
   }
 
-  if (effect.type === "blink") {
+  if (effect.type === "blink" || effect.type === "castFlare") {
     if (!tileOnScreen(effect, view)) {
       return;
     }
@@ -1194,14 +1637,30 @@ export function drawEffect(ctx, effect, view, time = 0, options = {}) {
     ctx.strokeStyle = effect.color;
     ctx.globalAlpha = 0.9 - life * 0.5;
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(sx * TILE_SIZE + 12, sy * TILE_SIZE + 12, 7 + life * 8, 0, Math.PI * 2);
-    ctx.stroke();
+    if (effect.type === "castFlare") {
+      const cx = sx * TILE_SIZE + 12;
+      const cy = sy * TILE_SIZE + 12;
+      const flareRadius = 5 + (1 - life) * 6;
+      for (let i = 0; i < 4; i += 1) {
+        const angle = (Math.PI / 2) * i + life * 0.7;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(angle) * 2, cy + Math.sin(angle) * 2);
+        ctx.lineTo(cx + Math.cos(angle) * flareRadius, cy + Math.sin(angle) * flareRadius);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(cx, cy, flareRadius, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(sx * TILE_SIZE + 12, sy * TILE_SIZE + 12, 7 + life * 8, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     ctx.restore();
     return;
   }
 
-  if (effect.type === "tileFlash" || effect.type === "telegraphPulse" || effect.type === "impactSpark" || effect.type === "castCircle" || effect.type === "deathBurst") {
+  if (effect.type === "tileFlash" || effect.type === "telegraphPulse" || effect.type === "impactSpark" || effect.type === "castCircle" || effect.type === "deathBurst" || effect.type === "spellBurst") {
     const point = effect.x !== undefined ? { x: effect.x, y: effect.y } : effect.to;
     if (!point || !tileOnScreen(point, view)) {
       return;
@@ -1288,6 +1747,33 @@ export function drawEffect(ctx, effect, view, time = 0, options = {}) {
       ctx.beginPath();
       ctx.arc(cx, cy, 4 + life * 12, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
+    if (effect.type === "spellBurst") {
+      const radius = (effect.radius || 1) * TILE_SIZE * 0.72;
+      ctx.save();
+      ctx.strokeStyle = effect.color;
+      ctx.globalAlpha = 0.9 - life * 0.72;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6 + radius * life, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 0.16 * (1 - life);
+      ctx.fillStyle = effect.color;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4 + radius * 0.7 * life, 0, Math.PI * 2);
+      ctx.fill();
+      const rays = effect.style === "fire" ? 8 : 6;
+      ctx.globalAlpha = 0.8 - life * 0.7;
+      for (let i = 0; i < rays; i += 1) {
+        const angle = (Math.PI * 2 * i) / rays + life * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(angle) * 4, cy + Math.sin(angle) * 4);
+        ctx.lineTo(cx + Math.cos(angle) * (8 + radius * 0.55 * life), cy + Math.sin(angle) * (8 + radius * 0.55 * life));
+        ctx.stroke();
+      }
       ctx.restore();
     }
     return;

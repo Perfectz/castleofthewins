@@ -39,7 +39,17 @@ function writeTelemetryStore(store) {
   }));
 }
 
+function average(values = []) {
+  if (!values.length) {
+    return 0;
+  }
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
 function createRunMetrics(game) {
+  const validation = typeof game.getValidationSummary === "function"
+    ? game.getValidationSummary()
+    : { signature: "", variants: {} };
   return {
     runId: makeId("run"),
     startedAt: new Date().toISOString(),
@@ -57,6 +67,9 @@ function createRunMetrics(game) {
     firstObjectiveSearchCount: 0,
     firstSearchBeforeObjectiveTurn: null,
     searchCount: 0,
+    waitCount: 0,
+    restCount: 0,
+    eliteKills: 0,
     modalOpenCounts: {
       pack: 0,
       magic: 0,
@@ -69,7 +82,9 @@ function createRunMetrics(game) {
     serviceOpenCounts: {},
     objectiveSeenKeys: {},
     optionalSeenKeys: {},
-    deepestDepth: Math.max(0, game.currentDepth || 0, game.player?.deepestDepth || 0)
+    deepestDepth: Math.max(0, game.currentDepth || 0, game.player?.deepestDepth || 0),
+    validationProfile: validation.signature,
+    validationVariants: validation.variants
   };
 }
 
@@ -232,6 +247,79 @@ function computeBankOpensAfterReturn(rawEvents = []) {
   };
 }
 
+function computeReturnFollowThrough(rawEvents = []) {
+  const summary = {
+    successfulReturns: 0,
+    bankOpensAfterReturn: 0,
+    rumorBuysAfterReturn: 0,
+    unlockPurchasesAfterReturn: 0,
+    contractArmsAfterReturn: 0,
+    returnsWithAnyTownAction: 0
+  };
+  let pendingReturn = null;
+
+  const finalizePendingReturn = () => {
+    if (!pendingReturn) {
+      return;
+    }
+    if (pendingReturn.bank) {
+      summary.bankOpensAfterReturn += 1;
+    }
+    if (pendingReturn.rumor) {
+      summary.rumorBuysAfterReturn += 1;
+    }
+    if (pendingReturn.unlock) {
+      summary.unlockPurchasesAfterReturn += 1;
+    }
+    if (pendingReturn.contract) {
+      summary.contractArmsAfterReturn += 1;
+    }
+    if (pendingReturn.bank || pendingReturn.rumor || pendingReturn.unlock || pendingReturn.contract) {
+      summary.returnsWithAnyTownAction += 1;
+    }
+    pendingReturn = null;
+  };
+
+  rawEvents.forEach((event) => {
+    if (event.type === "returned_to_town") {
+      finalizePendingReturn();
+      summary.successfulReturns += 1;
+      pendingReturn = {
+        bank: false,
+        rumor: false,
+        unlock: false,
+        contract: false
+      };
+      return;
+    }
+    if (!pendingReturn) {
+      return;
+    }
+    if (event.type === "run_started") {
+      finalizePendingReturn();
+      return;
+    }
+    if (event.type === "bank_persistence_viewed") {
+      pendingReturn.bank = true;
+      return;
+    }
+    if (event.type === "town_rumor_buy") {
+      pendingReturn.rumor = true;
+      return;
+    }
+    if (event.type === "town_unlock_purchase") {
+      pendingReturn.unlock = true;
+      return;
+    }
+    if (event.type === "contract_armed") {
+      pendingReturn.contract = true;
+    }
+  });
+
+  finalizePendingReturn();
+  return summary;
+}
+
 function computeMetaReview(game) {
   const rawEvents = Array.isArray(game.telemetry?.rawEvents) ? game.telemetry.rawEvents : [];
   const summaries = Array.isArray(game.runSummaryHistory) ? game.runSummaryHistory : [];
@@ -261,6 +349,18 @@ function computeMetaReview(game) {
   const returnSummaryOpens = rawEvents.filter((event) => event.type === "return_summary_opened").length;
   const returnSummaryCloses = rawEvents.filter((event) => event.type === "return_summary_closed").length;
   const bankAfterReturn = computeBankOpensAfterReturn(rawEvents);
+  const returnFollowThrough = computeReturnFollowThrough(rawEvents);
+  const clearTurns = summaries
+    .map((summary) => summary.firstObjectiveClearTurn)
+    .filter((value) => Number.isFinite(value));
+  const searchCounts = summaries
+    .map((summary) => Number.isFinite(summary.firstObjectiveSearchCount) ? summary.firstObjectiveSearchCount : summary.searchCount)
+    .filter((value) => Number.isFinite(value));
+  const validationProfileCounts = runStarts.reduce((counts, event) => {
+    const key = event.payload?.validationProfile || "default";
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }, {});
   return {
     totalRunStarts: runStarts.length,
     armedRunStarts: armedStarts.length,
@@ -270,6 +370,16 @@ function computeMetaReview(game) {
     masteryUnlocksByClass,
     successfulReturns: bankAfterReturn.successfulReturns,
     bankOpensAfterReturn: bankAfterReturn.bankOpensAfterReturn,
+    rumorBuysAfterReturn: returnFollowThrough.rumorBuysAfterReturn,
+    unlockPurchasesAfterReturn: returnFollowThrough.unlockPurchasesAfterReturn,
+    contractArmsAfterReturn: returnFollowThrough.contractArmsAfterReturn,
+    returnsWithAnyTownAction: returnFollowThrough.returnsWithAnyTownAction,
+    contractArmRateAfterReturn: returnFollowThrough.successfulReturns > 0
+      ? returnFollowThrough.contractArmsAfterReturn / returnFollowThrough.successfulReturns
+      : 0,
+    averageFirstObjectiveClearTurn: average(clearTurns),
+    averageFirstObjectiveSearchCount: average(searchCounts),
+    validationProfileCounts,
     returnSummaryOpens,
     returnSummaryCloses,
     archivedReturns: summaries.filter((summary) => summary.outcome !== "death").length
@@ -331,6 +441,21 @@ function updateRunMetrics(game, activeRun, type, payload = {}) {
     if (!activeRun.firstObjectiveClearTurn && activeRun.firstSearchBeforeObjectiveTurn === null) {
       activeRun.firstSearchBeforeObjectiveTurn = game.turn || 0;
     }
+    return;
+  }
+
+  if (type === "wait_used") {
+    activeRun.waitCount += 1;
+    return;
+  }
+
+  if (type === "rest_used") {
+    activeRun.restCount += 1;
+    return;
+  }
+
+  if (type === "elite_kill") {
+    activeRun.eliteKills += 1;
     return;
   }
 
@@ -408,7 +533,9 @@ export function startTelemetryRun(game) {
   recordTelemetryEvent(game, "run_started", {
     classId: activeRun.classId,
     raceId: activeRun.raceId,
-    contractId: activeRun.contractId
+    contractId: activeRun.contractId,
+    validationProfile: activeRun.validationProfile,
+    validationVariants: activeRun.validationVariants
   });
   return activeRun;
 }
@@ -613,6 +740,9 @@ export function buildRunSummary(game, outcome = "extract", extra = {}) {
     firstSearchBeforeObjectiveTurn: activeRun.firstSearchBeforeObjectiveTurn,
     firstObjectiveSearchCount: activeRun.firstObjectiveSearchCount || activeRun.searchCount || 0,
     searchCount: activeRun.searchCount || 0,
+    waitCount: activeRun.waitCount || 0,
+    restCount: activeRun.restCount || 0,
+    eliteKills: activeRun.eliteKills || 0,
     modalOpenCounts: {
       pack: activeRun.modalOpenCounts?.pack || 0,
       magic: activeRun.modalOpenCounts?.magic || 0,
@@ -623,6 +753,7 @@ export function buildRunSummary(game, outcome = "extract", extra = {}) {
     greedLabels: [...(activeRun.greedLabels || [])],
     returnValue: Math.floor(game.player?.gold || 0) + Math.floor(game.player?.bankGold || 0),
     cause: extra.cause || "",
+    carriedCurse: Boolean(extra.carriedCurse),
     townServicesOpened: [...(activeRun.townServicesOpened || [])],
     persistentChanges: Array.isArray(extra.persistentChanges) ? [...extra.persistentChanges] : [],
     masteryAdvance: extra.masteryAdvance || null,

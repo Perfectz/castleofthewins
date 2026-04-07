@@ -477,7 +477,10 @@ export function spawnReinforcementWave(game, band = "Medium") {
       : special?.extraElite
         ? 0.25
         : 0.1;
-  if (game.currentDepth >= 2 && eliteChance > 0 && Math.random() < eliteChance) {
+  const contractEliteChance = typeof game.getContractEliteWaveChanceBonus === "function"
+    ? Math.max(0, game.getContractEliteWaveChanceBonus())
+    : 0;
+  if (game.currentDepth >= 2 && eliteChance > 0 && Math.random() < Math.min(0.95, eliteChance + contractEliteChance)) {
     const elite = spawnNamedElite(game.currentLevel, game.currentDepth, room, theme, {
       roomIndex: game.currentLevel.rooms.indexOf(room),
       forceAlerted: true

@@ -66,10 +66,15 @@ export const SPELLS = {
     cost: 3,
     range: 8,
     effectColor: "#d6c1ff",
+    previewColor: "#d8c4ff",
+    projectileStyle: "arcane",
+    targetingMode: "single",
+    roleLabel: "opener",
     description: "Unerring arcane dart for moderate damage.",
     target: "monster",
     cast(game, caster, target) {
-      const damage = roll(2, 4) + Math.floor(caster.stats.int / 3) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "magic") : 0);
+      const casterStats = game.getActorStats ? game.getActorStats(caster) : caster.stats;
+      const damage = roll(2, 4) + Math.floor(casterStats.int / 3) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "magic") : 0);
       game.log(`A crackling bolt strikes ${target.name} for ${damage} damage.`, "good");
       game.damageActor(caster, target, damage, "magic");
       return true;
@@ -86,7 +91,8 @@ export const SPELLS = {
     description: "Restores a small amount of vitality.",
     target: "self",
     cast(game, caster) {
-      const healed = clamp(roll(2, 5) + Math.floor(caster.stats.int / 4), 4, caster.maxHp);
+      const casterStats = game.getActorStats ? game.getActorStats(caster) : caster.stats;
+      const healed = clamp(roll(2, 5) + Math.floor(casterStats.int / 4), 4, caster.maxHp);
       const before = caster.hp;
       caster.hp = Math.min(caster.maxHp, caster.hp + healed);
       game.log(`${caster.name} recovers ${caster.hp - before} hit points.`, "good");
@@ -103,10 +109,15 @@ export const SPELLS = {
     cost: 6,
     range: 7,
     effectColor: "#9ad7ff",
+    previewColor: "#b6e6ff",
+    projectileStyle: "frost",
+    targetingMode: "single",
+    roleLabel: "control",
     description: "Cold damage with a chance to slow the foe.",
     target: "monster",
     cast(game, caster, target) {
-      const damage = roll(2, 6) + Math.floor(caster.stats.int / 2) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "cold") : 0);
+      const casterStats = game.getActorStats ? game.getActorStats(caster) : caster.stats;
+      const damage = roll(2, 6) + Math.floor(casterStats.int / 2) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "cold") : 0);
       game.log(`Blue-white frost lashes ${target.name}.`, "good");
       game.damageActor(caster, target, damage, "cold");
       if (target.hp > 0 && Math.random() < 0.35) {
@@ -118,7 +129,7 @@ export const SPELLS = {
   },
   fireball: {
     id: "fireball",
-    name: "Fireball",
+    name: "Ball of Fire",
     school: "elemental",
     tier: 4,
     classAffinity: "wizard",
@@ -126,12 +137,37 @@ export const SPELLS = {
     cost: 9,
     range: 7,
     effectColor: "#ffb16f",
-    description: "High damage blast against a single foe.",
+    previewColor: "#ffc48e",
+    projectileStyle: "fire",
+    targetingMode: "blast",
+    allowFloorTarget: true,
+    blastRadius: 1,
+    roleLabel: "burst",
+    description: "A floor-targeted fire blast that engulfs a small cluster of enemies.",
     target: "monster",
     cast(game, caster, target) {
-      const damage = roll(3, 6) + Math.floor(caster.stats.int / 2) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "fire") : 0);
-      game.log(`The fireball bursts over ${target.name}.`, "good");
-      game.damageActor(caster, target, damage, "fire");
+      const preview = game.resolveSpellTargetPreview ? game.resolveSpellTargetPreview(this, target) : null;
+      const affected = Array.isArray(preview?.actors) ? preview.actors : [];
+      if (affected.length <= 0) {
+        game.log("The flames fail to catch anything worth the cast.", "warning");
+        return false;
+      }
+      const casterStats = game.getActorStats ? game.getActorStats(caster) : caster.stats;
+      const center = preview?.center || target;
+      if (center && game.emitSpellBurst) {
+        game.emitSpellBurst(center.x, center.y, this.effectColor || "#ffb16f", this.blastRadius || 1, "fire");
+      }
+      game.log(`The ball of fire bursts across ${affected.length} foe${affected.length === 1 ? "" : "s"}.`, "good");
+      affected.forEach((enemy, index) => {
+        const damage = roll(3, 6) + Math.floor(casterStats.int / 2) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(enemy, "fire") : 0);
+        if (index > 0 && center && game.playProjectile) {
+          game.playProjectile(center, enemy, this.effectColor || "#ffb16f", {
+            style: "fire",
+            duration: 150
+          });
+        }
+        game.damageActor(caster, enemy, damage, "fire");
+      });
       return true;
     }
   },
@@ -253,10 +289,15 @@ export const SPELLS = {
     cost: 7,
     range: 8,
     effectColor: "#ffe27a",
+    previewColor: "#fff0a8",
+    projectileStyle: "lightning",
+    targetingMode: "single",
+    roleLabel: "finisher",
     description: "High-voltage strike that rips through a single visible foe.",
     target: "monster",
     cast(game, caster, target) {
-      const damage = roll(3, 5) + Math.floor(caster.stats.int / 2) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "magic") : 0);
+      const casterStats = game.getActorStats ? game.getActorStats(caster) : caster.stats;
+      const damage = roll(3, 5) + Math.floor(casterStats.int / 2) + (game.getSpellDamageBonus ? game.getSpellDamageBonus(target, "magic") : 0);
       game.log(`Lightning cracks across ${target.name}.`, "good");
       game.damageActor(caster, target, damage, "magic");
       return true;
@@ -292,7 +333,8 @@ export const SPELLS = {
     description: "Restores a substantial amount of vitality.",
     target: "self",
     cast(game, caster) {
-      const healed = clamp(roll(4, 5) + Math.floor(caster.stats.int / 3), 8, caster.maxHp);
+      const casterStats = game.getActorStats ? game.getActorStats(caster) : caster.stats;
+      const healed = clamp(roll(4, 5) + Math.floor(casterStats.int / 3), 8, caster.maxHp);
       const before = caster.hp;
       caster.hp = Math.min(caster.maxHp, caster.hp + healed);
       game.log(`${caster.name} recovers ${caster.hp - before} hit points.`, "good");
@@ -470,11 +512,22 @@ export const ITEM_DEFS = {
   scoutCloak: { id: "scoutCloak", name: "Scout Cloak", kind: "armor", slot: "cloak", armor: 0, dexBonus: 1, searchBonus: 2, lightBonus: 1, value: 74, rarity: 3, weight: 1, visualId: "armor" },
   spellfocusRing: { id: "spellfocusRing", name: "Ring of Focus", kind: "armor", slot: "ring", armor: 0, manaBonus: 4, wardBonus: 1, value: 88, rarity: 2, weight: 0, visualId: "relic" },
   ironRing: { id: "ironRing", name: "Iron Ring", kind: "armor", slot: "ring", armor: 1, guardBonus: 1, value: 54, rarity: 2, weight: 0, visualId: "relic" },
+  ringOfMight: { id: "ringOfMight", name: "Ring of Might", kind: "armor", slot: "ring", armor: 0, strBonus: 1, value: 84, rarity: 2, weight: 0, visualId: "relic" },
+  ringOfGrace: { id: "ringOfGrace", name: "Ring of Grace", kind: "armor", slot: "ring", armor: 0, dexBonus: 1, value: 86, rarity: 2, weight: 0, visualId: "relic" },
+  ringOfVigor: { id: "ringOfVigor", name: "Ring of Vigor", kind: "armor", slot: "ring", armor: 0, conBonus: 1, value: 96, rarity: 3, weight: 0, visualId: "relic" },
+  ringOfInsight: { id: "ringOfInsight", name: "Ring of Insight", kind: "armor", slot: "ring", armor: 0, intBonus: 1, value: 96, rarity: 3, weight: 0, visualId: "relic" },
   goldCharm: { id: "goldCharm", name: "Charm of Fortune", kind: "armor", slot: "amulet", armor: 0, goldBonus: 0.15, searchBonus: 1, value: 94, rarity: 3, weight: 0, visualId: "relic" },
   torchCharm: { id: "torchCharm", name: "Charm of Light", kind: "armor", slot: "amulet", armor: 0, lightBonus: 1, value: 70, rarity: 2, weight: 0, visualId: "relic" },
   emberCharm: { id: "emberCharm", name: "Ember Charm", kind: "armor", slot: "amulet", armor: 0, fireResist: 2, value: 92, rarity: 3, weight: 0, visualId: "relic" },
   frostCharm: { id: "frostCharm", name: "Frost Charm", kind: "armor", slot: "amulet", armor: 0, coldResist: 2, value: 92, rarity: 3, weight: 0, visualId: "relic" },
   wardingAmulet: { id: "wardingAmulet", name: "Warding Amulet", kind: "armor", slot: "amulet", armor: 0, manaBonus: 1, wardBonus: 2, value: 122, rarity: 4, weight: 0, visualId: "relic" },
+  giantTorque: { id: "giantTorque", name: "Giant Torque", kind: "armor", slot: "amulet", armor: 0, strBonus: 2, value: 126, rarity: 4, weight: 0, visualId: "relic" },
+  windlaceAmulet: { id: "windlaceAmulet", name: "Windlace Amulet", kind: "armor", slot: "amulet", armor: 0, dexBonus: 2, value: 128, rarity: 4, weight: 0, visualId: "relic" },
+  heartstoneAmulet: { id: "heartstoneAmulet", name: "Heartstone Amulet", kind: "armor", slot: "amulet", armor: 0, conBonus: 2, value: 138, rarity: 4, weight: 0, visualId: "relic" },
+  sageCharm: { id: "sageCharm", name: "Sage Charm", kind: "armor", slot: "amulet", armor: 0, intBonus: 2, value: 138, rarity: 4, weight: 0, visualId: "relic" },
+  loadbearerMail: { id: "loadbearerMail", name: "Loadbearer Mail", kind: "armor", slot: "body", armor: 4, strBonus: 1, guardBonus: 1, value: 92, rarity: 3, weight: 7, visualId: "armor" },
+  scholarCowl: { id: "scholarCowl", name: "Scholar Cowl", kind: "armor", slot: "head", armor: 1, intBonus: 1, wardBonus: 1, value: 62, rarity: 3, weight: 1, visualId: "armor" },
+  veteranMantle: { id: "veteranMantle", name: "Veteran Mantle", kind: "armor", slot: "cloak", armor: 1, conBonus: 1, guardBonus: 1, value: 78, rarity: 3, weight: 1, visualId: "armor" },
   healingPotion: { id: "healingPotion", name: "Potion of Healing", kind: "consumable", effect: "heal", value: 28, rarity: 1, weight: 1, visualId: "potionRed" },
   manaPotion: { id: "manaPotion", name: "Potion of Mana", kind: "consumable", effect: "mana", value: 34, rarity: 1, weight: 1, visualId: "potionBlue" },
   identifyScroll: { id: "identifyScroll", name: "Scroll of Identify", kind: "consumable", effect: "identify", value: 36, rarity: 2, weight: 0, visualId: "spellbook" },
@@ -608,7 +661,7 @@ export const ROOM_EVENT_DEFS = {
     roomHint: "Furniture and shields choke the doorway into a fortified hold.",
     pressureText: "The holdout is coordinating the floor's defenders.",
     rewardText: "Breaking the hold leaves behind disciplined war gear.",
-    propId: "roomTorch",
+    propId: "barricade",
     reward: { type: "treasure", quality: "guarded" }
   },
   cursed_library: {
@@ -620,7 +673,7 @@ export const ROOM_EVENT_DEFS = {
     roomHint: "Spell ash and chained books cover the room.",
     pressureText: "The library is loud with ward-breaks and old curses.",
     rewardText: "You salvage a spellbook and a page of useful warding notes.",
-    propId: "roomTorch",
+    propId: "archiveStack",
     reward: { type: "spellbook" }
   },
   route_cache: {
@@ -696,28 +749,28 @@ export const TEMPLE_SERVICES = [
 ];
 
 export const MONSTER_DEFS = [
-  { id: "rat", name: "Giant Rat", depth: 1, hp: 6, attack: 3, defense: 7, damage: [1, 4], exp: 12, gold: [2, 10], color: "#8e8e75", sprite: "rat", visualId: "rat", tactic: "pack" },
-  { id: "kobold", name: "Kobold", depth: 1, hp: 8, attack: 4, defense: 8, damage: [1, 5], exp: 15, gold: [4, 12], color: "#b19061", sprite: "kobold", visualId: "kobold", tactic: "pack" },
-  { id: "slinger", name: "Kobold Slinger", depth: 1, hp: 7, attack: 5, defense: 8, damage: [1, 4], exp: 18, gold: [4, 12], color: "#b89066", sprite: "kobold", visualId: "kobold", tactic: "skirmish", ranged: { range: 5, damage: [1, 4], color: "#e0c7a2" } },
-  { id: "goblin", name: "Goblin", depth: 2, hp: 12, attack: 5, defense: 9, damage: [1, 6], exp: 24, gold: [5, 18], color: "#6e9d4f", sprite: "goblin", visualId: "goblin", tactic: "pack" },
-  { id: "archer", name: "Goblin Archer", depth: 2, hp: 11, attack: 6, defense: 9, damage: [1, 6], exp: 28, gold: [6, 20], color: "#8caf56", sprite: "goblin", visualId: "goblin", tactic: "skirmish", ranged: { range: 6, damage: [1, 5], color: "#c2a56a" } },
-  { id: "wolf", name: "Dire Wolf", depth: 2, hp: 14, attack: 6, defense: 10, damage: [2, 4], exp: 28, gold: [0, 0], color: "#a7a7a7", sprite: "wolf", visualId: "wolf", abilities: ["charge"], tactic: "charge" },
-  { id: "skeleton", name: "Skeleton", depth: 2, hp: 18, attack: 7, defense: 11, damage: [2, 5], exp: 40, gold: [8, 22], color: "#d9d9ca", sprite: "skeleton", visualId: "skeleton", tactic: "line" },
-  { id: "orc", name: "Orc", depth: 3, hp: 22, attack: 8, defense: 11, damage: [2, 6], exp: 46, gold: [10, 28], color: "#709243", sprite: "orc", visualId: "orc", tactic: "press" },
-  { id: "pikeguard", name: "Pike Guard", depth: 3, hp: 24, attack: 9, defense: 12, damage: [2, 6], exp: 52, gold: [12, 30], color: "#8f7b58", sprite: "orc", visualId: "orc", tactic: "line" },
-  { id: "slime", name: "Ochre Jelly", depth: 4, hp: 26, attack: 8, defense: 10, damage: [2, 6], exp: 52, gold: [0, 0], color: "#c8a73c", sprite: "slime", visualId: "slime", tactic: "press" },
-  { id: "boneArcher", name: "Bone Archer", depth: 4, hp: 20, attack: 8, defense: 12, damage: [2, 5], exp: 60, gold: [12, 34], color: "#d9d9ca", sprite: "skeleton", visualId: "skeleton", tactic: "skirmish", ranged: { range: 6, damage: [2, 5], color: "#d9c18a" } },
-  { id: "cultAdept", name: "Cult Adept", depth: 4, hp: 24, attack: 9, defense: 12, damage: [2, 5], exp: 64, gold: [12, 38], color: "#7566a6", sprite: "mage", visualId: "mage", spells: ["slowMonster", "magicMissile"], abilities: ["slow"], tactic: "control" },
-  { id: "troll", name: "Troll", depth: 4, hp: 36, attack: 10, defense: 12, damage: [2, 8], exp: 80, gold: [16, 40], color: "#5f7b3f", sprite: "troll", visualId: "troll", abilities: ["charge"], tactic: "charge" },
-  { id: "wraith", name: "Wraith", depth: 5, hp: 30, attack: 11, defense: 14, damage: [3, 6], exp: 98, gold: [18, 54], color: "#b4a7df", sprite: "wraith", visualId: "wraith", abilities: ["phase", "drain"], tactic: "phase" },
-  { id: "graveHound", name: "Grave Hound", depth: 5, hp: 30, attack: 11, defense: 13, damage: [2, 7], exp: 94, gold: [8, 24], color: "#9ca39f", sprite: "wolf", visualId: "wolf", abilities: ["charge", "drain"], tactic: "charge" },
-  { id: "ogre", name: "Ogre", depth: 5, hp: 44, attack: 12, defense: 13, damage: [3, 7], exp: 106, gold: [20, 68], color: "#ab7c50", sprite: "ogre", visualId: "ogre", abilities: ["charge"], tactic: "charge" },
-  { id: "shaman", name: "Orc Shaman", depth: 5, hp: 28, attack: 11, defense: 13, damage: [2, 6], exp: 110, gold: [18, 58], color: "#4a8f8f", sprite: "mage", visualId: "mage", spells: ["slowMonster", "holdMonster"], abilities: ["slow", "summon"], tactic: "control" },
-  { id: "warlock", name: "Warlock", depth: 6, hp: 34, attack: 12, defense: 15, damage: [3, 8], exp: 124, gold: [28, 80], color: "#7854b8", sprite: "mage", visualId: "mage", spells: ["magicMissile", "holdMonster", "lightningBolt"], abilities: ["teleport", "summon"], tactic: "control" },
-  { id: "wyrm", name: "Cave Wyrm", depth: 7, hp: 60, attack: 14, defense: 16, damage: [4, 8], exp: 180, gold: [30, 96], color: "#be5b33", sprite: "dragon", visualId: "dragon", tactic: "skirmish", ranged: { range: 5, damage: [3, 7], color: "#f08c4f" } },
-  { id: "gatekeeper", name: "Gatekeeper Hroth", depth: 3, hp: 34, attack: 10, defense: 13, damage: [2, 7], exp: 140, gold: [30, 60], color: "#b37f54", sprite: "orc", visualId: "orc", unique: true, elite: true, spells: ["holdMonster"], abilities: ["charge"], tactic: "press", role: "elite" },
-  { id: "cryptlord", name: "Veyra The Crypt Lord", depth: 5, hp: 48, attack: 12, defense: 15, damage: [3, 8], exp: 210, gold: [50, 90], color: "#a98bdd", sprite: "mage", visualId: "mage", unique: true, elite: true, spells: ["holdMonster", "slowMonster", "lightningBolt"], abilities: ["summon", "phase"], tactic: "control", role: "elite" },
-  { id: "stormWarden", name: "The Storm Warden", depth: 7, hp: 78, attack: 15, defense: 18, damage: [4, 9], exp: 320, gold: [0, 0], color: "#d6c08a", sprite: "dragon", visualId: "dragon", unique: true, elite: true, spells: ["lightningBolt", "frostBolt", "holdMonster"], abilities: ["charge"], tactic: "skirmish", role: "elite", ranged: { range: 6, damage: [4, 7], color: "#ffd676" } }
+  { id: "rat", name: "Giant Rat", depth: 1, hp: 6, attack: 3, defense: 7, damage: [1, 4], exp: 12, gold: [2, 10], color: "#8e8e75", sprite: "rat", visualId: "rat", tactic: "pack", moveSpeed: 100 },
+  { id: "kobold", name: "Kobold", depth: 1, hp: 8, attack: 4, defense: 8, damage: [1, 5], exp: 15, gold: [4, 12], color: "#b19061", sprite: "kobold", visualId: "kobold", tactic: "pack", moveSpeed: 94 },
+  { id: "slinger", name: "Kobold Slinger", depth: 1, hp: 7, attack: 5, defense: 8, damage: [1, 4], exp: 18, gold: [4, 12], color: "#b89066", sprite: "kobold", visualId: "kobold", tactic: "skirmish", moveSpeed: 78, ranged: { range: 5, damage: [1, 4], color: "#e0c7a2" } },
+  { id: "goblin", name: "Goblin", depth: 2, hp: 12, attack: 5, defense: 9, damage: [1, 6], exp: 24, gold: [5, 18], color: "#6e9d4f", sprite: "goblin", visualId: "goblin", tactic: "pack", moveSpeed: 96 },
+  { id: "archer", name: "Goblin Archer", depth: 2, hp: 11, attack: 6, defense: 9, damage: [1, 6], exp: 28, gold: [6, 20], color: "#8caf56", sprite: "goblin", visualId: "goblin", tactic: "skirmish", moveSpeed: 80, ranged: { range: 6, damage: [1, 5], color: "#c2a56a" } },
+  { id: "wolf", name: "Dire Wolf", depth: 2, hp: 14, attack: 6, defense: 10, damage: [2, 4], exp: 28, gold: [0, 0], color: "#a7a7a7", sprite: "wolf", visualId: "wolf", abilities: ["charge"], tactic: "charge", moveSpeed: 104 },
+  { id: "skeleton", name: "Skeleton", depth: 2, hp: 18, attack: 7, defense: 11, damage: [2, 5], exp: 40, gold: [8, 22], color: "#d9d9ca", sprite: "skeleton", visualId: "skeleton", tactic: "line", moveSpeed: 84 },
+  { id: "orc", name: "Orc", depth: 3, hp: 22, attack: 8, defense: 11, damage: [2, 6], exp: 46, gold: [10, 28], color: "#709243", sprite: "orc", visualId: "orc", tactic: "press", moveSpeed: 90 },
+  { id: "pikeguard", name: "Pike Guard", depth: 3, hp: 24, attack: 9, defense: 12, damage: [2, 6], exp: 52, gold: [12, 30], color: "#8f7b58", sprite: "orc", visualId: "orc", tactic: "line", moveSpeed: 82 },
+  { id: "slime", name: "Ochre Jelly", depth: 4, hp: 26, attack: 8, defense: 10, damage: [2, 6], exp: 52, gold: [0, 0], color: "#c8a73c", sprite: "slime", visualId: "slime", tactic: "press", moveSpeed: 68 },
+  { id: "boneArcher", name: "Bone Archer", depth: 4, hp: 20, attack: 8, defense: 12, damage: [2, 5], exp: 60, gold: [12, 34], color: "#d9d9ca", sprite: "skeleton", visualId: "skeleton", tactic: "skirmish", moveSpeed: 78, ranged: { range: 6, damage: [2, 5], color: "#d9c18a" } },
+  { id: "cultAdept", name: "Cult Adept", depth: 4, hp: 24, attack: 9, defense: 12, damage: [2, 5], exp: 64, gold: [12, 38], color: "#7566a6", sprite: "mage", visualId: "mage", spells: ["slowMonster", "magicMissile"], abilities: ["slow"], tactic: "control", moveSpeed: 84 },
+  { id: "troll", name: "Troll", depth: 4, hp: 36, attack: 10, defense: 12, damage: [2, 8], exp: 80, gold: [16, 40], color: "#5f7b3f", sprite: "troll", visualId: "troll", abilities: ["charge"], tactic: "charge", moveSpeed: 84 },
+  { id: "wraith", name: "Wraith", depth: 5, hp: 30, attack: 11, defense: 14, damage: [3, 6], exp: 98, gold: [18, 54], color: "#b4a7df", sprite: "wraith", visualId: "wraith", abilities: ["phase", "drain"], tactic: "phase", moveSpeed: 94 },
+  { id: "graveHound", name: "Grave Hound", depth: 5, hp: 30, attack: 11, defense: 13, damage: [2, 7], exp: 94, gold: [8, 24], color: "#9ca39f", sprite: "wolf", visualId: "wolf", abilities: ["charge", "drain"], tactic: "charge", moveSpeed: 102 },
+  { id: "ogre", name: "Ogre", depth: 5, hp: 44, attack: 12, defense: 13, damage: [3, 7], exp: 106, gold: [20, 68], color: "#ab7c50", sprite: "ogre", visualId: "ogre", abilities: ["charge"], tactic: "charge", moveSpeed: 80 },
+  { id: "shaman", name: "Orc Shaman", depth: 5, hp: 28, attack: 11, defense: 13, damage: [2, 6], exp: 110, gold: [18, 58], color: "#4a8f8f", sprite: "mage", visualId: "mage", spells: ["slowMonster", "holdMonster"], abilities: ["slow", "summon"], tactic: "control", moveSpeed: 82 },
+  { id: "warlock", name: "Warlock", depth: 6, hp: 34, attack: 12, defense: 15, damage: [3, 8], exp: 124, gold: [28, 80], color: "#7854b8", sprite: "mage", visualId: "mage", spells: ["magicMissile", "holdMonster", "lightningBolt"], abilities: ["teleport", "summon"], tactic: "control", moveSpeed: 84 },
+  { id: "wyrm", name: "Cave Wyrm", depth: 7, hp: 60, attack: 14, defense: 16, damage: [4, 8], exp: 180, gold: [30, 96], color: "#be5b33", sprite: "dragon", visualId: "dragon", tactic: "skirmish", moveSpeed: 86, ranged: { range: 5, damage: [3, 7], color: "#f08c4f" } },
+  { id: "gatekeeper", name: "Gatekeeper Hroth", depth: 3, hp: 34, attack: 10, defense: 13, damage: [2, 7], exp: 140, gold: [30, 60], color: "#b37f54", sprite: "orc", visualId: "orc", unique: true, elite: true, spells: ["holdMonster"], abilities: ["charge"], tactic: "press", role: "elite", moveSpeed: 90 },
+  { id: "cryptlord", name: "Veyra The Crypt Lord", depth: 5, hp: 48, attack: 12, defense: 15, damage: [3, 8], exp: 210, gold: [50, 90], color: "#a98bdd", sprite: "mage", visualId: "mage", unique: true, elite: true, spells: ["holdMonster", "slowMonster", "lightningBolt"], abilities: ["summon", "phase"], tactic: "control", role: "elite", moveSpeed: 86 },
+  { id: "stormWarden", name: "The Storm Warden", depth: 7, hp: 78, attack: 15, defense: 18, damage: [4, 9], exp: 320, gold: [0, 0], color: "#d6c08a", sprite: "dragon", visualId: "dragon", unique: true, elite: true, spells: ["lightningBolt", "frostBolt", "holdMonster"], abilities: ["charge"], tactic: "skirmish", role: "elite", moveSpeed: 92, ranged: { range: 6, damage: [4, 7], color: "#ffd676" } }
 ];
 
 export const SHOPS = {
@@ -909,7 +962,37 @@ export const OBJECTIVE_DEFS = {
     summary: "Push to the marked cache, claim it, and carry the supplies back into your run.",
     completion: "pickup",
     rewardType: "boon",
+    visualId: "vaultChest"
+  },
+  recover_waystone: {
+    id: "recover_waystone",
+    label: "Recover The Waystone",
+    shortLabel: "Recover Waystone",
+    intro: "A survey waystone is still intact somewhere ahead. Recover it before the floor breaks it apart.",
+    summary: "Push to the marked chamber, claim the waystone, and turn the recovery into cleaner next-floor intel.",
+    completion: "pickup",
+    rewardType: "rumor",
     visualId: "relicPedestal"
+  },
+  secure_ledger: {
+    id: "secure_ledger",
+    label: "Recover The Ledger",
+    shortLabel: "Recover Ledger",
+    intro: "A survey ledger is still intact below. Recover it before the floor tears the route notes apart.",
+    summary: "Claim the marked archive ledger and turn it into cleaner route planning for what comes next.",
+    completion: "pickup",
+    rewardType: "rumor",
+    visualId: "archiveStack"
+  },
+  purify_well: {
+    id: "purify_well",
+    label: "Purify The Well",
+    shortLabel: "Purify Well",
+    intro: "A corrupted well is spoiling the air on this floor. Clear it and purify the water before the floor closes in.",
+    summary: "Clear the chamber, then purify the well for a full refill and a boon before the floor answers back.",
+    completion: "interact",
+    rewardType: "boon",
+    visualId: "well"
   },
   break_beacon: {
     id: "break_beacon",
@@ -919,7 +1002,17 @@ export const OBJECTIVE_DEFS = {
     summary: "Clear the beacon chamber, then smash the signal focus before it draws more patrols.",
     completion: "interact",
     rewardType: "rumor",
-    visualId: "shrineSeal"
+    visualId: "beaconFocus"
+  },
+  light_watchfire: {
+    id: "light_watchfire",
+    label: "Light The Watchfire",
+    shortLabel: "Light Watchfire",
+    intro: "A dead watchfire sits in the marked chamber. Rekindle it before the floor's route memory is lost.",
+    summary: "Clear the room, then light the watchfire to reveal more of the floor and secure a cleaner push.",
+    completion: "interact",
+    rewardType: "boon",
+    visualId: "beaconFocus"
   }
 };
 
@@ -1004,11 +1097,46 @@ export const OPTIONAL_ENCOUNTER_DEFS = {
     summary: "Route notes and emergency stock in exchange for drawing fresh attention.",
     visualId: "cacheClosed"
   },
+  smuggler_cache: {
+    id: "smuggler_cache",
+    label: "Smuggler Cache",
+    summary: "Fast extract tools and hidden coin, if you are willing to announce that you found them.",
+    unlock: "supply_cache",
+    visualId: "cacheClosed"
+  },
+  oath_shrine: {
+    id: "oath_shrine",
+    label: "Oath Shrine",
+    summary: "Trade blood or mana for warded gear and sharper next-floor leverage.",
+    unlock: "temple_favors",
+    visualId: "bloodAltar"
+  },
+  pilgrim_pool: {
+    id: "pilgrim_pool",
+    label: "Pilgrim Pool",
+    summary: "Wash off curses and strain, but the glow tells the floor exactly where you are.",
+    unlock: "temple_favors",
+    visualId: "well"
+  },
   moon_well: {
     id: "moon_well",
     label: "Moon Well",
     summary: "Restore fully and reveal the floor, but the glow stirs the halls.",
-    visualId: "shrineSeal"
+    visualId: "well"
+  },
+  surveyor_stash: {
+    id: "surveyor_stash",
+    label: "Surveyor Stash",
+    summary: "A ledger case with route marks and a clean escape line, if you are willing to announce that you found it.",
+    unlock: "archive_maps",
+    visualId: "cacheClosed"
+  },
+  ember_cache: {
+    id: "ember_cache",
+    label: "Ember Cache",
+    summary: "Emergency supplies for a second push: resist stock, field gold, and a little extra heat on the floor.",
+    unlock: "guild_license",
+    visualId: "cacheClosed"
   }
 };
 
@@ -1171,7 +1299,7 @@ export const TOWN_UNLOCK_DEFS = {
   supply_cache: {
     id: "supply_cache",
     name: "Supply Cache",
-    description: "Provisioner stocks one extra emergency tool each refresh."
+    description: "Provisioner stocks one extra emergency tool each refresh, and smuggler caches begin appearing below."
   },
   guild_license: {
     id: "guild_license",
@@ -1181,7 +1309,7 @@ export const TOWN_UNLOCK_DEFS = {
   temple_favors: {
     id: "temple_favors",
     name: "Temple Favors",
-    description: "Temple services are cheaper and blood altars start appearing below."
+    description: "Temple services are cheaper, and blood altars, oath shrines, and pilgrim pools start appearing below."
   },
   archive_maps: {
     id: "archive_maps",
@@ -1218,6 +1346,87 @@ export const CONTRACT_DEFS = {
     name: "Scholar's Road",
     summary: "Cleaner route reads for a frailer start.",
     description: "Search reveals more route at a time and objectives pay extra rumor, but you begin each run with less maximum health."
+  },
+  hunters_call: {
+    id: "hunters_call",
+    name: "Hunter's Call",
+    summary: "Elite bounty up, elite pressure up.",
+    description: "Elite kills pay extra gold and rumor, but reinforcement waves are more likely to include an elite."
+  },
+  ration_run: {
+    id: "ration_run",
+    name: "Ration Run",
+    summary: "Cleaner opening, less idle time.",
+    description: "Begin with a healing potion and mapping scroll, but waiting, resting, and searching raise pressure harder."
+  },
+  sealed_return: {
+    id: "sealed_return",
+    name: "Sealed Return",
+    summary: "Safer extract tools, harsher greed tax.",
+    description: "Begin with a Rune of Return and one rumor token, but greed raises pressure harder and you begin runs with less maximum health."
+  },
+  route_debt: {
+    id: "route_debt",
+    name: "Route Debt",
+    summary: "Sharper routes, harsher scouting tax.",
+    description: "Begin with one rumor token and larger route reveals, but you start runs with lower maximum health and searching raises pressure harder."
+  },
+  trophy_path: {
+    id: "trophy_path",
+    name: "Trophy Path",
+    summary: "Bigger elite payoff, meaner elite pressure.",
+    description: "Elite kills pay extra gold and rumor, but reinforcement waves are more likely to include elite threats."
+  },
+  greedy_burden: {
+    id: "greedy_burden",
+    name: "Greedy Burden",
+    summary: "Greed pays harder, weight punishes harder.",
+    description: "Greed rooms pay more and town buyers pay better after return, but burden penalties worsen during the run and greed raises pressure harder."
+  },
+  last_light: {
+    id: "last_light",
+    name: "Last Light",
+    summary: "Emergency opener, no room to idle.",
+    description: "Begin with emergency stock, but waiting, resting, and searching all accelerate pressure harder than usual."
+  }
+};
+
+export const COMMENDATION_DEFS = {
+  clean_extract: {
+    id: "clean_extract",
+    name: "Clean Extract",
+    summary: "Archive badge for returning without taking a greed room.",
+    rewardLabel: "Archive badge"
+  },
+  greed_specialist: {
+    id: "greed_specialist",
+    name: "Greed Specialist",
+    summary: "Unlocks Greedy Burden after a greed-heavy extract.",
+    rewardLabel: "Unlocks contract: Greedy Burden"
+  },
+  elite_hunter: {
+    id: "elite_hunter",
+    name: "Elite Hunter",
+    summary: "Unlocks Trophy Path after an elite-heavy run.",
+    rewardLabel: "Unlocks contract: Trophy Path"
+  },
+  route_reader: {
+    id: "route_reader",
+    name: "Route Reader",
+    summary: "Unlocks Route Debt after a route-heavy extract.",
+    rewardLabel: "Unlocks contract: Route Debt"
+  },
+  curse_survivor: {
+    id: "curse_survivor",
+    name: "Curse Survivor",
+    summary: "Archive badge for extracting while carrying a curse or constitution strain.",
+    rewardLabel: "Archive badge"
+  },
+  class_loyalist: {
+    id: "class_loyalist",
+    name: "Class Loyalist",
+    summary: "Loyal class streaks earn a small prep edge on future runs.",
+    rewardLabel: "Prep bonus: +1 rumor token on matching class starts"
   }
 };
 
@@ -1239,6 +1448,20 @@ export const CLASS_MASTERY_DEFS = {
         name: "Shield Drill",
         description: "Start future Fighter runs with a padded cap.",
         itemIds: ["paddedCap"]
+      },
+      {
+        rank: 3,
+        trigger: "objective",
+        name: "Iron March",
+        description: "Start future Fighter runs with warded greaves.",
+        itemIds: ["wardedGreaves"]
+      },
+      {
+        rank: 4,
+        trigger: "extract",
+        name: "Siege Lessons",
+        description: "Start future Fighter runs already knowing Shield.",
+        spellIds: ["shield"]
       }
     ]
   },
@@ -1259,6 +1482,20 @@ export const CLASS_MASTERY_DEFS = {
         name: "Street Contacts",
         description: "Start future Rogue runs with one rumor token.",
         rumorTokens: 1
+      },
+      {
+        rank: 3,
+        trigger: "objective",
+        name: "Forward Kit",
+        description: "Start future Rogue runs with pathfinder sandals.",
+        itemIds: ["pathfinderSandals"]
+      },
+      {
+        rank: 4,
+        trigger: "extract",
+        name: "Clean Exit",
+        description: "Start future Rogue runs with a teleport scroll.",
+        itemIds: ["teleportScroll"]
       }
     ]
   },
@@ -1279,6 +1516,20 @@ export const CLASS_MASTERY_DEFS = {
         name: "Prepared Study",
         description: "Start future Wizard runs already knowing Identify.",
         spellIds: ["identify"]
+      },
+      {
+        rank: 3,
+        trigger: "objective",
+        name: "Warding Primer",
+        description: "Start future Wizard runs with a Spellbook of Shield.",
+        itemIds: ["spellbookShield"]
+      },
+      {
+        rank: 4,
+        trigger: "extract",
+        name: "Far Sight",
+        description: "Start future Wizard runs already knowing Clairvoyance.",
+        spellIds: ["clairvoyance"]
       }
     ]
   }
@@ -1325,9 +1576,29 @@ export const RUMOR_DEFS = {
     id: "supplies",
     text: "A sealed field cache lies below. Whoever reaches it first will fight better for the rest of the floor."
   },
+  waystone: {
+    id: "waystone",
+    text: "A survey waystone still survives below. Recover it and the next floor will read cleaner."
+  },
+  ledger: {
+    id: "ledger",
+    text: "An old route ledger still survives below. Recover it and the next descent will read cleaner."
+  },
+  shrine_path: {
+    id: "shrine_path",
+    text: "A ruined shrine is pulsing below. Clear the room first, then seal it before pressure breaks the line."
+  },
+  purify_well: {
+    id: "purify_well",
+    text: "A corrupted well is spoiling one floor. Purify it fast if you want a clean refill before greed."
+  },
   beacon: {
     id: "beacon",
     text: "A warning beacon is waking patrols deeper in the keep. Break it fast if it appears."
+  },
+  watchfire: {
+    id: "watchfire",
+    text: "A dead watchfire sits below. Light it and the floor will read more clearly for a few clean turns."
   }
 };
 

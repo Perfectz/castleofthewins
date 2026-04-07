@@ -29,6 +29,8 @@ export function createMonster(template, x, y) {
     alerted: 0,
     sleeping: Math.random() < 0.4,
     held: 0,
+    slowed: 0,
+    moveMeter: 100,
     chargeWindup: null,
     intent: null
   };
@@ -152,8 +154,17 @@ function applyLootAffix(item, affixId) {
   if (stats.manaBonus) {
     item.manaBonus = (item.manaBonus || 0) + stats.manaBonus;
   }
+  if (stats.strBonus) {
+    item.strBonus = (item.strBonus || 0) + stats.strBonus;
+  }
   if (stats.dexBonus) {
     item.dexBonus = (item.dexBonus || 0) + stats.dexBonus;
+  }
+  if (stats.conBonus) {
+    item.conBonus = (item.conBonus || 0) + stats.conBonus;
+  }
+  if (stats.intBonus) {
+    item.intBonus = (item.intBonus || 0) + stats.intBonus;
   }
   if (stats.searchBonus) {
     item.searchBonus = (item.searchBonus || 0) + stats.searchBonus;
@@ -258,6 +269,18 @@ export function describeItem(item) {
     if (getItemManaBonus(item)) {
       details.push(`+${getItemManaBonus(item)} mana`);
     }
+    if (getItemStrBonus(item)) {
+      details.push(`+${getItemStrBonus(item)} strength`);
+    }
+    if (getItemDexBonus(item)) {
+      details.push(`+${getItemDexBonus(item)} dexterity`);
+    }
+    if (getItemConBonus(item)) {
+      details.push(`+${getItemConBonus(item)} constitution`);
+    }
+    if (getItemIntBonus(item)) {
+      details.push(`+${getItemIntBonus(item)} intelligence`);
+    }
     if (getItemWardBonus(item)) {
       details.push(`ward ${getItemWardBonus(item)}`);
     }
@@ -286,8 +309,17 @@ export function describeItem(item) {
     if (getItemManaBonus(item)) {
       details.push(`+${getItemManaBonus(item)} mana`);
     }
+    if (getItemStrBonus(item)) {
+      details.push(`+${getItemStrBonus(item)} strength`);
+    }
     if (getItemDexBonus(item)) {
       details.push(`+${getItemDexBonus(item)} dexterity`);
+    }
+    if (getItemConBonus(item)) {
+      details.push(`+${getItemConBonus(item)} constitution`);
+    }
+    if (getItemIntBonus(item)) {
+      details.push(`+${getItemIntBonus(item)} intelligence`);
     }
     if (getItemLightBonus(item)) {
       details.push(`+${getItemLightBonus(item)} sight`);
@@ -379,11 +411,29 @@ export function getItemCritBonus(item) {
 }
 
 export function getItemManaBonus(item) {
+  if (!item) {
+    return 0;
+  }
   return (item.manaBonus || 0) + ((item.kind === "armor" && item.enchantment > 0 && item.slot === "ring") ? item.enchantment : 0);
 }
 
+export function getItemStrBonus(item) {
+  return item ? (item.strBonus || 0) : 0;
+}
+
 export function getItemDexBonus(item) {
+  if (!item) {
+    return 0;
+  }
   return (item.dexBonus || 0) + ((item.kind === "armor" && item.enchantment > 0 && item.slot === "feet") ? 1 : 0);
+}
+
+export function getItemConBonus(item) {
+  return item ? (item.conBonus || 0) : 0;
+}
+
+export function getItemIntBonus(item) {
+  return item ? (item.intBonus || 0) : 0;
 }
 
 export function getItemLightBonus(item) {
@@ -427,6 +477,11 @@ export function getItemValue(item) {
   value += getItemCritBonus(item) * 14;
   value += getItemGuardBonus(item) * 16;
   value += getItemWardBonus(item) * 18;
+  value += getItemManaBonus(item) * 14;
+  value += getItemStrBonus(item) * 16;
+  value += getItemDexBonus(item) * 16;
+  value += getItemConBonus(item) * 18;
+  value += getItemIntBonus(item) * 18;
   value += getItemSearchBonus(item) * 10;
   value += getItemFireResist(item) * 12;
   value += getItemColdResist(item) * 12;
@@ -509,7 +564,8 @@ export function getCarryWeight(player) {
 }
 
 export function getCarryCapacity(player) {
-  return player.stats.str * 3 + 12;
+  const strength = player?.effectiveStats?.str ?? player?.stats?.str ?? 0;
+  return strength * 3 + 12;
 }
 
 export function encumbranceTone(player) {
@@ -583,6 +639,37 @@ export function miniMapColor(tile, visible) {
   }
 }
 
+export function createEmptyEquipment() {
+  return {
+    weapon: null,
+    offhand: null,
+    head: null,
+    body: null,
+    cloak: null,
+    feet: null,
+    ring1: null,
+    ring2: null,
+    ring3: null,
+    ring4: null,
+    amulet1: null,
+    amulet2: null
+  };
+}
+
+function normalizeEquipment(equipment = {}) {
+  const normalized = {
+    ...createEmptyEquipment(),
+    ...(equipment || {})
+  };
+  if (!normalized.ring1 && equipment?.ring) {
+    normalized.ring1 = equipment.ring;
+  }
+  if (!normalized.amulet1 && equipment?.amulet) {
+    normalized.amulet1 = equipment.amulet;
+  }
+  return Object.fromEntries(Object.entries(createEmptyEquipment()).map(([slot]) => [slot, normalized[slot] || null]));
+}
+
 export function getExploredPercent(level) {
   if (!level || !level.explored || level.explored.length === 0) {
     return 0;
@@ -595,6 +682,8 @@ export function normalizePlayer(player) {
   const normalized = structuredCloneCompat(player);
   normalized.constitutionLoss = normalized.constitutionLoss || 0;
   normalized.deepestDepth = normalized.deepestDepth || normalized.currentDepth || 0;
+  normalized.moveSpeed = normalized.moveSpeed || 100;
+  normalized.moveTurnBudget = normalized.moveTurnBudget || 0;
   normalized.slowed = normalized.slowed || 0;
   normalized.tempGuard = normalized.tempGuard || 0;
   normalized.held = normalized.held || 0;
@@ -606,6 +695,15 @@ export function normalizePlayer(player) {
   normalized.perks = Array.isArray(normalized.perks) ? normalized.perks : [];
   normalized.relics = Array.isArray(normalized.relics) ? normalized.relics : [];
   normalized.knownRumors = Array.isArray(normalized.knownRumors) ? normalized.knownRumors : [];
+  normalized.spellsKnown = Array.isArray(normalized.spellsKnown)
+    ? [...new Set(normalized.spellsKnown.filter((spellId) => Boolean(SPELLS[spellId])))]
+    : [];
+  normalized.spellTrayIds = Array.isArray(normalized.spellTrayIds)
+    ? [...new Set(normalized.spellTrayIds.filter((spellId) => normalized.spellsKnown.includes(spellId)))]
+    : normalized.spellsKnown.slice(0, 8);
+  if (normalized.spellTrayIds.length === 0 && normalized.spellsKnown.length > 0) {
+    normalized.spellTrayIds = normalized.spellsKnown.slice(0, 8);
+  }
   normalized.runCurrencies = {
     rumorTokens: 0,
     hunterMark: 0,
@@ -632,6 +730,7 @@ export function normalizePlayer(player) {
   normalized.quest.npcSceneFlags = normalized.quest.npcSceneFlags || {};
   normalized.quest.returnSting = normalized.quest.returnSting || null;
   normalized.inventory = (normalized.inventory || []).map(normalizeItem);
+  normalized.equipment = normalizeEquipment(normalized.equipment);
   Object.keys(normalized.equipment || {}).forEach((slot) => {
     if (normalized.equipment[slot]) {
       normalized.equipment[slot] = normalizeItem(normalized.equipment[slot]);
@@ -664,6 +763,8 @@ export function normalizeLevels(levels) {
       alerted: actor.alerted || 0,
       mana: actor.mana || 0,
       held: actor.held || 0,
+      slowed: actor.slowed || 0,
+      moveMeter: typeof actor.moveMeter === "number" ? actor.moveMeter : 100,
       chargeWindup: actor.chargeWindup || null,
       intent: null,
       maxHp: actor.maxHp || actor.hp || 1,

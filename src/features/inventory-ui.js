@@ -9,16 +9,20 @@ import {
   getItemDexBonus,
   getItemFireResist,
   getItemGuardBonus,
+  getItemIntBonus,
   getItemLightBonus,
   getItemManaBonus,
   getItemName,
   getItemOvercastRelief,
   getItemPower,
+  getItemStrBonus,
   getItemSearchBonus,
+  getItemConBonus,
   getItemValue,
   getItemWardBonus,
   shopAcceptsItem
 } from "../core/entities.js";
+import { SPELLS } from "../data/content.js";
 
 const GROUP_DEFS = [
   { key: "recommended", label: "Recommended Now" },
@@ -42,6 +46,102 @@ const FILTER_DEFS = [
   { key: "equip", label: "Equip" },
   { key: "sell", label: "Sell" }
 ];
+
+const SPELL_CATEGORY_DEFS = [
+  { key: "offense", label: "Offense" },
+  { key: "defense", label: "Defense" },
+  { key: "recovery", label: "Recovery" },
+  { key: "control", label: "Control" },
+  { key: "travel", label: "Travel" },
+  { key: "sight", label: "Sight" },
+  { key: "identify", label: "Identify" },
+  { key: "curse", label: "Curse" },
+  { key: "utility", label: "Utility" }
+];
+
+const INVENTORY_CATEGORY_DEFS = [
+  { key: "weapons", label: "Weapons" },
+  { key: "armor", label: "Armor" },
+  { key: "accessories", label: "Accessories" },
+  { key: "consumables", label: "Consumables" },
+  { key: "spellbooks", label: "Spellbooks" },
+  { key: "wands", label: "Wands & Tools" },
+  { key: "valuables", label: "Valuables" },
+  { key: "quest", label: "Quest" }
+];
+
+const EFFECT_ALIASES = {
+  clairvoyance: "mapping"
+};
+
+export function getSpellEffectKey(spellId = "") {
+  if (!spellId) {
+    return "";
+  }
+  return EFFECT_ALIASES[spellId] || spellId;
+}
+
+export function getSpellCategoryDefs() {
+  return SPELL_CATEGORY_DEFS;
+}
+
+export function getInventoryCategoryDefs() {
+  return INVENTORY_CATEGORY_DEFS;
+}
+
+export function getSpellCategoryKey(spellOrId) {
+  const spell = typeof spellOrId === "string" ? SPELLS[spellOrId] : spellOrId;
+  const spellId = typeof spellOrId === "string" ? spellOrId : spellOrId?.id;
+  if (!spell) {
+    return "utility";
+  }
+  if (spellId === "identify") {
+    return "identify";
+  }
+  if (spellId === "removeCurse") {
+    return "curse";
+  }
+  if (["phaseDoor", "teleport", "runeOfReturn"].includes(spellId) || spell.school === "escape") {
+    return "travel";
+  }
+  if (["clairvoyance", "light", "detectTraps"].includes(spellId) || spell.school === "divination") {
+    return "sight";
+  }
+  if (spell.school === "restoration") {
+    return "recovery";
+  }
+  if (spell.school === "warding") {
+    return "defense";
+  }
+  if (spell.school === "control" || ["frostBolt", "slowMonster", "holdMonster"].includes(spellId)) {
+    return "control";
+  }
+  if (
+    ["magicMissile", "fireball", "lightningBolt"].includes(spellId)
+    || ["opener", "burst"].includes(String(spell.roleLabel || "").toLowerCase())
+  ) {
+    return "offense";
+  }
+  return "utility";
+}
+
+export function getSpellCategoryLabel(spellOrId) {
+  const key = getSpellCategoryKey(spellOrId);
+  return SPELL_CATEGORY_DEFS.find((entry) => entry.key === key)?.label || "Utility";
+}
+
+export function getItemEffectKey(item) {
+  if (!item) {
+    return "";
+  }
+  if (item.kind === "spellbook") {
+    return getSpellEffectKey(item.spell);
+  }
+  if (item.effect) {
+    return EFFECT_ALIASES[item.effect] || item.effect;
+  }
+  return "";
+}
 
 function getVisibleEnemyCount(game) {
   if (!game.player || !game.currentLevel) {
@@ -68,6 +168,89 @@ function getShopTagForContext(item, shopId = "") {
   return SHOP_LABELS[shopId] || null;
 }
 
+function getInventoryCategoryLabel(categoryKey = "utility") {
+  return INVENTORY_CATEGORY_DEFS.find((entry) => entry.key === categoryKey)?.label || "Item";
+}
+
+function getSemanticScanTags(item, context = {}) {
+  if (!item) {
+    return [];
+  }
+  const {
+    unknown = false,
+    cursed = false,
+    sellHereTag = null,
+    groupKey = "",
+    recommendation = ""
+  } = context;
+  const tags = [];
+  if (
+    item.kind === "weapon"
+    || getItemPower(item) > 0
+    || getItemAccuracyBonus(item) > 0
+    || getItemCritBonus(item) > 0
+    || item.effect === "lightning"
+  ) {
+    tags.push("damage");
+  }
+  if (getItemArmor(item) >= 3 || getItemGuardBonus(item) > 0 || item.effect === "slow") {
+    tags.push("guard");
+  }
+  if (getItemWardBonus(item) > 0) {
+    tags.push("ward");
+  }
+  if (getItemSearchBonus(item) > 0 || getItemLightBonus(item) > 0) {
+    tags.push("search");
+  }
+  if (
+    getItemDexBonus(item) > 0
+    || ["teleport", "runeReturn", "mapping"].includes(getItemEffectKey(item))
+  ) {
+    tags.push("travel");
+  }
+  if (getItemFireResist(item) > 0 || getItemColdResist(item) > 0) {
+    tags.push("resist");
+  }
+  if (unknown || cursed || recommendation === "Identify first") {
+    tags.push("cursed-risk");
+  }
+  if (sellHereTag || groupKey === "sell" || item.markedForSale) {
+    tags.push("sell");
+  }
+  return [...new Set(tags)];
+}
+
+function getInventoryCategoryKey(item, context = {}) {
+  if (!item) {
+    return "valuables";
+  }
+  if (item.kind === "quest") {
+    return "quest";
+  }
+  if (item.kind === "spellbook" && item.spell) {
+    return "spellbooks";
+  }
+  if (item.kind === "charged") {
+    return "wands";
+  }
+  if (item.kind === "consumable") {
+    return "consumables";
+  }
+  if (item.kind === "weapon") {
+    return "weapons";
+  }
+  if (item.kind === "armor") {
+    if (["ring", "amulet"].includes(item.slot)) {
+      return "accessories";
+    }
+    return "armor";
+  }
+  if (item.kind === "junk") {
+    return "valuables";
+  }
+  return "valuables";
+}
+
 function getBurdenWeightTone(game, item) {
   const state = game.getBurdenUiState();
   const weight = item.weight || 0;
@@ -86,15 +269,19 @@ function getBuildSummary(game) {
   const burdenUi = game.getBurdenUiState();
   const armorValue = typeof game.getArmorValue === "function" ? game.getArmorValue() : 0;
   const attackValue = typeof game.getAttackValue === "function" ? game.getAttackValue() : 0;
-  const manaLean = armorPieces.reduce((sum, item) => sum + getItemManaBonus(item), 0) + ((game.player?.spellsKnown?.length || 0) * 2);
+  const manaLean = armorPieces.reduce((sum, item) => sum + getItemManaBonus(item) + getItemIntBonus(item), 0) + ((game.player?.spellsKnown?.length || 0) * 2);
   const utilityLean = armorPieces.reduce((sum, item) => sum + getItemDexBonus(item) + getItemLightBonus(item) + getItemSearchBonus(item), 0);
-  const guardLean = armorPieces.reduce((sum, item) => sum + getItemGuardBonus(item) + getItemWardBonus(item), 0);
+  const guardLean = armorPieces.reduce((sum, item) => sum + getItemGuardBonus(item) + getItemWardBonus(item) + getItemConBonus(item), 0);
+  const strengthLean = armorPieces.reduce((sum, item) => sum + getItemStrBonus(item), 0);
   let headline = "Balanced kit";
   let note = "Mixed offense, defense, and utility.";
 
   if (manaLean >= attackValue + 2) {
     headline = "Mana-leaning";
     note = "Built around spells, mana pieces, and tools.";
+  } else if (strengthLean >= 2) {
+    headline = "Heavy hauler";
+    note = "Leans on strength pieces, burden control, and harder swings.";
   } else if (guardLean >= 4) {
     headline = "Layered defense";
     note = "Guard and ward pieces soak hits instead of just stacking armor.";
@@ -134,8 +321,14 @@ function getSlotQualityLabel(game, slotDef, compatibleCount = 0) {
   if (getItemGuardBonus(item) >= 2 || getItemWardBonus(item) >= 2) {
     return "Protection piece";
   }
-  if (getItemManaBonus(item) > 0) {
+  if (getItemManaBonus(item) > 0 || getItemIntBonus(item) > 0) {
     return "Mana piece";
+  }
+  if (getItemStrBonus(item) > 0) {
+    return "Power piece";
+  }
+  if (getItemConBonus(item) > 0) {
+    return "Endurance piece";
   }
   if (getItemDexBonus(item) > 0 || getItemLightBonus(item) > 0 || getItemSearchBonus(item) > 0) {
     return "Utility piece";
@@ -149,12 +342,34 @@ function getSlotQualityLabel(game, slotDef, compatibleCount = 0) {
   return "Stable slot";
 }
 
+function getEquipmentComparisonTarget(game, item) {
+  if (!item?.slot) {
+    return {
+      targetSlot: "",
+      equipped: null
+    };
+  }
+  if (typeof game.getEquipmentSlotForItem === "function") {
+    const target = game.getEquipmentSlotForItem(item) || {};
+    const targetSlot = target.targetSlot || "";
+    return {
+      targetSlot,
+      equipped: targetSlot ? game.player?.equipment?.[targetSlot] || null : null
+    };
+  }
+  return {
+    targetSlot: item.slot,
+    equipped: game.player?.equipment?.[item.slot] || null
+  };
+}
+
 function getComparisonDeltas(game, item) {
   if (!item.slot || (item.kind !== "weapon" && item.kind !== "armor")) {
     return null;
   }
-  const equipped = game.player.equipment[item.slot] || null;
+  const { targetSlot, equipped } = getEquipmentComparisonTarget(game, item);
   return {
+    targetSlot,
     equipped,
     attack: item.kind === "weapon" ? getItemPower(item) - (equipped ? getItemPower(equipped) : 0) : 0,
     armor: item.kind === "armor" ? getItemArmor(item) - (equipped ? getItemArmor(equipped) : 0) : 0,
@@ -163,7 +378,10 @@ function getComparisonDeltas(game, item) {
     guard: getItemGuardBonus(item) - (equipped ? getItemGuardBonus(equipped) : 0),
     ward: getItemWardBonus(item) - (equipped ? getItemWardBonus(equipped) : 0),
     mana: getItemManaBonus(item) - (equipped ? getItemManaBonus(equipped) : 0),
+    str: getItemStrBonus(item) - (equipped ? getItemStrBonus(equipped) : 0),
     dex: getItemDexBonus(item) - (equipped ? getItemDexBonus(equipped) : 0),
+    con: getItemConBonus(item) - (equipped ? getItemConBonus(equipped) : 0),
+    int: getItemIntBonus(item) - (equipped ? getItemIntBonus(equipped) : 0),
     sight: getItemLightBonus(item) - (equipped ? getItemLightBonus(equipped) : 0),
     search: getItemSearchBonus(item) - (equipped ? getItemSearchBonus(equipped) : 0),
     fireResist: getItemFireResist(item) - (equipped ? getItemFireResist(equipped) : 0),
@@ -182,7 +400,7 @@ function getUpgradeSummary(game, item) {
     };
   }
 
-  const slotLabel = game.getPackSlotDefinition(item.slot).label.toLowerCase();
+  const slotLabel = game.getPackSlotDefinition(deltas.targetSlot || item.slot).label.toLowerCase();
   if (!deltas.equipped) {
     return {
       isUpgrade: true,
@@ -199,7 +417,10 @@ function getUpgradeSummary(game, item) {
     + (deltas.guard * 2)
     + (deltas.ward * 2)
     + deltas.mana
+    + (deltas.str * 2)
     + deltas.dex
+    + (deltas.con * 2)
+    + (deltas.int * 2)
     + deltas.sight
     + deltas.search
     + deltas.fireResist
@@ -221,8 +442,17 @@ function getUpgradeSummary(game, item) {
   if (deltas.mana > 0) {
     return { isUpgrade: true, score, reason: `Adds +${deltas.mana} mana to your build`, fillsGap: false };
   }
+  if (deltas.str > 0) {
+    return { isUpgrade: true, score, reason: `Adds +${deltas.str} strength`, fillsGap: false };
+  }
   if (deltas.dex > 0) {
     return { isUpgrade: true, score, reason: `Adds +${deltas.dex} dexterity`, fillsGap: false };
+  }
+  if (deltas.con > 0) {
+    return { isUpgrade: true, score, reason: `Adds +${deltas.con} constitution`, fillsGap: false };
+  }
+  if (deltas.int > 0) {
+    return { isUpgrade: true, score, reason: `Adds +${deltas.int} intelligence`, fillsGap: false };
   }
   if (deltas.sight > 0) {
     return { isUpgrade: true, score, reason: `Improves sight by +${deltas.sight}`, fillsGap: false };
@@ -241,7 +471,7 @@ function getUpgradeSummary(game, item) {
   };
 }
 
-function buildItemSemantics(game, item, index, options = {}) {
+export function buildInventoryItemSemantics(game, item, index, options = {}) {
   const { shopId = "" } = options;
   const hpRatio = game.player.maxHp > 0 ? game.player.hp / game.player.maxHp : 1;
   const manaRatio = game.player.maxMana > 0 ? game.player.mana / game.player.maxMana : 1;
@@ -254,7 +484,10 @@ function buildItemSemantics(game, item, index, options = {}) {
   const upgrade = getUpgradeSummary(game, item);
   const heavyLabel = getBurdenWeightTone(game, item);
   const hasCursedEquipped = Object.values(game.player.equipment || {}).some((equippedItem) => equippedItem && equippedItem.cursed);
+  const itemEffectKey = getItemEffectKey(item);
+  const knownEffectKeys = (game.player?.spellsKnown || []).map((spellId) => getSpellEffectKey(spellId));
   const isDuplicateSpellbook = item.kind === "spellbook" && game.player.spellsKnown.includes(item.spell);
+  const isKnownEffect = Boolean(itemEffectKey && knownEffectKeys.includes(itemEffectKey));
   const isEmptyCharged = item.kind === "charged" && (item.charges || 0) <= 0;
   const inDanger = visibleEnemies > 0 || hpRatio < 0.45 || (game.currentDepth > 0 && burdenUi.state !== "safe");
   const buildIdentity = item.affixId
@@ -375,7 +608,7 @@ function buildItemSemantics(game, item, index, options = {}) {
     sortScore = 58;
   } else if (item.kind === "spellbook") {
     recommendation = "Keep";
-    reason = "Teaches an unknown spell";
+    reason = isKnownEffect ? "Already covered by a known spell" : "Teaches an unknown spell";
     groupKey = "recommended";
     sortScore = 72;
   } else if ((item.kind === "weapon" || item.kind === "armor") && shopTags.length > 0) {
@@ -389,6 +622,23 @@ function buildItemSemantics(game, item, index, options = {}) {
     groupKey = shopTags.length > 0 ? "sell" : "emergency";
     sortScore = 50;
   }
+
+  const categoryKey = getInventoryCategoryKey(item, {
+    unknown,
+    cursed,
+    groupKey,
+    isDuplicateSpellbook,
+    heavyLabel,
+    upgrade
+  });
+  const categoryLabel = getInventoryCategoryLabel(categoryKey);
+  const scanTags = getSemanticScanTags(item, {
+    unknown,
+    cursed,
+    sellHereTag,
+    groupKey,
+    recommendation
+  });
 
   return {
     index,
@@ -404,7 +654,12 @@ function buildItemSemantics(game, item, index, options = {}) {
     shopTags,
     sellHereTag,
     heavyLabel,
-    kindLabel: classifyItem(item)
+    kindLabel: classifyItem(item),
+    effectKey: itemEffectKey,
+    isKnownEffect,
+    categoryKey,
+    categoryLabel,
+    scanTags
   };
 }
 
@@ -413,7 +668,7 @@ function stackGroupEntries(entries, selectedIndex) {
   entries.forEach((entry) => {
     const shouldStack = entry.item.kind === "consumable";
     const stackKey = shouldStack
-      ? `${entry.groupKey}:${entry.item.id}:${entry.reason}:${entry.recommendation}`
+      ? `${entry.groupKey}:${entry.categoryKey}:${entry.item.id}:${entry.reason}:${entry.recommendation}`
       : `single:${entry.index}`;
     if (!stacks.has(stackKey)) {
       stacks.set(stackKey, {
@@ -443,7 +698,7 @@ function matchesFilter(entry, filter, shopId = "", inTown = false) {
       if (shopId) {
         return Boolean(entry.sellHereTag);
       }
-      return inTown ? entry.shopTags.length > 0 : false;
+      return Boolean(entry.item.markedForSale);
     default:
       return true;
   }
@@ -452,15 +707,20 @@ function matchesFilter(entry, filter, shopId = "", inTown = false) {
 export function buildInventoryPresentationModel(game, options = {}) {
   const { filter = "all", selectedIndex = -1, shopId = "" } = options;
   const inTown = game.currentDepth === 0;
-  const entries = game.player.inventory.map((item, index) => buildItemSemantics(game, item, index, { shopId }));
+  const entries = game.player.inventory.map((item, index) => buildInventoryItemSemantics(game, item, index, { shopId }));
   const visibleEntries = entries.filter((entry) => matchesFilter(entry, filter, shopId, inTown));
   const groups = GROUP_DEFS.map((group) => {
     const groupedEntries = entries
       .filter((entry) => entry.groupKey === group.key)
       .filter((entry) => matchesFilter(entry, filter, shopId, inTown));
+    const items = stackGroupEntries(groupedEntries, selectedIndex);
     return {
       ...group,
-      items: stackGroupEntries(groupedEntries, selectedIndex)
+      items,
+      sections: INVENTORY_CATEGORY_DEFS.map((category) => ({
+        ...category,
+        items: items.filter((entry) => entry.categoryKey === category.key)
+      })).filter((section) => section.items.length > 0)
     };
   }).filter((group) => group.items.length > 0);
   const sortedVisibleEntries = groups.flatMap((group) => group.items);

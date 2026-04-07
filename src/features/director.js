@@ -139,16 +139,20 @@ export function increaseDanger(game, source = "unknown", amount = 1) {
     level.dangerTriggers.loud += 1;
   }
 
+  const contractBonus = typeof game.getContractPaceDangerBonus === "function"
+    ? Math.max(0, game.getContractPaceDangerBonus(source))
+    : 0;
+  const rawAmount = amount + contractBonus;
   const scaledAmount = game.currentDepth === 1
-    ? Math.max(0, amount - (source === "objective_clear" ? 0 : 1))
-    : amount;
+    ? Math.max(0, rawAmount - (source === "objective_clear" ? 0 : 1))
+    : rawAmount;
   level.dangerScore = Math.max(0, (level.dangerScore || 0) + scaledAmount);
   const band = getBandFromScore(level.dangerScore);
   level.dangerLevel = band.label;
   level.dangerTone = band.color;
   const reinforcementLoss = game.currentDepth === 1
     ? Math.max(0, scaledAmount)
-    : amount;
+    : rawAmount;
   level.reinforcementClock = Math.max(game.currentDepth === 1 ? 16 : 6, (level.reinforcementClock || 12) - reinforcementLoss);
   const turnsLost = Math.max(0, previousClock - level.reinforcementClock);
   syncDangerState(game);

@@ -283,7 +283,21 @@ export function addSetPiece(level, depth) {
   if (!level.rooms || level.rooms.length < 4) {
     return;
   }
-  const room = choice(level.rooms.slice(2, -1));
+  const reservedRoomIndexes = new Set(level.reservedRoomIndexes || []);
+  if (typeof level.exitRoomIndex === "number") {
+    reservedRoomIndexes.add(level.exitRoomIndex);
+  }
+  if (typeof level.floorObjective?.roomIndex === "number") {
+    reservedRoomIndexes.add(level.floorObjective.roomIndex);
+  }
+  if (typeof level.floorOptional?.roomIndex === "number") {
+    reservedRoomIndexes.add(level.floorOptional.roomIndex);
+  }
+  const candidateRooms = level.rooms.filter((room, index) => index >= 2 && index < level.rooms.length - 1 && !reservedRoomIndexes.has(index));
+  const room = choice(candidateRooms.length > 0 ? candidateRooms : level.rooms.slice(2, -1));
+  if (!room) {
+    return;
+  }
   const theme = choice(["treasury", "chapel", "crossfire", "prison", "gauntlet"]);
   const center = centerOf(room);
   const byId = (id) => MONSTER_DEFS.find((monster) => monster.id === id);
@@ -372,6 +386,12 @@ export function addSecretVault(level, depth) {
   const reservedRoomIndexes = new Set(level.reservedRoomIndexes || []);
   if (typeof level.exitRoomIndex === "number") {
     reservedRoomIndexes.add(level.exitRoomIndex);
+  }
+  if (typeof level.floorObjective?.roomIndex === "number") {
+    reservedRoomIndexes.add(level.floorObjective.roomIndex);
+  }
+  if (typeof level.floorOptional?.roomIndex === "number") {
+    reservedRoomIndexes.add(level.floorOptional.roomIndex);
   }
   const eligibleRooms = level.rooms.filter((room, index) => index > 0 && !reservedRoomIndexes.has(index));
   const room = choice(eligibleRooms.length > 0 ? eligibleRooms : level.rooms.slice(1, -1));

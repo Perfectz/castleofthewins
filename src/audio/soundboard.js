@@ -2,10 +2,79 @@ export class SoundBoard {
   constructor(settings) {
     this.settings = settings;
     this.ctx = null;
+    this.music = null;
+    this.musicTrack = "";
   }
 
   updateSettings(settings) {
     this.settings = settings;
+    if (!this.settings.musicEnabled) {
+      this.stopMusic();
+    }
+  }
+
+  ensureMusicElement() {
+    if (typeof window === "undefined" || typeof window.Audio === "undefined") {
+      return null;
+    }
+    if (!this.music) {
+      this.music = new window.Audio();
+      this.music.loop = true;
+      this.music.preload = "metadata";
+      this.music.volume = 0.55;
+      this.music.setAttribute("playsinline", "");
+    }
+    return this.music;
+  }
+
+  isMusicPlaying() {
+    return Boolean(this.music && !this.music.paused && !this.music.ended);
+  }
+
+  syncMusic(track = "") {
+    this.musicTrack = track || "";
+    if (!this.musicTrack || !this.settings.musicEnabled) {
+      this.stopMusic();
+      return;
+    }
+    const music = this.ensureMusicElement();
+    if (!music) {
+      return;
+    }
+    if (music.dataset.track !== this.musicTrack) {
+      music.dataset.track = this.musicTrack;
+      music.src = this.musicTrack;
+      music.currentTime = 0;
+    }
+  }
+
+  resumeMusic() {
+    if (!this.settings.musicEnabled || !this.musicTrack) {
+      return;
+    }
+    const music = this.ensureMusicElement();
+    if (!music) {
+      return;
+    }
+    if (music.dataset.track !== this.musicTrack) {
+      music.dataset.track = this.musicTrack;
+      music.src = this.musicTrack;
+      music.currentTime = 0;
+    }
+    const playPromise = music.play?.();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        // Ignore autoplay rejections until the next user gesture.
+      });
+    }
+  }
+
+  stopMusic() {
+    if (!this.music) {
+      return;
+    }
+    this.music.pause();
+    this.music.currentTime = 0;
   }
 
   play(type) {

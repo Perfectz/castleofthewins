@@ -3,8 +3,14 @@ import { nowTime } from "../core/utils.js";
 export class GamepadInput {
   constructor() {
     this.lastMoveAt = 0;
+    this.lastMoveDirection = "";
     this.lastScrollAt = 0;
     this.lastButtons = new Map();
+  }
+
+  resetMoveState() {
+    this.lastMoveAt = 0;
+    this.lastMoveDirection = "";
   }
 
   isConnected() {
@@ -29,18 +35,21 @@ export class GamepadInput {
     return null;
   }
 
-  poll(mode) {
+  poll(mode, moveRepeatMs = 180) {
     const pad = this.getGamepad();
     if (!pad) {
+      this.resetMoveState();
       return null;
     }
     const now = nowTime();
     const axes = pad.axes || [];
     const buttons = pad.buttons || [];
-    const moveRepeatReady = now - this.lastMoveAt > 180;
     const scrollRepeatReady = now - this.lastScrollAt > 140;
     const dx = Math.abs(axes[0] || 0) > 0.45 ? Math.sign(axes[0]) : (buttons[15]?.pressed ? 1 : buttons[14]?.pressed ? -1 : 0);
     const dy = Math.abs(axes[1] || 0) > 0.45 ? Math.sign(axes[1]) : (buttons[13]?.pressed ? 1 : buttons[12]?.pressed ? -1 : 0);
+    const moveDirection = (dx || dy) ? `${dx},${dy}` : "";
+    const moveRepeatReady = Boolean(moveDirection)
+      && (moveDirection !== this.lastMoveDirection || now - this.lastMoveAt >= moveRepeatMs);
     const scrollAxis = Math.abs(axes[3] || 0) > 0.45
       ? Math.sign(axes[3])
       : buttons[7]?.pressed
@@ -50,6 +59,7 @@ export class GamepadInput {
           : 0;
     if ((dx || dy) && moveRepeatReady) {
       this.lastMoveAt = now;
+      this.lastMoveDirection = moveDirection;
       if (mode === "target") {
         return { type: "target", dx, dy };
       }
@@ -57,6 +67,9 @@ export class GamepadInput {
         return { type: "ui-move", dx, dy };
       }
       return { type: "move", dx, dy };
+    }
+    if (!moveDirection) {
+      this.lastMoveDirection = "";
     }
     const pressed = (index) => {
       const current = !!buttons[index]?.pressed;

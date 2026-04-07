@@ -153,21 +153,24 @@ export function useStairsCommand(game, direction) {
         optionalTaken: Boolean(previousLevel?.floorOptional?.opened)
       });
       game.refreshShopState();
-    if (game.player?.quest?.hasRunestone) {
-      game.checkQuestState?.();
-    } else {
-      game.maybeShowTownStoryScene?.();
-    }
-    if (previousLevel?.floorResolved) {
-      const returnMeta = game.recordTownReturnSummary?.(previousLevel, game.currentDepth + 1);
-      if (returnMeta?.summary && game.mode !== "modal") {
-        game.showExtractionSummaryModal?.(returnMeta.summary, {
-          ...returnMeta,
-          level: previousLevel
-        });
+      let blockedByStorySurface = false;
+      if (game.player?.quest?.hasRunestone) {
+        const beforeQuestMode = game.mode;
+        game.checkQuestState?.();
+        blockedByStorySurface = beforeQuestMode !== "modal" && game.mode === "modal";
+      } else {
+        blockedByStorySurface = Boolean(game.maybeShowTownStoryScene?.());
+      }
+      if (previousLevel?.floorResolved) {
+        const returnMeta = game.recordTownReturnSummary?.(previousLevel, game.currentDepth + 1);
+        if (returnMeta?.summary && !blockedByStorySurface) {
+          game.showExtractionSummaryModal?.(returnMeta.summary, {
+            ...returnMeta,
+            level: previousLevel
+          });
+        }
       }
     }
-  }
   game.recordTelemetry?.("depth_entered", {
     depth: nextDepth,
     source: "stairs_up",

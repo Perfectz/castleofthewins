@@ -4,6 +4,7 @@ import { clamp, distance, escapeHtml } from "../core/utils.js";
 import { getDangerSummary, getPressureStatus } from "./director.js";
 import { getObjectiveRoomClear, getObjectiveStatusText, getOptionalStatusText } from "./objectives.js";
 import { renderOnboardingChecklist, shouldShowOnboardingChecklist } from "./onboarding.js";
+import { getValidationVariant } from "./validation.js";
 
 function buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lootHere) {
   const directive = game.getLoopDirective ? game.getLoopDirective(tile) : null;
@@ -30,23 +31,23 @@ function buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lo
       advice = `${focus.name} is sleeping. Open on your terms or slip past.`;
       pushAction("search", "Scout", "Set the clean route", true);
       if (game.player.spellsKnown.length > 0) {
-        pushAction("open-hub", "Magic", "Prep a clean opener", false, "magic");
+        pushAction("open-spell-tray", "Magic", "Prep a clean opener", false, "magic");
       }
     } else if (hpRatio < 0.35 && (focusIntent === "shoot" || focusIntent === "summon" || focusIntent === "charge" || focusDistance <= 2)) {
       advice = `Break contact now. ${focus.name} can finish this exchange.`;
       pushAction("stairs-up", "Ascend", "Leave the floor", true);
-      pushAction("open-hub", "Magic", "Spend control or escape", false, "magic");
+      pushAction("open-spell-tray", "Magic", "Spend control or escape", false, "magic");
     } else if (focus.ranged && focusIntent !== "sleep") {
       advice = `Break line of sight on ${focus.name}.`;
-      pushAction("open-hub", "Magic", "Answer ranged pressure", true, "magic");
+      pushAction("open-spell-tray", "Magic", "Answer ranged pressure", true, "magic");
       pushAction("wait", "Hold", "Do not walk into fire", false);
     } else if (focus.abilities && focus.abilities.includes("charge") && focusIntent !== "sleep") {
       advice = "Sidestep the charge lane before you advance.";
       pushAction("wait", "Hold", "Read the charge lane", true);
-      pushAction("open-hub", "Magic", "Slow or burst it", false, "magic");
+      pushAction("open-spell-tray", "Magic", "Slow or burst it", false, "magic");
     } else if (focus.abilities && focus.abilities.includes("summon") && focusIntent !== "sleep") {
       advice = "Kill the summoner before the room fills.";
-      pushAction("open-hub", "Magic", "Kill summoner", true, "magic");
+      pushAction("open-spell-tray", "Magic", "Kill summoner", true, "magic");
     } else if (focusDistance >= 4 && focusIntent === "advance") {
       advice = `${focus.name} is aware. Set the approach before opening more map.`;
       pushAction("wait", "Hold", "Read the lane", true);
@@ -69,14 +70,20 @@ function buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lo
         : "The captive is pinned here. Clear the room before the rescue can move.";
       pushAction("wait", "Hold", "Finish the fight before rescuing them", true);
       if (game.player.spellsKnown.length > 0) {
-        pushAction("open-hub", "Magic", "Spend control to win the room", false, "magic");
+        pushAction("open-spell-tray", "Magic", "Spend control to win the room", false, "magic");
       }
     } else if (objectiveId === "purge_nest" && !roomClear) {
       advice = "The nest is exposed, but defenders are still alive. Clear the room first.";
       pushAction("wait", "Hold", "Finish the room before purging it", true);
+    } else if (objectiveId === "recover_waystone") {
+      advice = "Claim the waystone now. It sharpens the next floor instead of this one.";
+      pushAction("pickup", "Take Waystone", "Bank the route edge", true);
     } else if (objectiveId === "seal_shrine") {
       advice = "Seal the shrine when ready. It spends mana and spikes floor pressure.";
       pushAction("interact", "Seal", "Finish the objective", true);
+    } else if (objectiveId === "purify_well") {
+      advice = "Purify the well when ready. It refills you, but the floor answers immediately.";
+      pushAction("interact", "Purify", "Take the refill and clear the floor", true);
     } else {
       advice = "Resolve the objective now.";
       pushAction("interact", "Resolve", "Finish the floor objective", true);
@@ -107,7 +114,12 @@ function buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lo
     advice = game.storyFlags?.townServiceVisited
       ? "You checked a town door. Take the north road into the keep."
       : "Step onto one labeled town door, then take the north road into the keep.";
-    pushAction("map-focus", "Survey", "Check the north road", true);
+    pushAction(
+      "map-focus",
+      game.storyFlags?.townServiceVisited ? "Go North" : "Services",
+      game.storyFlags?.townServiceVisited ? "Enter the keep" : "Open a town door",
+      true
+    );
     pushAction("open-briefing", "Briefing", "Hear the run goal", false);
     pushAction("open-hub", "Journal", "Review the run goal", false, "journal");
   } else if (game.currentDepth === 0 && townMeta) {
@@ -169,11 +181,12 @@ function buildDockSlots(game, actions) {
         prompt: "X",
         label: game.player.spellsKnown.length > 0 ? "Magic" : "Survey",
         note: game.player.spellsKnown.length > 0 ? "Review spell options" : "Check the minimap",
-        action: game.player.spellsKnown.length > 0 ? "open-hub" : "map-focus",
+        action: game.player.spellsKnown.length > 0 ? "open-spell-tray" : "map-focus",
         tab: game.player.spellsKnown.length > 0 ? "magic" : "",
         tone: "primary"
       },
       {
+        key: "back",
         prompt: "B",
         label: "Cancel",
         note: "Leave targeting",
@@ -214,10 +227,16 @@ function buildDockSlots(game, actions) {
       label: "Briefing",
       note: "Hear the keep objective"
     });
+  } else if (firstTownRun && game.storyFlags?.townServiceVisited) {
+    pushCandidate({
+      action: "map-focus",
+      label: "Go North",
+      note: "Enter the keep"
+    });
   }
   if (game.player.spellsKnown.length > 0) {
     pushCandidate({
-      action: "open-hub",
+      action: "open-spell-tray",
       label: "Magic",
       note: "Cast, burst, or control",
       tab: "magic"
@@ -248,33 +267,48 @@ function buildDockSlots(game, actions) {
     });
   }
 
+  const dominantHud = getValidationVariant(game, "hud") === "dominant_cta";
+  const orderedCandidates = dominantHud
+    ? candidates.slice().sort((left, right) => Number(Boolean(right.recommended)) - Number(Boolean(left.recommended)))
+    : candidates;
+  const primaryAction = game.getControllerPrimaryDockAction
+    ? game.getControllerPrimaryDockAction(orderedCandidates)
+    : orderedCandidates[0];
+  const secondaryAction = orderedCandidates.find((entry) =>
+    entry.action !== primaryAction.action || (entry.tab || "") !== (primaryAction.tab || "")
+  ) || orderedCandidates[0];
+
   return [
     {
       key: "primary",
       prompt: "A",
-      label: candidates[0].label,
-      note: candidates[0].note,
-      action: candidates[0].action,
-      tab: candidates[0].tab || "",
+      label: primaryAction.label,
+      note: primaryAction.note,
+      action: primaryAction.action,
+      tab: primaryAction.tab || "",
+      service: primaryAction.service || "",
       tone: "primary",
       active: true
     },
     {
       key: "secondary",
       prompt: "X",
-      label: candidates[1].label,
-      note: candidates[1].note,
-      action: candidates[1].action,
-      tab: candidates[1].tab || "",
+      label: secondaryAction.label,
+      note: secondaryAction.note,
+      action: secondaryAction.action,
+      tab: secondaryAction.tab || "",
       tone: "secondary"
     },
     {
-      key: "tertiary",
+      key: "back",
       prompt: "B",
-      label: candidates[2].label,
-      note: candidates[2].note,
-      action: candidates[2].action,
-      tab: candidates[2].tab || "",
+      label: "Back",
+      note: game.layoutMode === "desktop"
+        ? "Cancel targeting or close menus"
+        : game.mapDrawer && game.mapDrawerOpen
+          ? "Close the survey"
+          : "Cancel targeting or close menus",
+      action: "target-cancel",
       tone: "secondary"
     },
     {
@@ -388,12 +422,18 @@ export function getAdvisorModel(game) {
   const onboardingMarkup = shouldShowOnboardingChecklist(game)
     ? renderOnboardingChecklist(game)
     : "";
+  const dominantHud = getValidationVariant(game, "hud") === "dominant_cta";
+  const dominantAction = objectiveView.actions.find((entry) => entry.recommended) || objectiveView.actions[0] || null;
+  const dominantCtaMarkup = dominantHud && dominantAction
+    ? `<div class="field-brief-cta"><span class="pill">Now</span><strong>${escapeHtml(dominantAction.label)}</strong><span>${escapeHtml(dominantAction.note)}</span></div>`
+    : "";
 
   const fieldHtml = `
     <div class="field-summary-head">
       <span class="advisor-label">${escapeHtml(ribbonLabel)}</span>
       <span class="field-summary-state ${focusHealth ? focusHealth.tone : visible.length > 0 ? "warning" : pressure.tone}">${escapeHtml(ribbonState)}</span>
     </div>
+    ${dominantCtaMarkup}
     <div class="field-brief-text">${escapeHtml(objectiveView.advice)}</div>
     ${supportMarkup}
     ${townMetaMarkup}
@@ -474,7 +514,7 @@ export function renderActionBar(game) {
   const advisor = getAdvisorModel(game);
   game.actionBar.dataset.mode = game.targetMode ? "target" : "field";
   game.actionBar.innerHTML = advisor.dockSlots.map((slot) => `
-    <button class="action-button dock-action dock-slot dock-slot-${slot.key} dock-tone-${slot.tone}${slot.tone === "primary" ? " recommended" : ""}${slot.active ? " is-active" : ""}" data-action="${slot.action}"${slot.tab ? ` data-tab="${slot.tab}"` : ""} data-focus-key="dock:${slot.key}" type="button">
+    <button class="action-button dock-action dock-slot dock-slot-${slot.key} dock-tone-${slot.tone}${slot.tone === "primary" ? " recommended" : ""}${slot.active ? " is-active" : ""}" data-action="${slot.action}"${slot.tab ? ` data-tab="${slot.tab}"` : ""}${slot.service ? ` data-service="${slot.service}"` : ""} data-focus-key="dock:${slot.key}" type="button">
       <span class="context-slot">${escapeHtml(slot.prompt)}</span>
       <span class="context-copy">
         <span class="context-main">${escapeHtml(slot.label)}</span>

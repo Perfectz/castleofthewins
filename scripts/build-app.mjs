@@ -24,6 +24,7 @@ const orderedFiles = [
   "features/chronicle.js",
   "features/meta-progression.js",
   "features/telemetry.js",
+  "features/validation.js",
   "features/onboarding.js",
   "features/hud-feed.js",
   "features/inventory-ui.js",

@@ -1,4 +1,18 @@
 import { escapeHtml } from "../core/utils.js";
+import { getValidationVariant } from "./validation.js";
+
+const ACTION_LABELS = {
+  bank: "Bank",
+  interact: "Interact",
+  move: "Move",
+  search: "Search",
+  stairs_down: "Descend",
+  stairs_up: "Ascend",
+  "stairs-up": "Ascend",
+  "stairs-down": "Descend",
+  town_service: "Town Door",
+  town_rumor: "Buy Intel"
+};
 function scoreEntry(entry, currentTurn) {
   const message = entry?.message || "";
   const age = Math.max(0, currentTurn - (entry?.turn || 0));
@@ -53,10 +67,14 @@ function getObjectiveLine(game) {
     };
   }
   const directive = typeof game.getLoopDirective === "function" ? game.getLoopDirective() : null;
+  const dominantHud = getValidationVariant(game, "hud") === "dominant_cta";
+  const recommendedAction = ACTION_LABELS[directive?.recommendedActionId || ""] || "";
   return {
-    turnLabel: directive?.phase ? (typeof game.getLoopDirectiveLabel === "function" ? game.getLoopDirectiveLabel(directive.phase) : "Loop") : "Goal",
+    turnLabel: dominantHud ? "Next" : (directive?.phase ? (typeof game.getLoopDirectiveLabel === "function" ? game.getLoopDirectiveLabel(directive.phase) : "Loop") : "Goal"),
     tone: "ticker-context",
-    text: directive?.primaryText || "Follow the current directive."
+    text: dominantHud && recommendedAction
+      ? `${recommendedAction}: ${directive?.primaryText || "Follow the current directive."}`
+      : directive?.primaryText || "Follow the current directive."
   };
 }
 

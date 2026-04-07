@@ -1,5 +1,5 @@
 import { CLASSES, RACES } from "../data/content.js";
-import { CHARACTER_SHEET_PATH, PIXEL_ASSET_ROOT } from "../data/assets.js";
+import { CHARACTER_SHEET_PATH, PIXEL_ASSET_ROOT, TITLE_SCREEN_ASSETS } from "../data/assets.js";
 import { getCarryCapacity, getClass, getRace } from "../core/entities.js";
 import { choiceCard, escapeHtml } from "../core/utils.js";
 
@@ -91,73 +91,6 @@ const CLASS_ART = {
   }
 };
 
-const TITLE_PARTY = [
-  { label: "Fighter", sprite: CLASS_ART.fighter.sprite, accent: CLASS_ART.fighter.accent },
-  { label: "Wizard", sprite: CLASS_ART.wizard.sprite, accent: CLASS_ART.wizard.accent },
-  { label: "Rogue", sprite: CLASS_ART.rogue.sprite, accent: CLASS_ART.rogue.accent }
-];
-
-const TITLE_THREATS = [
-  {
-    label: "Wisp",
-    accent: "#8cc9ff",
-    sprite: {
-      src: CHARACTER_SHEET_PATH,
-      width: 16,
-      height: 16,
-      x: 16,
-      y: 16,
-      sheetWidth: 112,
-      sheetHeight: 64
-    }
-  },
-  {
-    label: "Ghoul",
-    accent: "#b2bb94",
-    sprite: {
-      src: CHARACTER_SHEET_PATH,
-      width: 16,
-      height: 16,
-      x: 32,
-      y: 16,
-      sheetWidth: 112,
-      sheetHeight: 64
-    }
-  },
-  {
-    label: "Skeleton",
-    accent: "#d5c7a8",
-    sprite: {
-      src: CHARACTER_SHEET_PATH,
-      width: 16,
-      height: 16,
-      x: 80,
-      y: 16,
-      sheetWidth: 112,
-      sheetHeight: 64
-    }
-  }
-];
-
-const TITLE_FEATURES = [
-  {
-    kicker: "1. Start In Town",
-    copy: "Open services if you need them, then walk north on the main road to the keep stairs."
-  },
-  {
-    kicker: "2. Enter The Keep",
-    copy: "The first floor reveals a marked route segment on entry. Survey early and stay on the clean line."
-  },
-  {
-    kicker: "3. Clear The Floor",
-    copy: "Orange marks the floor objective. Resolve it before the deeper stairs unlock."
-  },
-  {
-    kicker: "4. Extract Or Greed",
-    copy: "Once the objective is done, decide whether to cash out in town or stay for one more risky reward."
-  }
-];
-
 function styleMap(entries) {
   return entries.join("; ");
 }
@@ -178,17 +111,6 @@ function renderPixelSprite(sprite, className = "", scale = 4) {
     );
   }
   return `<span class="pixel-sprite${className ? ` ${className}` : ""}" style="${styleMap(baseRules)}" aria-hidden="true"></span>`;
-}
-
-function renderSpriteChip(entry, tone = "warm") {
-  return `
-    <div class="sprite-chip tone-${tone}" style="${styleMap([`--chip-accent:${entry.accent}`])}">
-      <div class="sprite-chip-frame">
-        ${renderPixelSprite(entry.sprite, "sprite-chip-sprite", 3)}
-      </div>
-      <span class="sprite-chip-label">${escapeHtml(entry.label)}</span>
-    </div>
-  `;
 }
 
 function buildChoiceArtMarkup(type, entry) {
@@ -289,10 +211,6 @@ export function buildAdventurerIdentityMarkup(options) {
   `;
 }
 
-function buildTitleLineup(entries, tone) {
-  return entries.map((entry) => renderSpriteChip(entry, tone)).join("");
-}
-
 export function resetCreationDraft(game) {
   game.selectedRace = RACES[0].id;
   game.selectedClass = CLASSES[0].id;
@@ -340,71 +258,74 @@ export function getCreationStats(game) {
 export function showTitleScreen(game) {
   game.mode = "title";
   game.setModalVisibility(true);
+  game.modalSurfaceKey = "title";
   game.recordTelemetry?.("modal_opened", { surface: "title" });
   const template = document.getElementById("title-template");
   const fragment = template.content.cloneNode(true);
+  const titleLoopImage = fragment.getElementById("title-loop-image");
   const saveSummary = fragment.getElementById("title-save-summary");
   const loadButton = fragment.getElementById("title-load-button");
-  const partyLineup = fragment.getElementById("title-party-lineup");
-  const threatLineup = fragment.getElementById("title-threat-lineup");
-  const featureList = fragment.getElementById("title-feature-list");
   const savedMeta = game.getSavedRunMeta();
-  const latestSummary = typeof game.getLatestPersistenceSummary === "function" ? game.getLatestPersistenceSummary() : null;
-  const activeContract = typeof game.getActiveContract === "function" ? game.getActiveContract(false) : null;
-  const masteryClassId = savedMeta?.classId || latestSummary?.classId || game.selectedClass;
-  const masterySummary = typeof game.getClassMasterySummary === "function"
-    ? game.getClassMasterySummary(masteryClassId)
-    : "No mastery track.";
+  const savedSlots = typeof game.getAllSavedRunMeta === "function" ? game.getAllSavedRunMeta() : [];
+  const hasSavedRun = savedSlots.some((entry) => Boolean(entry.meta));
 
-  if (partyLineup) {
-    partyLineup.innerHTML = buildTitleLineup(TITLE_PARTY, "warm");
-  }
-  if (threatLineup) {
-    threatLineup.innerHTML = buildTitleLineup(TITLE_THREATS, "cool");
-  }
-  if (featureList) {
-    featureList.innerHTML = TITLE_FEATURES.map((entry) => `
-      <article class="title-feature-card">
-        <div class="title-feature-kicker">${escapeHtml(entry.kicker)}</div>
-        <div class="title-feature-copy">${escapeHtml(entry.copy)}</div>
-      </article>
-    `).join("");
+  if (titleLoopImage) {
+    const prefersReducedMotion = Boolean(game.reducedMotionQuery?.matches);
+    titleLoopImage.src = prefersReducedMotion ? TITLE_SCREEN_ASSETS.still : TITLE_SCREEN_ASSETS.loop;
+    titleLoopImage.onerror = () => {
+      titleLoopImage.onerror = null;
+      titleLoopImage.src = TITLE_SCREEN_ASSETS.still;
+    };
   }
 
-  if (savedMeta) {
-    const savedTime = savedMeta.savedAt ? game.formatSaveStamp(savedMeta.savedAt) : null;
+  if (savedMeta && saveSummary) {
+    saveSummary.classList.remove("hidden");
     saveSummary.innerHTML = `
-      <div class="title-save-label">Continue Run</div>
-      <div class="title-save-name">${escapeHtml(savedMeta.name)}</div>
-      <div class="title-save-meta">Level ${savedMeta.level} &middot; Depth ${savedMeta.depth}${savedMeta.className ? ` &middot; ${escapeHtml(savedMeta.className)}` : ""}</div>
-      ${savedTime ? `<div class="title-save-meta">${escapeHtml(savedTime)}</div>` : ""}
-      <div class="title-save-meta">${escapeHtml(activeContract ? `Town Persistence: ${activeContract.name} armed` : "Town Persistence: No contract armed")}</div>
-      <div class="title-save-meta">${escapeHtml(`Mastery: ${masterySummary}`)}</div>
-      <div class="title-save-meta">${escapeHtml(latestSummary ? `Last return: ${latestSummary.outcome} on depth ${latestSummary.extractedDepth}, ${latestSummary.returnValue} gp value.` : "Last return: none recorded yet.")}</div>
+      <button class="title-save-card" data-action="load-game" data-save-slot="${savedMeta.slotId}" data-focus-key="title:continue-card" type="button">
+        <div class="title-save-label">Continue</div>
+        <div class="title-save-name">${escapeHtml(savedMeta.name)}</div>
+        <div class="title-save-meta">Depth ${savedMeta.depth} &middot; Level ${savedMeta.level}${savedMeta.className ? ` &middot; ${escapeHtml(savedMeta.className)}` : ""}</div>
+      </button>
     `;
-  } else {
+  } else if (hasSavedRun && saveSummary) {
+    saveSummary.classList.remove("hidden");
     saveSummary.innerHTML = `
-      <div class="title-save-label">No Saved Run</div>
-      <div class="title-save-name">No saved run</div>
-      <div class="title-save-meta">Start a fresh descent and your latest browser save will appear here.</div>
-      <div class="title-save-meta">${escapeHtml(activeContract ? `Town Persistence: ${activeContract.name} armed` : "Town Persistence: No contract armed")}</div>
-      <div class="title-save-meta">${escapeHtml(`Mastery: ${masterySummary}`)}</div>
-      <div class="title-save-meta">${escapeHtml(latestSummary ? `Last return: ${latestSummary.outcome} on depth ${latestSummary.extractedDepth}, ${latestSummary.returnValue} gp value.` : "Last return: none recorded yet.")}</div>
+      <div class="title-save-label">Continue</div>
+      <div class="title-save-name">Saved Run Available</div>
+      <div class="title-save-meta">Choose a slot and return to the keep.</div>
     `;
-    loadButton.disabled = true;
+  } else if (saveSummary) {
+    saveSummary.innerHTML = "";
+    saveSummary.classList.add("hidden");
   }
+  loadButton.disabled = !hasSavedRun;
 
   game.modalRoot.innerHTML = "";
   game.modalRoot.appendChild(fragment);
   game.modalRoot.classList.remove("hidden");
   game.refreshChrome();
+  game.syncMusicToggleUi?.();
+  game.syncSurfaceMusic?.();
+  const modal = game.modalRoot.querySelector(".title-screen");
+  if (modal) {
+    modal.scrollTop = 0;
+  }
+  if (game.layoutMode === "mobile" && modal) {
+    modal.tabIndex = -1;
+    modal.focus({ preventScroll: true });
+    return;
+  }
   game.focusFirstUiElement?.();
 }
 
 export function showCreationModal(game, options = {}) {
-  const { focusTarget = null } = options;
+  const {
+    focusTarget = null,
+    preserveScroll = false
+  } = options;
   game.mode = "creation";
   game.setModalVisibility(true);
+  const previousState = preserveScroll ? game.captureModalRefreshState?.("creation") : null;
   game.recordTelemetry?.("modal_opened", { surface: "creation" });
   const template = document.getElementById("creation-template");
   const fragment = template.content.cloneNode(true);
@@ -439,6 +360,8 @@ export function showCreationModal(game, options = {}) {
         mastery: { summary: "No mastery track." },
         startingBonuses: []
       };
+  const contractModel = typeof game.getContractViewModel === "function" ? game.getContractViewModel() : null;
+  const recommendedContract = contractModel?.all?.find((contract) => contract.id === contractModel.recommendedId) || null;
   const pointsRemaining = game.getCreationPointsRemaining();
   const previewHp = game.getMaxHpForStats(stats, 1, role.name, 0, race.hp + role.bonuses.hp);
   const previewMana = game.getMaxManaForStats(stats, role.name, 0, race.mana + role.bonuses.mana);
@@ -489,25 +412,36 @@ export function showCreationModal(game, options = {}) {
       <div class="field-label">Town Persistence</div>
       <div class="text-block">
         ${escapeHtml(persistencePreview.activeContract ? `Active contract: ${persistencePreview.activeContract.name}. Town Persistence, opt-in, next run only.` : "No contract armed. Contracts stay opt-in at the bank and apply to the next run only.")}<br><br>
+        ${escapeHtml(recommendedContract ? `Recommended next run: ${recommendedContract.name}. ${recommendedContract.recommendationReason || recommendedContract.description}` : "No contract recommendation available yet.")}<br><br>
         ${escapeHtml(`Mastery: ${persistencePreview.mastery.summary}`)}<br><br>
         ${escapeHtml(persistencePreview.startingBonuses.length > 0
           ? `Starting bonuses on this run: ${persistencePreview.startingBonuses.join(", ")}.`
           : "Starting bonuses on this run: none yet.")}
       </div>
+      ${recommendedContract?.unlocked ? `<div class="modal-actions"><button class="menu-button" data-action="contract-arm-recommended" data-focus-key="creation:contract:recommended" type="button">${recommendedContract.active ? "Recommended Armed" : `Arm ${escapeHtml(recommendedContract.name)}`}</button></div>` : ""}
     </div>
   `;
 
   game.modalRoot.innerHTML = "";
   game.modalRoot.appendChild(fragment);
   game.modalRoot.classList.remove("hidden");
+  game.modalSurfaceKey = "creation";
   game.refreshChrome();
+  game.syncMusicToggleUi?.();
+  game.syncSurfaceMusic?.();
+  game.applyControllerNavigationMetadata?.();
+  const nextModal = game.getModalElement?.();
+  if (nextModal && previousState) {
+    nextModal.scrollTop = previousState.scrollTop;
+  }
   const statButtons = game.modalRoot.querySelectorAll(".creation-stat-button");
   statButtons.forEach((button) => {
     const stat = button.dataset.stat || "str";
     const delta = button.dataset.delta === "-1" ? "down" : "up";
     button.dataset.focusKey = `creation:stat:${stat}:${delta}`;
   });
-  const focusElement = focusTarget ? game.findUiElementByFocusKey?.(focusTarget) : null;
+  const focusElement = game.resolveModalFocusTarget?.(focusTarget, previousState)
+    || (focusTarget ? game.findUiElementByFocusKey?.(focusTarget) : null);
   if (focusElement) {
     game.focusUiElement?.(focusElement);
     return;

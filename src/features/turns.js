@@ -1,4 +1,3 @@
-import { getEncumbranceTier } from "../core/entities.js";
 import { onPlayerWait } from "./builds.js";
 import { advanceDangerTurn } from "./director.js";
 
@@ -6,6 +5,7 @@ export function performWait(game) {
   if (!game.player || game.mode !== "game" || game.player.hp <= 0) {
     return;
   }
+  game.recordTelemetry?.("wait_used");
   game.log(`${game.player.name} waits.`, "warning");
   game.audio.play("ui");
   onPlayerWait(game);
@@ -17,6 +17,7 @@ export function restUntilSafe(game) {
   if (!game.player || game.mode !== "game" || game.player.hp <= 0) {
     return;
   }
+  game.recordTelemetry?.("rest_used", { kind: "rest" });
   let recovered = 0;
   let interrupted = false;
   onPlayerWait(game);
@@ -41,6 +42,7 @@ export function sleepUntilRestored(game) {
   if (!game.player || game.mode !== "game" || game.player.hp <= 0) {
     return;
   }
+  game.recordTelemetry?.("rest_used", { kind: "sleep" });
   if (game.player.hp >= game.player.maxHp && game.player.mana >= game.player.maxMana) {
     game.log("You are already fully restored.", "warning");
     game.render();
@@ -100,19 +102,27 @@ export function resolveTurn(game, advanceTurn = true) {
   if (!game.player || game.player.hp <= 0) {
     return;
   }
+  let monsterActions = 1;
+  if (typeof advanceTurn === "object") {
+    monsterActions = Math.max(0, Math.floor(advanceTurn.monsterActions ?? 1));
+    advanceTurn = advanceTurn.advanceTurn ?? true;
+  }
   if (advanceTurn) {
     game.turn += 1;
   }
-  const encumbrance = getEncumbranceTier(game.player);
+  const encumbrance = game.getEncumbranceTier ? game.getEncumbranceTier() : 0;
+  const stats = game.getActorStats ? game.getActorStats(game.player) : game.player.stats;
   const hpRegenBase = encumbrance >= 2 ? 0.01 : encumbrance === 1 ? 0.02 : 0.03;
   const manaRegenBase = encumbrance >= 2 ? 0.02 : encumbrance === 1 ? 0.04 : 0.06;
-  const hpRegen = hpRegenBase + Math.max(0, game.player.stats.con - 10) * 0.004;
-  const manaRegen = manaRegenBase + Math.max(0, game.player.stats.int - 10) * 0.006;
+  const hpRegen = hpRegenBase + Math.max(0, stats.con - 10) * 0.004;
+  const manaRegen = manaRegenBase + Math.max(0, stats.int - 10) * 0.006;
   game.player.hp = Math.min(game.player.maxHp, game.player.hp + hpRegen);
   game.player.mana = Math.min(game.player.maxMana, game.player.mana + manaRegen);
   advanceDangerTurn(game);
-  game.processMonsters();
-  if (encumbrance >= 2 && game.currentDepth > 0) {
+  for (let index = 0; index < monsterActions; index += 1) {
+    game.processMonsters();
+  }
+  if (monsterActions > 0 && encumbrance >= 2 && game.currentDepth > 0) {
     game.processMonsters();
   }
   if ((game.player.slowed || 0) > 0) {
@@ -155,12 +165,17 @@ export function endTurn(game, advanceTurn = true) {
   if (!game.player || game.player.hp <= 0) {
     return;
   }
+  let options = {};
+  if (typeof advanceTurn === "object") {
+    options = advanceTurn;
+    advanceTurn = advanceTurn.advanceTurn ?? true;
+  }
   if ((game.hasPendingProgressionChoice && game.hasPendingProgressionChoice()) || game.pendingSpellChoices > 0) {
-    game.pendingTurnResolution = advanceTurn;
+    game.pendingTurnResolution = { advanceTurn, ...options };
     if (!game.showNextProgressionModal || !game.showNextProgressionModal()) {
       game.render();
     }
     return;
   }
-  game.resolveTurn(advanceTurn);
+  game.resolveTurn({ advanceTurn, ...options });
 }

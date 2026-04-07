@@ -1,12 +1,16 @@
 import { escapeHtml } from "../core/utils.js";
+import { getOnboardingVariantMeta } from "./validation.js";
 
-const FUNNEL_STEPS = [
-  { id: "visit_town_door", label: "Check Town", summary: "Step onto one labeled town door before the first descent." },
-  { id: "enter_keep", label: "Enter Keep", summary: "Walk north on the town road and descend." },
-  { id: "find_objective", label: "Find Objective", summary: "Use the marked route and survey to reach the floor objective." },
-  { id: "clear_objective", label: "Clear Objective", summary: "Resolve the marked room to unlock the next decision." },
-  { id: "choose_extract_or_greed", label: "Choose Exit Or Greed", summary: "Leave clean or stay for one more prize." }
-];
+function getFunnelSteps(game) {
+  const meta = getOnboardingVariantMeta(game);
+  return [
+    { id: "visit_town_door", label: meta.steps.visit_town_door, summary: "Step onto one labeled town door before the first descent." },
+    { id: "enter_keep", label: meta.steps.enter_keep, summary: "Walk north on the town road and descend." },
+    { id: "find_objective", label: meta.steps.find_objective, summary: "Use the marked route and survey to reach the floor objective." },
+    { id: "clear_objective", label: meta.steps.clear_objective, summary: "Resolve the marked room to unlock the next decision." },
+    { id: "choose_extract_or_greed", label: meta.steps.choose_extract_or_greed, summary: "Leave clean or stay for one more prize." }
+  ];
+}
 
 function getFlagKey(stepId) {
   return `onboarding_${stepId}`;
@@ -36,9 +40,10 @@ export function shouldShowOnboardingChecklist(game) {
 }
 
 export function getOnboardingSteps(game) {
-  return FUNNEL_STEPS.map((step, index) => {
+  const steps = getFunnelSteps(game);
+  return steps.map((step, index) => {
     const done = hasOnboardingFlag(game, step.id);
-    const previousComplete = index === 0 || hasOnboardingFlag(game, FUNNEL_STEPS[index - 1].id);
+    const previousComplete = index === 0 || hasOnboardingFlag(game, steps[index - 1].id);
     return {
       ...step,
       done,
@@ -51,12 +56,13 @@ export function renderOnboardingChecklist(game) {
   if (!shouldShowOnboardingChecklist(game)) {
     return "";
   }
+  const meta = getOnboardingVariantMeta(game);
   const steps = getOnboardingSteps(game);
   const directive = typeof game.getLoopDirective === "function" ? game.getLoopDirective() : null;
   const activeSummary = directive?.primaryText || directive?.supportText || "";
   return `
     <div class="onboarding-checklist">
-      <div class="onboarding-checklist-label">First Run Loop</div>
+      <div class="onboarding-checklist-label">${escapeHtml(meta.checklistLabel)}</div>
       <div class="onboarding-step-row">
         ${steps.map((step) => `
           <span class="onboarding-step${step.done ? " done" : step.active ? " active" : ""}">${escapeHtml(step.label)}</span>

@@ -37,17 +37,21 @@ function placeObjectiveTile(level, room, tileKind, extra = {}) {
   return position;
 }
 
-function placeObjectiveItem(level, room, objectiveId, depth) {
+function placeObjectiveItem(level, room, objectiveId, depth, options = {}) {
+  const {
+    itemName = depth >= 4 ? "Storm Sigil" : "Wind Relic",
+    rewardType = "relic"
+  } = options;
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const position = randomRoomTile(room);
     if (actorAt(level, position.x, position.y) || itemsAt(level, position.x, position.y).length > 0) {
       continue;
     }
     const item = {
-      ...createItem("goldCharm", { id: `objectiveRelic${depth}`, name: depth >= 4 ? "Storm Sigil" : "Wind Relic" }),
+      ...createItem("goldCharm", { id: `objectiveRelic${depth}`, name: itemName }),
       kind: "objective",
       objectiveId,
-      rewardType: "relic",
+      rewardType,
       x: position.x,
       y: position.y,
       value: 0,
@@ -82,8 +86,10 @@ function addRoomTorches(level, room, propId = "roomTorch", count = 2) {
   });
 }
 
+const LIT_MARKER_PROPS = new Set(["relicPedestal", "shrineSeal", "bloodAltar", "ghostMerchant", "well", "beaconFocus"]);
+
 function addRoomDress(level, room, objectiveId, optionalId = "") {
-  if (objectiveId === "recover_relic") {
+  if (objectiveId === "recover_relic" || objectiveId === "recover_waystone") {
     addRoomTorches(level, room, "roomTorch", 4);
     return;
   }
@@ -102,7 +108,7 @@ function addRoomDress(level, room, objectiveId, optionalId = "") {
     addRoomTorches(level, room, "roomTorch", 2);
     return;
   }
-  if (objectiveId === "seal_shrine") {
+  if (objectiveId === "seal_shrine" || objectiveId === "purify_well") {
     addRoomTorches(level, room, "shrineTorch", 4);
     return;
   }
@@ -115,49 +121,15 @@ function decorateObjectiveMarker(level, objective, room) {
   if (!objective?.marker) {
     return;
   }
-  if (objective.id === "recover_relic") {
-    addLevelProp(level, {
-      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
-      x: objective.marker.x,
-      y: objective.marker.y,
-      propId: "relicPedestal",
-      layer: "fixture",
-      light: true
-    });
-  } else if (objective.id === "secure_supplies") {
-    addLevelProp(level, {
-      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
-      x: objective.marker.x,
-      y: objective.marker.y,
-      propId: "vaultChest",
-      layer: "fixture"
-    });
-  } else if (objective.id === "rescue_captive") {
-    addLevelProp(level, {
-      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
-      x: objective.marker.x,
-      y: objective.marker.y,
-      propId: "prisonerCell",
-      layer: "fixture"
-    });
-  } else if (objective.id === "purge_nest") {
-    addLevelProp(level, {
-      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
-      x: objective.marker.x,
-      y: objective.marker.y,
-      propId: "broodNest",
-      layer: "fixture"
-    });
-  } else if (objective.id === "seal_shrine" || objective.id === "break_beacon") {
-    addLevelProp(level, {
-      id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
-      x: objective.marker.x,
-      y: objective.marker.y,
-      propId: "shrineSeal",
-      layer: "fixture",
-      light: true
-    });
-  }
+  const propId = objective.visualId || "relicPedestal";
+  addLevelProp(level, {
+    id: `objective-${objective.id}-${objective.marker.x}-${objective.marker.y}`,
+    x: objective.marker.x,
+    y: objective.marker.y,
+    propId,
+    layer: "fixture",
+    light: LIT_MARKER_PROPS.has(propId)
+  });
   addRoomDress(level, room, objective.id);
 }
 
@@ -171,7 +143,7 @@ function decorateOptionalMarker(level, optional, room) {
     y: optional.marker.y,
     propId: optional.visualId || "vaultChest",
     layer: "fixture",
-    light: optional.id === "ghost_merchant" || optional.id === "blood_altar" || optional.id === "moon_well"
+    light: LIT_MARKER_PROPS.has(optional.visualId || "vaultChest")
   });
   addRoomDress(level, room, "", optional.id);
 }
@@ -199,6 +171,18 @@ function setupObjectiveState(level, depth, objectiveId, room, roomIndex) {
       }
     }
     objective.detail = "Recover the sealed cache and carry the supplies back into the run.";
+  } else if (objectiveId === "recover_waystone") {
+    objective.marker = placeObjectiveItem(level, room, objectiveId, depth, {
+      itemName: depth >= 4 ? "Storm Waystone" : "Survey Waystone",
+      rewardType: "rumor"
+    });
+    objective.detail = "Recover the waystone and cash it into cleaner route intel for what comes next.";
+  } else if (objectiveId === "secure_ledger") {
+    objective.marker = placeObjectiveItem(level, room, objectiveId, depth, {
+      itemName: depth >= 4 ? "Storm Ledger" : "Survey Ledger",
+      rewardType: "rumor"
+    });
+    objective.detail = "Recover the route ledger and turn it into cleaner pathing for the next descent.";
   } else if (objectiveId === "purge_nest") {
     objective.marker = placeObjectiveTile(level, room, "throne", {
       label: "Brood Nest",
@@ -221,6 +205,13 @@ function setupObjectiveState(level, depth, objectiveId, room, roomIndex) {
       objectiveAction: "seal"
     });
     objective.detail = "Seal the shrine and weather the answer from the floor.";
+  } else if (objectiveId === "purify_well") {
+    objective.marker = placeObjectiveTile(level, room, "fountain", {
+      label: "Purifying Well",
+      objectiveId,
+      objectiveAction: "purifyWell"
+    });
+    objective.detail = "Clear the room, then purify the well for a clean refill before the floor answers back.";
   } else if (objectiveId === "break_beacon") {
     objective.marker = placeObjectiveTile(level, room, "altar", {
       label: "Alarm Beacon",
@@ -228,6 +219,13 @@ function setupObjectiveState(level, depth, objectiveId, room, roomIndex) {
       objectiveAction: "breakBeacon"
     });
     objective.detail = "Clear the room, then smash the beacon before it pulls more patrols into the floor.";
+  } else if (objectiveId === "light_watchfire") {
+    objective.marker = placeObjectiveTile(level, room, "altar", {
+      label: "Watchfire Brazier",
+      objectiveId,
+      objectiveAction: "watchfire"
+    });
+    objective.detail = "Clear the chamber, then light the watchfire to reveal more of the floor before the keep answers back.";
   }
 
   spawnObjectiveGuard(level, depth, room, roomIndex, objectiveId);
@@ -281,11 +279,41 @@ function setupOptionalState(level, depth, optionalId, room, roomIndex) {
       optionalId,
       optionalAction: "scout"
     });
+  } else if (optionalId === "smuggler_cache") {
+    optional.marker = placeObjectiveTile(level, room, "throne", {
+      label: "Smuggler Cache",
+      optionalId,
+      optionalAction: "smuggler"
+    });
+  } else if (optionalId === "oath_shrine") {
+    optional.marker = placeObjectiveTile(level, room, "altar", {
+      label: "Oath Shrine",
+      optionalId,
+      optionalAction: "oath"
+    });
+  } else if (optionalId === "pilgrim_pool") {
+    optional.marker = placeObjectiveTile(level, room, "fountain", {
+      label: "Pilgrim Pool",
+      optionalId,
+      optionalAction: "pilgrimPool"
+    });
   } else if (optionalId === "moon_well") {
     optional.marker = placeObjectiveTile(level, room, "fountain", {
       label: "Moon Well",
       optionalId,
       optionalAction: "moonWell"
+    });
+  } else if (optionalId === "surveyor_stash") {
+    optional.marker = placeObjectiveTile(level, room, "throne", {
+      label: "Surveyor Stash",
+      optionalId,
+      optionalAction: "surveyor"
+    });
+  } else if (optionalId === "ember_cache") {
+    optional.marker = placeObjectiveTile(level, room, "throne", {
+      label: "Ember Cache",
+      optionalId,
+      optionalAction: "ember"
     });
   }
 
@@ -425,11 +453,24 @@ export function resolveFloorObjective(game, reason = "completed") {
 }
 
 export function handleObjectivePickup(game, item) {
-  if (!item || !["recover_relic", "secure_supplies"].includes(item.objectiveId)) {
+  if (!item || !["recover_relic", "secure_supplies", "recover_waystone", "secure_ledger"].includes(item.objectiveId)) {
     return false;
   }
+  game.markOnboarding?.("find_objective");
   resolveFloorObjective(game, "pickup");
-  game.log(item.objectiveId === "secure_supplies" ? "You secure the cache and feel the floor shift around you." : "You secure the relic and feel the floor shift around you.", "good");
+  if (item.objectiveId === "secure_supplies") {
+    game.log("You secure the cache and feel the floor shift around you.", "good");
+  } else if (item.objectiveId === "recover_waystone") {
+    game.log("You recover the waystone and the next route sharpens in your mind.", "good");
+    game.revealGuidedObjectiveRoute?.("recover_waystone");
+  } else if (item.objectiveId === "secure_ledger") {
+    game.log("You recover the ledger and sketch a cleaner route for what comes next.", "good");
+    game.grantRumorToken?.(1);
+    game.revealGuidedObjectiveRoute?.("secure_ledger");
+    game.revealGuidedObjectiveRoute?.("secure_ledger");
+  } else {
+    game.log("You secure the relic and feel the floor shift around you.", "good");
+  }
   return true;
 }
 
@@ -447,6 +488,14 @@ function grantOptionalReward(game, optionalId) {
   }
   if (optionalId === "scout_cache") {
     game.grantRumorToken(1);
+    return;
+  }
+  if (optionalId === "smuggler_cache" || optionalId === "pilgrim_pool") {
+    game.grantRumorToken(1);
+    return;
+  }
+  if (optionalId === "oath_shrine") {
+    game.grantBoon(choice(["hunter_mark", "aether_cache"]));
     return;
   }
   if (optionalId === "ghost_merchant" || optionalId === "vault_room" || optionalId === "moon_well") {
@@ -525,6 +574,38 @@ export function handleOptionalInteraction(game, tile) {
       updatePropState(game.currentLevel, "cacheClosed", "cacheOpen");
       break;
     }
+    case "smuggler_cache": {
+      const gold = Math.round(randInt(28, 70) * Math.max(1, game.currentDepth) * greedGoldMultiplier);
+      game.player.gold += gold;
+      game.addItemToInventory(createItem("teleportScroll", { identified: true }));
+      game.addItemToInventory(createItem("healingPotion", { identified: true }));
+      game.log(`The smuggler cache yields ${gold} gold, a teleport scroll, and a field heal.`, "good");
+      updatePropState(game.currentLevel, "cacheClosed", "cacheOpen");
+      break;
+    }
+    case "oath_shrine": {
+      const manaCost = Math.min(game.player.mana, 3);
+      if (manaCost > 0) {
+        game.player.mana -= manaCost;
+      } else {
+        game.player.hp = Math.max(1, game.player.hp - 4);
+      }
+      game.addItemToInventory(createItem("wardingAmulet", { identified: true }));
+      game.log(manaCost > 0
+        ? "The oath shrine drinks mana and leaves behind a warded charm."
+        : "The oath shrine takes blood and leaves behind a warded charm.", "warning");
+      break;
+    }
+    case "pilgrim_pool": {
+      const curseCount = typeof game.removeCurses === "function" ? game.removeCurses() : 0;
+      game.player.constitutionLoss = Math.max(0, (game.player.constitutionLoss || 0) - 2);
+      game.player.hp = Math.min(game.player.maxHp, game.player.hp + 8);
+      game.player.mana = Math.min(game.player.maxMana, game.player.mana + 6);
+      game.log(curseCount > 0
+        ? `The pilgrim pool lifts ${curseCount} curse${curseCount === 1 ? "" : "s"} and steadies your breathing.`
+        : "The pilgrim pool steadies your breathing and clears the ache from the run.", "good");
+      break;
+    }
     case "moon_well": {
       game.player.hp = game.player.maxHp;
       game.player.mana = game.player.maxMana;
@@ -532,6 +613,24 @@ export function handleOptionalInteraction(game, tile) {
         revealCircle(game.currentLevel, randInt(1, game.currentLevel.width - 2), randInt(1, game.currentLevel.height - 2), 2);
       }
       game.log("Moonlight floods the room, restoring you and sketching more of the floor.", "good");
+      break;
+    }
+    case "surveyor_stash": {
+      game.addItemToInventory(createItem("mappingScroll", { identified: true }));
+      game.grantRumorToken?.(1);
+      game.revealGuidedObjectiveRoute?.("surveyor_stash");
+      game.revealGuidedObjectiveRoute?.("surveyor_stash");
+      game.log("The surveyor stash yields route notes, a mapping scroll, and one clean rumor.", "good");
+      updatePropState(game.currentLevel, "cacheClosed", "cacheOpen");
+      break;
+    }
+    case "ember_cache": {
+      const gold = Math.round(randInt(24, 60) * Math.max(1, game.currentDepth) * greedGoldMultiplier);
+      game.player.gold += gold;
+      game.addItemToInventory(createItem("healingPotion", { identified: true }));
+      game.addItemToInventory(createItem("emberCharm", { identified: true }));
+      game.log(`The ember cache yields ${gold} gold, a field heal, and a fire ward charm.`, "good");
+      updatePropState(game.currentLevel, "cacheClosed", "cacheOpen");
       break;
     }
     default:
@@ -589,9 +688,33 @@ export function handleObjectiveInteraction(game, tile) {
       game.increaseDanger?.("seal_shrine", 2);
       return resolveFloorObjective(game, "seal");
     }
+    if (objective.id === "purify_well") {
+      if (!getObjectiveRoomClear(game)) {
+        game.log("The well cannot be purified while enemies still hold the room.", "warning");
+        return true;
+      }
+      game.player.hp = game.player.maxHp;
+      game.player.mana = game.player.maxMana;
+      game.player.constitutionLoss = Math.max(0, (game.player.constitutionLoss || 0) - 1);
+      game.log("You purify the well and drink deep before the halls answer back.", "good");
+      game.increaseDanger?.("fountain", 2);
+      return resolveFloorObjective(game, "purify");
+    }
     if (objective.id === "break_beacon") {
       game.log("You smash the beacon. The hall falls dark for a precious moment.", "good");
       return resolveFloorObjective(game, "beacon");
+    }
+    if (objective.id === "light_watchfire") {
+      if (!getObjectiveRoomClear(game)) {
+        game.log("The watchfire cannot be lit while enemies still hold the chamber.", "warning");
+        return true;
+      }
+      for (let index = 0; index < 10; index += 1) {
+        revealCircle(game.currentLevel, randInt(1, game.currentLevel.width - 2), randInt(1, game.currentLevel.height - 2), 2);
+      }
+      game.addItemToInventory(createItem("mappingScroll", { identified: true }));
+      game.log("You light the watchfire. More of the floor answers in clean lines before the danger returns.", "good");
+      return resolveFloorObjective(game, "watchfire");
     }
   }
 
@@ -630,7 +753,7 @@ export function getOptionalStatusText(level) {
 }
 
 export function grantObjectiveRumor(game) {
-  const rumorPool = [RUMOR_DEFS.relic_hunt, RUMOR_DEFS.nest, RUMOR_DEFS.captive, RUMOR_DEFS.supplies, RUMOR_DEFS.beacon].filter(Boolean);
+  const rumorPool = [RUMOR_DEFS.relic_hunt, RUMOR_DEFS.nest, RUMOR_DEFS.captive, RUMOR_DEFS.supplies, RUMOR_DEFS.waystone, RUMOR_DEFS.ledger, RUMOR_DEFS.shrine_path, RUMOR_DEFS.purify_well, RUMOR_DEFS.beacon, RUMOR_DEFS.watchfire].filter(Boolean);
   const rumor = choice(rumorPool);
   if (rumor && game.learnRumor) {
     game.learnRumor(rumor.id);

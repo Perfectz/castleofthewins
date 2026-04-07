@@ -334,6 +334,9 @@ export function onPlayerMove(game) {
 }
 
 export function onMonsterKilled(game, monster) {
+  if (monster?.elite) {
+    game.onEliteKillProgress?.(monster);
+  }
   if (hasPerk(game, "cleave")) {
     const splash = game.currentLevel.actors.find((other) => other !== monster && Math.max(Math.abs(other.x - monster.x), Math.abs(other.y - monster.y)) <= 1);
     if (splash) {
