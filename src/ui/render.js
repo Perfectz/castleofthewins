@@ -1,3 +1,9 @@
+/**
+ * @module render
+ * @owns Canvas rendering, tile/actor/item drawing, visual effects, tint caching
+ * @reads level.tiles, level.visible, level.explored, level.actors, level.items, level.props
+ * @mutates Canvas pixels only — no game state mutation
+ */
 import { TILE_SIZE, VIEW_SIZE } from "../core/constants.js";
 import { ACTOR_VISUALS, BOARD_PROP_VISUALS, ITEM_VISUALS, getActorVisual, getBoardPropVisual, getItemVisual, getTileVisual, ITEM_VISUAL_IDS, TILESET_VISUALS, TOWN_BUILDING_ASSETS, TOWN_TERRAIN_ASSETS } from "../data/assets.js";
 import { clamp, shadeColor } from "../core/utils.js";
@@ -16,7 +22,8 @@ const TOWN_BUILDING_RENDER = {
 const townTerrainImages = buildTownTerrainImages();
 const townBuildingImages = buildTownBuildingImages();
 const imageCache = buildImageCache();
-const tintedFrameCache = {};
+const tintedFrameCache = new Map();
+const TINT_CACHE_LIMIT = 512;
 const DUNGEON_TERRAIN_THEME = {
   unseen: "#040506",
   floor: {
@@ -143,8 +150,9 @@ function resolveFrame(frame, tint = "") {
     return image;
   }
   const cacheKey = `${frame.src}:${frame.x}:${frame.y}:${frame.width}:${frame.height}:${tint}`;
-  if (tintedFrameCache[cacheKey]) {
-    return tintedFrameCache[cacheKey];
+  const cached = tintedFrameCache.get(cacheKey);
+  if (cached) {
+    return cached;
   }
   const canvas = createCanvas(frame.width, frame.height);
   if (!canvas) {
@@ -158,7 +166,14 @@ function resolveFrame(frame, tint = "") {
   ctx.fillRect(0, 0, frame.width, frame.height);
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = "source-over";
-  tintedFrameCache[cacheKey] = canvas;
+  if (tintedFrameCache.size >= TINT_CACHE_LIMIT) {
+    const evictCount = TINT_CACHE_LIMIT >> 2;
+    const iter = tintedFrameCache.keys();
+    for (let i = 0; i < evictCount; i++) {
+      tintedFrameCache.delete(iter.next().value);
+    }
+  }
+  tintedFrameCache.set(cacheKey, canvas);
   return canvas;
 }
 

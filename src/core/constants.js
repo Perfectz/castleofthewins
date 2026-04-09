@@ -6,6 +6,12 @@ export const SAVE_KEY = "castle-of-the-winds-web-save";
 export const SETTINGS_KEY = "castle-of-the-winds-web-settings";
 export const APP_VERSION = 2;
 
+export const GAMEPAD_DEADZONE = 0.45;
+export const MUSIC_VOLUME = 0.55;
+export const MAX_CORPSES = 12;
+export const MAX_CHRONICLE_EVENTS = 80;
+export const TREASURE_DROP_CHANCE = 0.42;
+
 export const DIRECTIONS = {
   ArrowUp: [0, -1],
   ArrowDown: [0, 1],

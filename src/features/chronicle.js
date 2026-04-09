@@ -1,4 +1,11 @@
+/**
+ * @module chronicle
+ * @owns Run history tracking, chronicle events, death recap
+ * @reads game.player, game.chronicleEvents, game.deathContext
+ * @mutates game.chronicleEvents, game.deathContext
+ */
 import { escapeHtml } from "../core/utils.js";
+import { MAX_CHRONICLE_EVENTS } from "../core/constants.js";
 
 export function ensureChronicleState(game) {
   game.chronicleEvents = Array.isArray(game.chronicleEvents) ? game.chronicleEvents : [];
@@ -13,7 +20,7 @@ export function recordChronicleEvent(game, type, payload = {}) {
     type,
     payload
   });
-  if (game.chronicleEvents.length > 80) {
+  if (game.chronicleEvents.length > MAX_CHRONICLE_EVENTS) {
     game.chronicleEvents.shift();
   }
 }
@@ -77,6 +84,9 @@ export function renderChronicleMarkup(game, limit = 10) {
 
 export function buildDeathRecapMarkup(game) {
   ensureChronicleState(game);
+  if (!game.player) {
+    return "<div class='section-block text-block'>No death data available.</div>";
+  }
   const context = game.deathContext || {
     location: game.currentLevel?.description || "the dungeon",
     cause: "Unknown cause",

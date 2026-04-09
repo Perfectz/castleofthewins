@@ -1,3 +1,9 @@
+/**
+ * @module validation
+ * @owns A/B testing framework, experiment variants, route tuning
+ * @reads URL search params, game state for validation
+ * @mutates game.validationState
+ */
 const DEFAULT_VALIDATION_VARIANTS = {
   onboarding: "guided_loop",
   hud: "dominant_cta",

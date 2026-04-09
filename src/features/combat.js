@@ -1,8 +1,20 @@
-import { rollTreasure, weightedMonster } from "../core/entities.js";
-import { actorAt, getTile, hasLineOfSight, inBounds, isVisible, summonMonsterNear } from "../core/world.js";
-import { clamp, distance, nowTime, randInt, removeFromArray, roll } from "../core/utils.js";
+/**
+ * @module combat
+ * @owns Attack resolution, damage application, monster death, level-up, monster AI turns
+ * @reads game.player, game.currentLevel.actors, game.currentDepth
+ * @mutates defender.hp, monster status (sleeping/alerted/held/slowed),
+ *          game.currentLevel.actors, game.currentLevel.items, game.currentLevel.corpses,
+ *          game.player.exp, game.player.level, game.player.stats
+ * @emits game.log, game.audio.play, game.emitReadout, game.emitImpact, game.flashTile,
+ *        game.playProjectile, game.emitCastCircle, game.emitDeathBurst
+ */
+import { MAX_CORPSES, TREASURE_DROP_CHANCE } from "../core/constants.js";
+import { rollTreasure } from "../core/entities.js";
+import { hasLineOfSight, isVisible } from "../core/world.js";
+import { clamp, distance, randInt, removeFromArray, roll } from "../core/utils.js";
 import { buildDeathRecapMarkup, noteDeathContext, recordChronicleEvent } from "./chronicle.js";
 import { getBuildAttackBonus, getBuildDamageBonus, onMonsterKilled, queuePerkChoice } from "./builds.js";
+import { buildMonsterContext, canMonsterMoveToTile, executeMonsterBehavior, findRetreat } from "./monster-behaviors.js";
 
 const UNDEAD_IDS = new Set(["skeleton", "wraith", "cryptlord"]);
 const BASE_MOVE_THRESHOLD = 100;
@@ -34,60 +46,7 @@ function isUndead(actor) {
   return Boolean(actor && UNDEAD_IDS.has(actor.id));
 }
 
-function findNearbyCorpse(level, monster, radius = 4) {
-  if (!level?.corpses?.length) {
-    return null;
-  }
-  return level.corpses.find((corpse) => distance(monster, corpse) <= radius);
-}
-
-function applyBannerBuff(game, monster) {
-  const allies = (game.currentLevel?.actors || []).filter((ally) =>
-    ally !== monster &&
-    distance(ally, monster) <= 4 &&
-    ally.hp > 0
-  );
-  if (allies.length === 0) {
-    return false;
-  }
-  allies.forEach((ally) => {
-    ally.tempAttackBuff = Math.max(ally.tempAttackBuff || 0, 2);
-    ally.tempBuffTurns = Math.max(ally.tempBuffTurns || 0, 2);
-    ally.alerted = Math.max(ally.alerted || 0, 6);
-    ally.sleeping = false;
-  });
-  monster.bannerCooldown = 4;
-  game.emitReadout("Rally", monster.x, monster.y, "#ffd27b", 320);
-  if (isVisible(game.currentLevel, monster.x, monster.y)) {
-    game.log(`${monster.name} rallies the room around you.`, "bad");
-  }
-  return true;
-}
-
-function raiseCorpse(game, monster) {
-  const corpse = findNearbyCorpse(game.currentLevel, monster, 4);
-  if (!corpse || !game.canAddDynamicMonster?.(1)) {
-    return false;
-  }
-  summonMonsterNear(game.currentLevel, corpse.x, corpse.y, weightedMonster(Math.max(2, game.currentDepth - 1)));
-  const raised = game.currentLevel.actors[game.currentLevel.actors.length - 1];
-  if (raised) {
-    raised.id = "skeleton";
-    raised.name = "Raised Dead";
-    raised.sprite = "skeleton";
-    raised.visualId = "skeleton";
-    raised.color = "#cfc8b0";
-    raised.role = "frontliner";
-    raised.behaviorKit = "";
-    raised.sleeping = false;
-    raised.alerted = 7;
-    raised.raisedCorpse = true;
-  }
-  game.currentLevel.corpses = game.currentLevel.corpses.filter((entry) => entry !== corpse);
-  game.emitReadout("Raise", monster.x, monster.y, "#d6a8ff", 360);
-  game.log(`${monster.name} drags a corpse back into the fight.`, "bad");
-  return true;
-}
+// applyBannerBuff, raiseCorpse, findNearbyCorpse moved to monster-behaviors.js
 
 export function visibleEnemies(game) {
   return game.currentLevel.actors.filter((actor) => isVisible(game.currentLevel, actor.x, actor.y));
@@ -119,41 +78,11 @@ export function makeNoise(game, radius, source = game.player, reason = "noise") 
 }
 
 export function canMonsterMoveTo(game, monster, x, y) {
-  if (!inBounds(game.currentLevel, x, y)) {
-    return false;
-  }
-  if (game.player.x === x && game.player.y === y) {
-    return false;
-  }
-  const tile = getTile(game.currentLevel, x, y);
-  const canPhase = monster.abilities && monster.abilities.includes("phase");
-  if (actorAt(game.currentLevel, x, y)) {
-    return false;
-  }
-  return (tile.walkable || (canPhase && tile.kind === "wall")) && !(tile.kind === "secretDoor" && tile.hidden);
+  return canMonsterMoveToTile(game, monster, x, y);
 }
 
 export function findRetreatStep(game, monster) {
-  const options = [];
-  for (let dy = -1; dy <= 1; dy += 1) {
-    for (let dx = -1; dx <= 1; dx += 1) {
-      if (dx === 0 && dy === 0) {
-        continue;
-      }
-      const nx = monster.x + dx;
-      const ny = monster.y + dy;
-      if (!canMonsterMoveTo(game, monster, nx, ny)) {
-        continue;
-      }
-      options.push({
-        x: nx,
-        y: ny,
-        score: distance({ x: nx, y: ny }, game.player) + (hasLineOfSight(game.currentLevel, nx, ny, game.player.x, game.player.y) ? 1 : 0)
-      });
-    }
-  }
-  options.sort((a, b) => b.score - a.score);
-  return options[0] || null;
+  return findRetreat(game, monster);
 }
 
 export function canCharge(game, monster, dx, dy, distanceToPlayer) {
@@ -257,7 +186,7 @@ export function attack(game, attacker, defender) {
   }
   let damage = isPlayer ? roll(...game.getDamageRange()) + getBuildDamageBonus(game, defender, "physical") : roll(...attacker.damage);
   if (isPlayer) {
-    const critChance = Math.min(0.4, 0.05 + (game.getMeleeCritBonus ? game.getMeleeCritBonus() * 0.05 : 0));
+    const critChance = Math.min(0.4, 0.05 + (game.getMeleeCritBonus?.() ?? 0) * 0.05);
     if (Math.random() < critChance) {
       damage += Math.max(2, Math.floor(damage * 0.5));
       game.log("Critical hit.", "good");
@@ -280,38 +209,27 @@ export function attack(game, attacker, defender) {
 export function damageActor(game, attacker, defender, amount, damageType = "physical") {
   let resolvedAmount = amount;
   if (defender.id === "player") {
-    if (attacker.behaviorKit === "breaker" && game.getGuardValue && game.getGuardValue() >= 3) {
+    if (attacker.behaviorKit === "breaker" && (game.getGuardValue?.() ?? 0) >= 3) {
       resolvedAmount += 1;
       game.player.guardBrokenTurns = Math.max(game.player.guardBrokenTurns || 0, 2);
       game.log(`${attacker.name} breaks through your guard.`, "bad");
     }
-    if (damageType === "physical" && game.getGuardValue) {
-      resolvedAmount = Math.max(1, resolvedAmount - game.getGuardValue());
+    if (damageType === "physical") {
+      resolvedAmount = Math.max(1, resolvedAmount - (game.getGuardValue?.() ?? 0));
     }
-    if (damageType === "magic" && game.getWardValue) {
-      resolvedAmount = Math.max(1, resolvedAmount - game.getWardValue());
+    if (damageType === "magic") {
+      resolvedAmount = Math.max(1, resolvedAmount - (game.getWardValue?.() ?? 0));
     }
-    if (damageType === "fire" && (game.player.resistFireTurns || 0) > 0) {
-      if (game.getWardValue) {
-        resolvedAmount = Math.max(1, resolvedAmount - game.getWardValue());
+    if (damageType === "fire" || damageType === "cold") {
+      const buffKey = damageType === "fire" ? "resistFireTurns" : "resistColdTurns";
+      const getResist = damageType === "fire" ? game.getFireResistValue : game.getColdResistValue;
+      if ((game.player[buffKey] || 0) > 0) {
+        resolvedAmount = Math.max(1, resolvedAmount - (game.getWardValue?.() ?? 0));
+        resolvedAmount = Math.max(1, resolvedAmount - (getResist?.call(game) ?? 0));
+        resolvedAmount = Math.max(1, Math.ceil(resolvedAmount * 0.6));
+      } else if (getResist) {
+        resolvedAmount = Math.max(1, resolvedAmount - getResist.call(game));
       }
-      if (game.getFireResistValue) {
-        resolvedAmount = Math.max(1, resolvedAmount - game.getFireResistValue());
-      }
-      resolvedAmount = Math.max(1, Math.ceil(resolvedAmount * 0.6));
-    } else if (damageType === "fire" && game.getFireResistValue) {
-      resolvedAmount = Math.max(1, resolvedAmount - game.getFireResistValue());
-    }
-    if (damageType === "cold" && (game.player.resistColdTurns || 0) > 0) {
-      if (game.getWardValue) {
-        resolvedAmount = Math.max(1, resolvedAmount - game.getWardValue());
-      }
-      if (game.getColdResistValue) {
-        resolvedAmount = Math.max(1, resolvedAmount - game.getColdResistValue());
-      }
-      resolvedAmount = Math.max(1, Math.ceil(resolvedAmount * 0.6));
-    } else if (damageType === "cold" && game.getColdResistValue) {
-      resolvedAmount = Math.max(1, resolvedAmount - game.getColdResistValue());
     }
   }
   defender.hp -= resolvedAmount;
@@ -352,17 +270,17 @@ export function killMonster(game, monster) {
       sourceId: monster.id,
       turn: game.turn
     });
-    if (game.currentLevel.corpses.length > 12) {
+    if (game.currentLevel.corpses.length > MAX_CORPSES) {
       game.currentLevel.corpses.shift();
     }
   }
   removeFromArray(game.currentLevel.actors, monster);
   game.emitDeathBurst(monster.x, monster.y, monster.color || "#f2deb1");
-  const gold = randInt(monster.gold[0], monster.gold[1]);
+  const gold = monster.gold ? randInt(monster.gold[0], monster.gold[1]) : 0;
   if (gold > 0) {
     game.currentLevel.items.push({ x: monster.x, y: monster.y, kind: "gold", name: "Gold", amount: gold });
   }
-  if (Math.random() < 0.42) {
+  if (Math.random() < TREASURE_DROP_CHANCE) {
     game.currentLevel.items.push({ ...rollTreasure({ depth: game.currentDepth, quality: monster.elite ? "guarded" : "" }), x: monster.x, y: monster.y });
   }
   if (monster.elite) {
@@ -467,150 +385,29 @@ export function processMonsters(game) {
       monster.alerted -= 1;
     }
 
-    if (monster.chargeWindup) {
-      if (canMonsterSpendMovement(monster)) {
-        applyCharge(game, monster);
-      }
+    // --- behavior table dispatch ---
+    const ctx = buildMonsterContext(game, monster);
+    if (executeMonsterBehavior(game, monster, ctx, () => canMonsterSpendMovement(monster))) {
       return;
     }
 
-    if (monster.behaviorKit === "banner_captain" && canSeePlayer && (monster.bannerCooldown || 0) <= 0 && Math.random() < 0.26) {
-      if (applyBannerBuff(game, monster)) {
-        return;
-      }
-    }
-
-    if (monster.behaviorKit === "corpse_raiser" && canSeePlayer && monster.mana >= 3 && Math.random() < 0.24) {
-      monster.mana -= 3;
-      if (raiseCorpse(game, monster)) {
-        return;
-      }
-    }
-
-    if (monster.behaviorKit === "pinning_controller" && canSeePlayer && monster.mana >= 2 && distanceToPlayer <= 6 && Math.random() < 0.28) {
-      monster.mana -= 2;
-      game.log(`${monster.name} pins the lane with binding force.`, "bad");
-      game.emitReadout("Pin", monster.x, monster.y, "#ccbfff", 320);
-      game.player.held = Math.max(game.player.held || 0, 1);
-      game.player.slowed = Math.max(game.player.slowed || 0, 2);
-      return;
-    }
-
-    if (distanceToPlayer <= 1) {
-      game.attack(monster, game.player);
-      return;
-    }
-
-    if (monster.ranged && canSeePlayer && distanceToPlayer <= monster.ranged.range) {
-      if (distanceToPlayer <= (monster.behaviorKit === "coward_caster" ? 3 : 2)) {
-        const retreat = findRetreatStep(game, monster);
-        if (retreat) {
-          monster.x = retreat.x;
-          monster.y = retreat.y;
-          return;
-        }
-      }
-      if (Math.random() < (monster.behaviorKit === "coward_caster" ? 0.72 : 0.55)) {
-        game.playProjectile(monster, game.player, monster.ranged.color);
-        game.log(`${monster.name} launches a ranged attack.`, "bad");
-        game.emitReadout("Shot", monster.x, monster.y, "#ffd46b", 320);
-        game.audio.play("hit");
-        game.damageActor(monster, game.player, roll(...monster.ranged.damage), "physical");
-        return;
-      }
-    }
-
-    if (monster.spells && canSeePlayer && monster.mana >= 4 && Math.random() < (monster.behaviorKit === "coward_caster" ? 0.36 : 0.24)) {
-      const spellId = (monster.spells || [])[randInt(0, monster.spells.length - 1)];
-      const spellCost = spellId === "lightningBolt" ? 6 : spellId === "holdMonster" ? 5 : 4;
-      monster.mana -= spellCost;
-      game.emitCastCircle(monster.x, monster.y, monster.abilities && monster.abilities.includes("summon") ? "#d6a8ff" : "#c9a5ff");
-      if (spellId === "slowMonster") {
-        game.log(`${monster.name} casts a crippling spell.`, "bad");
-        game.emitReadout("Hex", monster.x, monster.y, "#bfd9ff", 340);
-        game.playProjectile(monster, game.player, "#bfd9ff");
-        game.player.slowed = Math.max(game.player.slowed || 0, 3);
-      } else if (spellId === "holdMonster") {
-        game.log(`${monster.name} binds you in place.`, "bad");
-        game.emitReadout("Hold", monster.x, monster.y, "#ccbfff", 340);
-        game.playProjectile(monster, game.player, "#ccbfff");
-        game.player.held = Math.max(game.player.held || 0, 1);
-        game.player.slowed = Math.max(game.player.slowed || 0, 2);
-      } else if (spellId === "lightningBolt") {
-        game.log(`${monster.name} tears a line of lightning through the room.`, "bad");
-        game.emitReadout("Bolt", monster.x, monster.y, "#ffe27a", 340);
-        game.playProjectile(monster, game.player, "#ffe27a");
-        game.damageActor(monster, game.player, roll(3, 5) + Math.floor(game.currentDepth / 2), "magic");
-      } else if (spellId === "frostBolt") {
-        game.log(`${monster.name} lashes you with freezing magic.`, "bad");
-        game.emitReadout("Frost", monster.x, monster.y, "#9ad7ff", 340);
-        game.playProjectile(monster, game.player, "#9ad7ff");
-        game.damageActor(monster, game.player, roll(2, 5) + Math.floor(game.currentDepth / 2), "cold");
-        game.player.slowed = Math.max(game.player.slowed || 0, 2);
-      } else {
-        game.log(`${monster.name} hurls dark magic.`, "bad");
-        game.emitReadout("Cast", monster.x, monster.y, "#c9a5ff", 340);
-        game.playProjectile(monster, game.player, "#c9a5ff");
-        game.damageActor(monster, game.player, roll(2, 5) + game.currentDepth, "magic");
-      }
-      if (monster.abilities && monster.abilities.includes("summon") && Math.random() < 0.12) {
-        summonMonsterNear(level, monster.x, monster.y, weightedMonster(game.currentDepth));
-        game.log(`${monster.name} calls for aid from the dark.`, "bad");
-        game.emitReadout("Summon", monster.x, monster.y, "#d6a8ff", 360);
-      }
-      if (monster.abilities && monster.abilities.includes("teleport") && Math.random() < 0.2) {
-        const position = game.findSafeTile(level, 12);
-        if (position) {
-          monster.x = position.x;
-          monster.y = position.y;
-          game.addEffect({ type: "blink", x: monster.x, y: monster.y, color: "#ba8eff", until: nowTime() + 180 });
-        }
-      }
-      return;
-    }
-
-    if (canSeePlayer && canCharge(game, monster, dx, dy, distanceToPlayer) && Math.random() < 0.4) {
-      monster.chargeWindup = { dx: Math.sign(dx), dy: Math.sign(dy) };
-      game.emitTelegraphPulse(monster.x, monster.y, "#ff9f6b", 260);
-      game.emitReadout("Charge", monster.x, monster.y, "#ffb487", 340);
-      if (isVisible(level, monster.x, monster.y)) {
-        game.log(`${monster.name} lowers itself for a brutal rush.`, "warning");
-      }
-      return;
-    }
-
+    // --- movement fallback (no behavior matched) ---
     let stepX = 0;
     let stepY = 0;
     if (monster.alerted > 0) {
-      if (monster.behaviorKit === "stalker" && canSeePlayer && distanceToPlayer <= 3) {
-        const retreat = findRetreatStep(game, monster);
-        if (retreat && canMonsterSpendMovement(monster)) {
-          monster.x = retreat.x;
-          monster.y = retreat.y;
-          return;
-        }
-      }
-      if (monster.tactic === "skirmish" && distanceToPlayer <= 4) {
-        const retreat = findRetreatStep(game, monster);
-        if (retreat && canMonsterSpendMovement(monster)) {
-          monster.x = retreat.x;
-          monster.y = retreat.y;
-          return;
-        }
-      }
-      if (monster.tactic === "pack" && distanceToPlayer <= 5) {
-        const flankLeft = canMonsterMoveTo(game, monster, monster.x + Math.sign(dx), monster.y);
-        const flankRight = canMonsterMoveTo(game, monster, monster.x, monster.y + Math.sign(dy));
+      if (monster.tactic === "pack" && ctx.distanceToPlayer <= 5) {
+        const flankLeft = canMonsterMoveToTile(game, monster, monster.x + Math.sign(ctx.dx), monster.y);
+        const flankRight = canMonsterMoveToTile(game, monster, monster.x, monster.y + Math.sign(ctx.dy));
         if (flankLeft && flankRight && Math.random() < 0.5) {
-          stepX = Math.sign(dx);
+          stepX = Math.sign(ctx.dx);
           stepY = 0;
         } else {
-          stepX = Math.sign(dx);
-          stepY = Math.sign(dy);
+          stepX = Math.sign(ctx.dx);
+          stepY = Math.sign(ctx.dy);
         }
       } else {
-        stepX = Math.sign(dx);
-        stepY = Math.sign(dy);
+        stepX = Math.sign(ctx.dx);
+        stepY = Math.sign(ctx.dy);
       }
     } else if (Math.random() < 0.55) {
       stepX = randInt(-1, 1);
@@ -623,7 +420,7 @@ export function processMonsters(game) {
       game.attack(monster, game.player);
       return;
     }
-    if (canMonsterMoveTo(game, monster, nx, ny) && canMonsterSpendMovement(monster)) {
+    if (canMonsterMoveToTile(game, monster, nx, ny) && canMonsterSpendMovement(monster)) {
       monster.x = nx;
       monster.y = ny;
     }

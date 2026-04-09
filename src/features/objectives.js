@@ -1,3 +1,11 @@
+/**
+ * @module objectives
+ * @owns Floor objectives, optional greed encounters, objective/optional resolution
+ * @reads game.currentLevel, game.currentDepth, game.player, game.townUnlocks
+ * @mutates level.floorObjective, level.floorOptional, level.floorResolved,
+ *          level.items, level.actors, level.tiles
+ * @emits game.log, game.emitReadout
+ */
 import { BOON_DEFS, OBJECTIVE_DEFS, OPTIONAL_ENCOUNTER_DEFS, RELIC_DEFS, RUMOR_DEFS } from "../data/content.js";
 import { createItem, rollTreasure } from "../core/entities.js";
 import { actorAt, addLevelProp, centerOf, itemsAt, randomRoomTile, revealCircle, setTile, tileDef } from "../core/world.js";
@@ -518,8 +526,8 @@ export function handleOptionalInteraction(game, tile) {
   game.recordTelemetry?.("optional_triggered", {
     optionalId: optional.id
   });
-  const greedGoldMultiplier = game.getGreedGoldMultiplier ? game.getGreedGoldMultiplier() : 1;
-  const greedRumorBonus = game.getGreedRumorBonus ? game.getGreedRumorBonus() : 0;
+  const greedGoldMultiplier = game.getGreedGoldMultiplier?.() ?? 1;
+  const greedRumorBonus = game.getGreedRumorBonus?.() ?? 0;
 
   switch (optional.id) {
     case "cursed_cache": {
@@ -638,7 +646,7 @@ export function handleOptionalInteraction(game, tile) {
   }
 
   if (game.increaseDanger) {
-    const dangerBonus = game.getGreedDangerBonus ? game.getGreedDangerBonus() : 0;
+    const dangerBonus = game.getGreedDangerBonus?.() ?? 0;
     game.increaseDanger(`optional_${optional.id}`, (optional.id === "vault_room" ? 3 : 2) + dangerBonus);
   }
   if (game.recordChronicleEvent) {

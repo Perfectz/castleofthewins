@@ -18,7 +18,8 @@ export function loadSettings() {
       return defaultSettings();
     }
     return { ...defaultSettings(), ...(JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}")) };
-  } catch {
+  } catch (err) {
+    console.warn("Settings parse failed:", err.message);
     return defaultSettings();
   }
 }

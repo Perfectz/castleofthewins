@@ -1,3 +1,9 @@
+/**
+ * @module creation
+ * @owns Character creation draft state, title/creation screen rendering
+ * @reads RACES, CLASSES from content.js
+ * @mutates game.selectedRace, game.selectedClass, game.creationStatBonuses
+ */
 import { CLASSES, RACES } from "../data/content.js";
 import { CHARACTER_SHEET_PATH, PIXEL_ASSET_ROOT, TITLE_SCREEN_ASSETS } from "../data/assets.js";
 import { getClass, getRace } from "../core/entities.js";
@@ -115,8 +121,8 @@ function renderPixelSprite(sprite, className = "", scale = 4) {
 
 function buildChoiceArtMarkup(type, entry) {
   const art = type === "race" ? getRaceArt(entry.id) : getClassArt(entry.id);
-  const tone = type === "race" ? art.accent : art.accent;
-  const sprite = type === "race" ? art.sprite : art.sprite;
+  const tone = art.accent;
+  const sprite = art.sprite;
   return {
     artHtml: `
       <div class="choice-art-frame" style="${styleMap([`--choice-accent:${tone}`])}">

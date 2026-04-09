@@ -1,3 +1,10 @@
+/**
+ * @module meta-progression
+ * @owns Class mastery, contracts, commendations, durable town unlocks, campaign archive
+ * @reads game.player, game.classMasteries, game.contracts, game.commendations
+ * @mutates game.classMasteries, game.commendations, game.contracts,
+ *          game.campaignArchive, game.durableTownUnlocks
+ */
 import { CLASS_MASTERY_DEFS, COMMENDATION_DEFS, CONTRACT_DEFS, SPELLS, TOWN_UNLOCK_DEFS } from "../data/content.js";
 import { createTownItem } from "../core/entities.js";
 
@@ -10,7 +17,8 @@ function parseMetaProfile() {
   }
   try {
     return JSON.parse(localStorage.getItem(META_PROFILE_KEY) || "{}");
-  } catch {
+  } catch (err) {
+    console.warn("Meta progression parse failed:", err.message);
     return {};
   }
 }

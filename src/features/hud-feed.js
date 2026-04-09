@@ -1,3 +1,9 @@
+/**
+ * @module hud-feed
+ * @owns Ticker/log display, prioritized message feed
+ * @reads game.messages, game.turn
+ * @mutates None — pure display data composition
+ */
 import { escapeHtml } from "../core/utils.js";
 import { getValidationVariant } from "./validation.js";
 
@@ -112,7 +118,7 @@ function getThreatLine(game) {
   if (!game.player || !game.currentLevel) {
     return null;
   }
-  const combatLine = game.getCombatFeedLines ? game.getCombatFeedLines(3)[0] : "";
+  const combatLine = game.getCombatFeedLines?.(3)?.[0] ?? "";
   if (combatLine) {
     return {
       turnLabel: "Threat",
@@ -120,7 +126,7 @@ function getThreatLine(game) {
       text: combatLine
     };
   }
-  const tileAction = game.getTileActionPrompt ? game.getTileActionPrompt() : null;
+  const tileAction = game.getTileActionPrompt?.() ?? null;
   if (tileAction) {
     return {
       turnLabel: tileAction.label,

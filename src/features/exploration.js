@@ -1,3 +1,10 @@
+/**
+ * @module exploration
+ * @owns Search and stair-travel commands
+ * @reads game.player, game.currentLevel, game.currentDepth, game.mode
+ * @mutates level.tiles (secret reveal), game.currentDepth, game.currentLevel
+ * @emits command-result effects (logs, sounds)
+ */
 import { addCommandLog, addCommandSound, createCommandResult } from "../core/command-result.js";
 import { getTile, inBounds, revealSecretTile } from "../core/world.js";
 import { randInt } from "../core/utils.js";
@@ -33,14 +40,14 @@ export function performSearchCommand(game) {
   if (game.increaseDanger) {
     game.increaseDanger("search", game.currentLevel?.floorResolved ? 2 : 1);
   }
-  const routeReveal = game.revealGuidedObjectiveRoute ? game.revealGuidedObjectiveRoute("search") : null;
+  const routeReveal = game.revealGuidedObjectiveRoute?.("search") ?? null;
   let message = found > 0
     ? `You discover ${found} hidden feature${found === 1 ? "" : "s"}.`
     : "You search carefully but find nothing.";
   let tone = found > 0 ? "good" : "warning";
   if (routeReveal?.revealed) {
-    const routeCue = game.getObjectiveRouteHint ? game.getObjectiveRouteHint() : game.getCurrentRouteCueText ? game.getCurrentRouteCueText() : "";
-    const pressureText = game.getPressureUiState ? game.getPressureUiState().shortLabel.toLowerCase() : "pressure";
+    const routeCue = game.getObjectiveRouteHint?.() ?? game.getCurrentRouteCueText?.() ?? "";
+    const pressureText = game.getPressureUiState?.()?.shortLabel?.toLowerCase() ?? "pressure";
     message = found > 0
       ? `${message} Searching raised pressure, but your route sketch now reaches farther ${routeReveal.direction}.`
       : routeReveal.complete

@@ -1,4 +1,11 @@
+/**
+ * @module persistence
+ * @owns Save/load, save metadata, save migration, save chrome display
+ * @reads SAVE_FIELDS from save-contract.js, entire game state for serialization
+ * @mutates All SAVE_FIELDS on game during load, localStorage
+ */
 import { APP_VERSION, SAVE_KEY } from "../core/constants.js";
+import { SAVE_FIELDS, SAVE_FIELD_DEFAULTS } from "../core/save-contract.js";
 import { normalizeLevels, normalizePlayer, normalizeShopState } from "../core/entities.js";
 import { defaultSettings, saveSettings } from "../core/settings.js";
 import { ensureBuildState } from "./builds.js";
@@ -26,7 +33,8 @@ function parseStoredSnapshot(raw) {
   }
   try {
     return JSON.parse(raw);
-  } catch {
+  } catch (err) {
+    console.warn("Save parse failed:", err.message);
     return null;
   }
 }
@@ -324,38 +332,24 @@ export function syncSaveChrome(game) {
 }
 
 export function createSaveSnapshot(game) {
-  return {
+  const snapshot = {
     saveFormatVersion: SAVE_FORMAT_VERSION,
-    version: APP_VERSION,
-    turn: game.turn,
-    currentDepth: game.currentDepth,
-    levels: game.levels,
-    player: game.player,
-    settings: game.settings,
-    shopState: game.shopState,
-    storyFlags: game.storyFlags,
-    townUnlocks: game.townUnlocks,
-    shopTiers: game.shopTiers,
-    townState: game.townState,
-    rumorTable: game.rumorTable,
-    chronicleEvents: game.chronicleEvents,
-    deathContext: game.deathContext,
-    telemetry: game.telemetry,
-    contracts: game.contracts,
-    classMasteries: game.classMasteries,
-    runSummaryHistory: game.runSummaryHistory,
-    lastTownRefreshTurn: game.lastTownRefreshTurn,
-    meta: {
-      name: game.player.name,
-      level: game.player.level,
-      depth: game.currentDepth,
-      classId: game.player.classId,
-      className: game.player.className,
-      raceId: game.player.raceId,
-      raceName: game.player.race,
-      savedAt: new Date().toISOString()
-    }
+    version: APP_VERSION
   };
+  for (const key of SAVE_FIELDS) {
+    snapshot[key] = game[key];
+  }
+  snapshot.meta = {
+    name: game.player.name,
+    level: game.player.level,
+    depth: game.currentDepth,
+    classId: game.player.classId,
+    className: game.player.className,
+    raceId: game.player.raceId,
+    raceName: game.player.race,
+    savedAt: new Date().toISOString()
+  };
+  return snapshot;
 }
 
 export function migrateSnapshot(snapshot) {
@@ -364,44 +358,10 @@ export function migrateSnapshot(snapshot) {
   if (!migrated.saveFormatVersion) {
     migrated.saveFormatVersion = 1;
   }
-  if (!migrated.storyFlags) {
-    migrated.storyFlags = {};
-  }
-  if (!migrated.lastTownRefreshTurn) {
-    migrated.lastTownRefreshTurn = 0;
-  }
-  if (!migrated.shopState) {
-    migrated.shopState = {};
-  }
-  if (!migrated.townUnlocks) {
-    migrated.townUnlocks = {};
-  }
-  if (!migrated.shopTiers) {
-    migrated.shopTiers = {};
-  }
-  if (!migrated.townState) {
-    migrated.townState = {};
-  }
-  if (!migrated.rumorTable) {
-    migrated.rumorTable = [];
-  }
-  if (!migrated.chronicleEvents) {
-    migrated.chronicleEvents = [];
-  }
-  if (!("deathContext" in migrated)) {
-    migrated.deathContext = null;
-  }
-  if (!("telemetry" in migrated)) {
-    migrated.telemetry = null;
-  }
-  if (!("contracts" in migrated)) {
-    migrated.contracts = null;
-  }
-  if (!("classMasteries" in migrated)) {
-    migrated.classMasteries = null;
-  }
-  if (!("runSummaryHistory" in migrated)) {
-    migrated.runSummaryHistory = [];
+  for (const [key, defaultFactory] of Object.entries(SAVE_FIELD_DEFAULTS)) {
+    if (!(key in migrated) || migrated[key] === undefined) {
+      migrated[key] = defaultFactory();
+    }
   }
   if (originalVersion < 6 && Array.isArray(migrated.levels)) {
     resetDungeonMapState(migrated.levels);
@@ -439,6 +399,7 @@ export function loadGame(game, options = {}) {
   }
   const snapshot = migrateSnapshot(deserializeSnapshot(resolved.snapshot));
   localStorage.setItem(getSaveSlotKey(resolved.slotId), JSON.stringify(serializeSnapshot(snapshot)));
+  // Restore fields that need normalization
   game.turn = snapshot.turn;
   game.levels = normalizeLevels(snapshot.levels);
   game.player = normalizePlayer(snapshot.player);
@@ -450,18 +411,12 @@ export function loadGame(game, options = {}) {
   saveSettings(game.settings);
   game.audio.updateSettings(game.settings);
   game.shopState = normalizeShopState(snapshot.shopState);
-  game.storyFlags = snapshot.storyFlags || {};
-  game.townUnlocks = snapshot.townUnlocks || {};
-  game.shopTiers = snapshot.shopTiers || {};
-  game.townState = snapshot.townState || {};
-  game.rumorTable = snapshot.rumorTable || [];
-  game.chronicleEvents = snapshot.chronicleEvents || [];
-  game.deathContext = snapshot.deathContext || null;
-  game.lastTownRefreshTurn = snapshot.lastTownRefreshTurn || 0;
-  game.telemetry = snapshot.telemetry || null;
-  game.contracts = snapshot.contracts || null;
-  game.classMasteries = snapshot.classMasteries || null;
-  game.runSummaryHistory = snapshot.runSummaryHistory || [];
+  // Restore plain fields using the save contract
+  for (const key of SAVE_FIELDS) {
+    if (key === "turn" || key === "currentDepth" || key === "levels" || key === "player" || key === "settings" || key === "shopState") continue;
+    const defaultFactory = SAVE_FIELD_DEFAULTS[key];
+    game[key] = (key in snapshot && snapshot[key] !== undefined) ? snapshot[key] : (defaultFactory ? defaultFactory() : null);
+  }
   game.pendingSpellChoices = 0;
   game.pendingPerkChoices = 0;
   game.pendingRewardChoice = null;

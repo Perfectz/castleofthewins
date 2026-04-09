@@ -1,3 +1,9 @@
+/**
+ * @module telemetry
+ * @owns Event logging, run metrics, telemetry persistence
+ * @reads game.turn, game.currentDepth, game.player
+ * @mutates game.telemetry, game.runSummaryHistory
+ */
 import { APP_VERSION } from "../core/constants.js";
 
 const TELEMETRY_STORAGE_KEY = "cotw.telemetry.v1";
@@ -21,7 +27,8 @@ function parseTelemetryStore() {
       rawEvents: Array.isArray(parsed.rawEvents) ? parsed.rawEvents : [],
       summaries: Array.isArray(parsed.summaries) ? parsed.summaries : []
     };
-  } catch {
+  } catch (err) {
+    console.warn("Telemetry parse failed:", err.message);
     return {
       rawEvents: [],
       summaries: []
