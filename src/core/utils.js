@@ -1,3 +1,8 @@
+/**
+ * @module utils
+ * @owns Small reusable helpers with no game-state ownership
+ * @mutates None — pure utility functions
+ */
 export function choice(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
@@ -27,7 +32,7 @@ export function distance(a, b) {
 }
 
 export function structuredCloneCompat(value) {
-  return JSON.parse(JSON.stringify(value));
+  return structuredClone(value);
 }
 
 export function capitalize(value) {

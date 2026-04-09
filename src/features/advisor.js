@@ -7,14 +7,14 @@ import { renderOnboardingChecklist, shouldShowOnboardingChecklist } from "./onbo
 import { getValidationVariant } from "./validation.js";
 
 function buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lootHere) {
-  const directive = game.getLoopDirective ? game.getLoopDirective(tile) : null;
+  const directive = game.getLoopDirective?.(tile) ?? null;
   const objectiveText = getObjectiveStatusText(game.currentLevel);
   const optionalText = getOptionalStatusText(game.currentLevel);
-  const objectiveGuide = directive?.primaryText || (game.getObjectiveGuideText ? game.getObjectiveGuideText() : "");
-  const floorThesis = game.getFloorThesisText ? game.getFloorThesisText() : "";
-  const routeCue = directive?.routeCueText || (game.getCurrentRouteCueText ? game.getCurrentRouteCueText() : "");
-  const dangerNote = directive?.supportText || (game.getImmediateDangerNote ? game.getImmediateDangerNote() : "");
-  const townMeta = game.currentDepth === 0 && game.getTownMetaSummary ? game.getTownMetaSummary() : null;
+  const objectiveGuide = directive?.primaryText || (game.getObjectiveGuideText?.() ?? "");
+  const floorThesis = game.getFloorThesisText?.() ?? "";
+  const routeCue = directive?.routeCueText || (game.getCurrentRouteCueText?.() ?? "");
+  const dangerNote = directive?.supportText || (game.getImmediateDangerNote?.() ?? "");
+  const townMeta = game.currentDepth === 0 ? (game.getTownMetaSummary?.() ?? null) : null;
   const actions = [];
   const pushAction = (action, label, note, recommended = false, tab = "") => {
     if (!actions.some((entry) => entry.action === action)) {
@@ -356,8 +356,8 @@ export function getAdvisorModel(game) {
   }
 
   const tile = getTile(game.currentLevel, game.player.x, game.player.y);
-  const visible = game.getSortedVisibleEnemies ? game.getSortedVisibleEnemies() : game.visibleEnemies();
-  const focus = game.getFocusedThreat ? game.getFocusedThreat(visible) : visible[0] || null;
+  const visible = game.getSortedVisibleEnemies?.() ?? game.visibleEnemies();
+  const focus = game.getFocusedThreat?.(visible) ?? visible[0] ?? null;
   const hpRatio = game.player.maxHp > 0 ? game.player.hp / game.player.maxHp : 1;
   const manaRatio = game.player.maxMana > 0 ? game.player.mana / game.player.maxMana : 1;
   const lootHere = itemsAt(game.currentLevel, game.player.x, game.player.y);
@@ -373,14 +373,14 @@ export function getAdvisorModel(game) {
           : "Steady";
   const locationLabel = game.currentDepth > 0 ? `Depth ${game.currentDepth}` : "Town";
   const objectiveView = buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lootHere);
-  const visibleLoot = game.getVisibleLootItems ? game.getVisibleLootItems() : [];
+  const visibleLoot = game.getVisibleLootItems?.() ?? [];
   const focusHealth = focus ? getMonsterHealthState(focus) : null;
   const dockSlots = buildDockSlots(game, objectiveView.actions);
   const pressure = getPressureStatus(game.currentLevel);
   const firstTownRun = game.currentDepth === 0 && (game.player.deepestDepth || 0) === 0;
-  const returnSting = game.getTownReturnStingText ? game.getTownReturnStingText() : "";
-  const tileAction = game.getTileActionPrompt ? game.getTileActionPrompt(tile) : null;
-  const pinnedEvent = game.getPinnedTickerEntry ? game.getPinnedTickerEntry() : null;
+  const returnSting = game.getTownReturnStingText?.() ?? "";
+  const tileAction = game.getTileActionPrompt?.(tile) ?? null;
+  const pinnedEvent = game.getPinnedTickerEntry?.() ?? null;
 
   const statsHtml = `
     <div class="stat-band-head">

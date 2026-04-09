@@ -1,3 +1,14 @@
+/**
+ * @module director
+ * @owns Floor difficulty/pressure progression, reinforcement clock, danger bands
+ * @reads game.currentLevel, game.currentDepth, game.storyFlags
+ * @mutates level.dangerScore, level.dangerLevel, level.dangerTone,
+ *          level.dangerTriggers, level.reinforcementClock, level.directorFlags,
+ *          game.dangerLevel, game.dangerTriggers, game.reinforcementClock
+ * @emits effects (logs via effect bus)
+ */
+
+import { createEffects, addLog } from "../core/effect-bus.js";
 import { spawnReinforcementWave } from "./encounters.js";
 
 const DANGER_THRESHOLDS = [
@@ -48,7 +59,7 @@ function getSpecialPressureLog(level, fallback) {
   return level?.floorSpecial?.pressureLog || fallback;
 }
 
-function applyBandTransition(game, previous, next) {
+function applyBandTransition(game, previous, next, fx) {
   if (!game.currentLevel || previous === next.label) {
     return;
   }
@@ -56,25 +67,25 @@ function applyBandTransition(game, previous, next) {
     stirVisiblePressure(game, 2);
     if (game.currentDepth > 1 && game.currentLevel.floorSpecial?.mediumBandWave) {
       const wave = spawnReinforcementWave(game, "Medium");
-      game.log(wave.length > 0 ? getSpecialPressureLog(game.currentLevel, "Pressure rising: patrols start moving through the floor.") : "Pressure rising: patrols start moving through the floor.", "warning");
+      addLog(fx, wave.length > 0 ? getSpecialPressureLog(game.currentLevel, "Pressure rising: patrols start moving through the floor.") : "Pressure rising: patrols start moving through the floor.", "warning");
       return;
     }
-    game.log("Pressure rising: patrols start moving through the floor.", "warning");
+    addLog(fx, "Pressure rising: patrols start moving through the floor.", "warning");
     return;
   }
   if (next.label === "High") {
     stirVisiblePressure(game, 3);
     if (game.currentDepth > 1) {
       const wave = spawnReinforcementWave(game, "High");
-      game.log(wave.length > 0 ? getSpecialPressureLog(game.currentLevel, "Pressure spikes: the floor turns aggressive.") : "Pressure spikes: the floor turns aggressive.", "bad");
+      addLog(fx, wave.length > 0 ? getSpecialPressureLog(game.currentLevel, "Pressure spikes: the floor turns aggressive.") : "Pressure spikes: the floor turns aggressive.", "bad");
       return;
     }
-    game.log("Pressure spikes: the floor turns aggressive.", "bad");
+    addLog(fx, "Pressure spikes: the floor turns aggressive.", "bad");
     return;
   }
   if (next.label === "Critical") {
     const wave = spawnReinforcementWave(game, "Critical");
-    game.log(wave.length > 0 ? "Collapse risk: reinforcements are cutting off a clean retreat." : "Collapse risk: the halls are fully hostile now.", "bad");
+    addLog(fx, wave.length > 0 ? "Collapse risk: reinforcements are cutting off a clean retreat." : "Collapse risk: the halls are fully hostile now.", "bad");
   }
 }
 
@@ -117,9 +128,15 @@ export function syncDangerState(game) {
   game.reinforcementClock = level.reinforcementClock || 0;
 }
 
-export function increaseDanger(game, source = "unknown", amount = 1) {
+/**
+ * @mutates level.dangerScore, level.dangerLevel, level.dangerTone,
+ *          level.dangerTriggers, level.reinforcementClock
+ * @param {object} [fx] - Optional effects collector. If omitted, creates and returns one.
+ */
+export function increaseDanger(game, source = "unknown", amount = 1, fx = null) {
+  const ownFx = fx || createEffects();
   if (!game.currentLevel || game.currentDepth === 0) {
-    return "Low";
+    return ownFx;
   }
   const level = game.currentLevel;
   const previous = level.dangerLevel || "Low";
@@ -161,46 +178,56 @@ export function increaseDanger(game, source = "unknown", amount = 1) {
     const effectText = turnsLost > 0
       ? `${PRESSURE_LABELS[band.label] || band.label.toLowerCase()} ${turnsLost === 1 ? "arrives 1 turn sooner" : `arrives ${turnsLost} turns sooner`}`
       : `${PRESSURE_LABELS[band.label] || band.label.toLowerCase()} now`;
-    game.log(`${causeText}: ${effectText}.`, source === "rest" || source === "search" ? "warning" : "bad");
+    addLog(ownFx, `${causeText}: ${effectText}.`, source === "rest" || source === "search" ? "warning" : "bad");
   }
-  applyBandTransition(game, previous, band);
-  return band.label;
+  applyBandTransition(game, previous, band, ownFx);
+  return ownFx;
 }
 
-export function noteFloorIntro(game) {
+/**
+ * @mutates level.directorFlags, game.storyFlags
+ */
+export function noteFloorIntro(game, fx = null) {
+  const ownFx = fx || createEffects();
   if (!game.currentLevel || game.currentDepth === 0) {
-    return;
+    return ownFx;
   }
   const flags = game.currentLevel.directorFlags || {};
   if (flags.introShown) {
-    return;
+    return ownFx;
   }
   flags.introShown = true;
   game.currentLevel.directorFlags = flags;
   if (game.currentLevel.floorThemeName) {
-    game.log(`${game.currentLevel.floorThemeName}: ${game.currentLevel.description}.`, "warning");
+    addLog(ownFx, `${game.currentLevel.floorThemeName}: ${game.currentLevel.description}.`, "warning");
   }
   if (game.currentLevel.floorSpecial?.introLog) {
-    game.log(game.currentLevel.floorSpecial.introLog, "warning");
+    addLog(ownFx, game.currentLevel.floorSpecial.introLog, "warning");
   }
   if (game.currentLevel.floorObjective?.intro) {
-    game.log(game.currentLevel.floorObjective.intro, "warning");
+    addLog(ownFx, game.currentLevel.floorObjective.intro, "warning");
   }
   if (game.currentDepth === 1 && !game.storyFlags?.objectiveLoopExplained) {
     game.storyFlags.objectiveLoopExplained = true;
-    game.log("Orange marks the floor objective on the map. Clear it, use U on the marker when the room is ready, then choose between stairs up or one greedy detour.", "warning");
+    addLog(ownFx, "Orange marks the floor objective on the map. Clear it, use U on the marker when the room is ready, then choose between stairs up or one greedy detour.", "warning");
   }
+  return ownFx;
 }
 
-export function markGreedAction(game, source = "greed") {
-  const greedyPurseBonus = game.currentLevel?.floorResolved && game.player?.relics?.includes("greedy_purse") ? 1 : 0;
-  const amount = (game.currentLevel?.floorResolved ? 2 : 1) + greedyPurseBonus;
-  return increaseDanger(game, source, amount);
+export function markGreedAction(game, source = "greed", fx = null) {
+  const amount = game.currentLevel?.floorResolved ? 2 : 1;
+  return increaseDanger(game, source, amount, fx);
 }
 
-export function advanceDangerTurn(game) {
+/**
+ * @mutates level.dangerTriggers.turns, level.reinforcementClock,
+ *          level.directorFlags, level.dangerScore
+ * @param {object} [fx] - Optional effects collector. If omitted, creates and returns one.
+ */
+export function advanceDangerTurn(game, fx = null) {
+  const ownFx = fx || createEffects();
   if (!game.currentLevel || game.currentDepth === 0) {
-    return;
+    return ownFx;
   }
   const level = game.currentLevel;
   if (!level.dangerTriggers) {
@@ -213,7 +240,7 @@ export function advanceDangerTurn(game) {
     ? (level.floorResolved ? 20 : 30)
     : (level.floorResolved ? 10 : 15);
   if (turns > 0 && turns % timeCadence === 0) {
-    increaseDanger(game, "time", isIntroFloor ? 1 : (level.floorResolved ? 2 : 1));
+    increaseDanger(game, "time", isIntroFloor ? 1 : (level.floorResolved ? 2 : 1), ownFx);
   }
   if (isIntroFloor) {
     if ((level.floorResolved && turns % 2 === 0) || (!level.floorResolved && turns % 3 === 0)) {
@@ -224,17 +251,17 @@ export function advanceDangerTurn(game) {
   }
   if (level.reinforcementClock <= 6 && !level.directorFlags.warningSix) {
     level.directorFlags.warningSix = true;
-    game.log(level.floorSpecial?.pressureLog || "The floor is shifting. Reinforcements are close now.", "warning");
+    addLog(ownFx, level.floorSpecial?.pressureLog || "The floor is shifting. Reinforcements are close now.", "warning");
   }
   if (level.reinforcementClock <= 3 && !level.directorFlags.warningThree) {
     level.directorFlags.warningThree = true;
-    game.log("Last clean turns. Another wave is almost on top of you.", "bad");
+    addLog(ownFx, "Last clean turns. Another wave is almost on top of you.", "bad");
   }
   if (level.reinforcementClock <= 0) {
     const band = level.dangerLevel || "Medium";
     const wave = spawnReinforcementWave(game, band);
     if (wave.length > 0) {
-      game.log(band === "Critical" ? "Another wave is coming in. Leave now or get buried here." : "Reinforcements are entering the floor.", band === "Low" ? "warning" : "bad");
+      addLog(ownFx, band === "Critical" ? "Another wave is coming in. Leave now or get buried here." : "Reinforcements are entering the floor.", band === "Low" ? "warning" : "bad");
       if (game.recordChronicleEvent) {
         game.recordChronicleEvent("reinforcements", {
           band,
@@ -250,6 +277,7 @@ export function advanceDangerTurn(game) {
     level.directorFlags.warningThree = false;
     syncDangerState(game);
   }
+  return ownFx;
 }
 
 export function getDangerSummary(level) {

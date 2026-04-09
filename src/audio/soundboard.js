@@ -1,3 +1,11 @@
+/**
+ * @module soundboard
+ * @owns Audio output, synthesized SFX, music streaming
+ * @reads game.settings.soundEnabled, game.settings.musicEnabled
+ * @mutates AudioContext, HTMLAudioElement
+ */
+import { MUSIC_VOLUME } from "../core/constants.js";
+
 export class SoundBoard {
   constructor(settings) {
     this.settings = settings;
@@ -21,7 +29,7 @@ export class SoundBoard {
       this.music = new window.Audio();
       this.music.loop = true;
       this.music.preload = "metadata";
-      this.music.volume = 0.55;
+      this.music.volume = MUSIC_VOLUME;
       this.music.setAttribute("playsinline", "");
     }
     return this.music;

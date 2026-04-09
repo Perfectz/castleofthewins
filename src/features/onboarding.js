@@ -1,3 +1,9 @@
+/**
+ * @module onboarding
+ * @owns First-run tutorial checklist and onboarding flags
+ * @reads game.storyFlags
+ * @mutates game.storyFlags
+ */
 import { escapeHtml } from "../core/utils.js";
 import { getOnboardingVariantMeta } from "./validation.js";
 

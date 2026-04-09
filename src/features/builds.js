@@ -1,6 +1,18 @@
+/**
+ * @module builds
+ * @owns Perks, relics, boons, rumor tokens, build modifiers, reward queue
+ * @reads game.player.perks, game.player.relics, game.player.runCurrencies,
+ *        game.currentDepth, game.currentLevel.actors
+ * @mutates game.player.perks, game.player.relics, game.player.gold,
+ *          game.player.hp, game.player.mana, game.player.runCurrencies,
+ *          game.pendingPerkChoices, game.pendingRewardChoice, game.pendingRewardQueue
+ * @emits effects (logs via effect bus)
+ */
+
 import { BOON_DEFS, PERK_DEFS, RELIC_DEFS, RUMOR_DEFS } from "../data/content.js";
 import { createItem } from "../core/entities.js";
 import { choice, clamp } from "../core/utils.js";
+import { createEffects, addLog } from "../core/effect-bus.js";
 
 const CLASS_FAMILY = {
   Fighter: "fighter",
@@ -18,22 +30,19 @@ function weightedDraw(entries, count = 3, excludeIds = []) {
   const picks = [];
   const blocked = new Set(excludeIds);
   while (picks.length < count && available.length > 0) {
-    const bucket = [];
-    available.forEach((entry) => {
-      if (blocked.has(entry.id)) {
-        return;
-      }
-      const weight = entry.weight || 1;
-      for (let i = 0; i < weight; i += 1) {
-        bucket.push(entry);
-      }
-    });
-    if (bucket.length === 0) {
-      break;
+    let totalWeight = 0;
+    const eligible = [];
+    for (const entry of available) {
+      if (blocked.has(entry.id)) continue;
+      totalWeight += entry.weight || 1;
+      eligible.push({ entry, cumWeight: totalWeight });
     }
-    const next = choice(bucket);
-    blocked.add(next.id);
-    picks.push(next);
+    if (totalWeight === 0) break;
+    const roll = Math.random() * totalWeight;
+    const picked = eligible.find((e) => roll < e.cumWeight);
+    if (!picked) break;
+    blocked.add(picked.entry.id);
+    picks.push(picked.entry);
   }
   return picks;
 }
@@ -140,36 +149,37 @@ export function clearRewardChoice(game) {
   game.pendingRewardChoice = null;
 }
 
-export function chooseReward(game, rewardId) {
+export function chooseReward(game, rewardId, fx = null) {
+  const ownFx = fx || createEffects();
   ensureBuildState(game);
   const choiceState = game.pendingRewardChoice;
   if (!choiceState) {
-    return false;
+    return ownFx;
   }
   if (!choiceState.options.includes(rewardId)) {
-    return false;
+    return ownFx;
   }
 
   if (choiceState.type === "perk") {
     if (!game.player.perks.includes(rewardId)) {
       game.player.perks.push(rewardId);
-      game.log(`${game.player.name} learns ${PERK_DEFS[rewardId].name}.`, "good");
+      addLog(ownFx, `${game.player.name} learns ${PERK_DEFS[rewardId].name}.`, "good");
       game.pendingPerkChoices = Math.max(0, game.pendingPerkChoices - 1);
     }
   } else if (choiceState.type === "relic") {
     if (!game.player.relics.includes(rewardId)) {
       game.player.relics.push(rewardId);
-      game.log(`You claim ${RELIC_DEFS[rewardId].name}.`, "good");
+      addLog(ownFx, `You claim ${RELIC_DEFS[rewardId].name}.`, "good");
     }
   } else if (choiceState.type === "boon") {
-    grantBoon(game, rewardId);
+    grantBoon(game, rewardId, ownFx);
   } else {
-    return false;
+    return ownFx;
   }
 
   clearRewardChoice(game);
   game.recalculateDerivedStats?.();
-  return true;
+  return ownFx;
 }
 
 export function hasPendingProgressionChoice(game) {
@@ -177,30 +187,31 @@ export function hasPendingProgressionChoice(game) {
   return game.pendingPerkChoices > 0 || Boolean(game.pendingRewardChoice) || game.pendingRewardQueue.length > 0 || game.pendingSpellChoices > 0;
 }
 
-export function grantBoon(game, boonId) {
+export function grantBoon(game, boonId, fx = null) {
+  const ownFx = fx || createEffects();
   ensureBuildState(game);
   const boon = BOON_DEFS[boonId];
   if (!boon) {
-    return false;
+    return ownFx;
   }
   if (boonId === "windfall") {
     const gold = 60 + Math.max(0, game.currentDepth) * 20;
     game.player.gold += gold;
     grantRumorToken(game, 1);
-    game.log(`Windfall: ${gold} gold and one rumor token.`, "good");
+    addLog(ownFx, `Windfall: ${gold} gold and one rumor token.`, "good");
   } else if (boonId === "field_medicine") {
     game.player.hp = game.player.maxHp;
     game.addItemToInventory(createItem("healingPotion", { identified: true }));
-    game.log("Field Medicine: full recovery and one healing potion.", "good");
+    addLog(ownFx, "Field Medicine: full recovery and one healing potion.", "good");
   } else if (boonId === "aether_cache") {
     game.player.mana = game.player.maxMana;
     game.addItemToInventory(createItem("manaPotion", { identified: true }));
-    game.log("Aether Cache: full mana and one mana potion.", "good");
+    addLog(ownFx, "Aether Cache: full mana and one mana potion.", "good");
   } else if (boonId === "hunter_mark") {
     game.player.runCurrencies.hunterMark += 1;
-    game.log("Hunter's Mark: the next elite will yield extra value.", "good");
+    addLog(ownFx, "Hunter's Mark: the next elite will yield extra value.", "good");
   }
-  return true;
+  return ownFx;
 }
 
 export function grantRumorToken(game, amount = 1) {
@@ -245,7 +256,7 @@ export function getBuildArmorBonus(game) {
 
 export function getBuildEvadeBonus(game) {
   let evade = 0;
-  const burden = game.getEncumbranceTier ? game.getEncumbranceTier() : 0;
+  const burden = game.getEncumbranceTier?.() ?? 0;
   if (hasPerk(game, "evasion")) {
     evade += burden === 0 ? 4 : 2;
   }
@@ -333,7 +344,8 @@ export function onPlayerMove(game) {
   game.player.tempGuard = 0;
 }
 
-export function onMonsterKilled(game, monster) {
+export function onMonsterKilled(game, monster, fx = null) {
+  const ownFx = fx || createEffects();
   if (monster?.elite) {
     game.onEliteKillProgress?.(monster);
   }
@@ -341,7 +353,7 @@ export function onMonsterKilled(game, monster) {
     const splash = game.currentLevel.actors.find((other) => other !== monster && Math.max(Math.abs(other.x - monster.x), Math.abs(other.y - monster.y)) <= 1);
     if (splash) {
       splash.hp -= 2;
-      game.log(`Cleave bites into ${splash.name}.`, "good");
+      addLog(ownFx, `Cleave bites into ${splash.name}.`, "good");
       if (splash.hp <= 0) {
         game.killMonster(splash);
       }
@@ -350,6 +362,7 @@ export function onMonsterKilled(game, monster) {
   if (game.player.runCurrencies?.hunterMark > 0 && monster.elite) {
     game.player.runCurrencies.hunterMark -= 1;
     game.player.gold += 40 + game.currentDepth * 12;
-    game.log("Hunter's Mark pays out in extra bounty.", "good");
+    addLog(ownFx, "Hunter's Mark pays out in extra bounty.", "good");
   }
+  return ownFx;
 }

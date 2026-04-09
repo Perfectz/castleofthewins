@@ -1,3 +1,9 @@
+/**
+ * @module entities
+ * @owns Actor/item creation, normalization, stat queries, bonus calculations
+ * @reads ITEM_DEFS, MONSTER_DEFS, LOOT_AFFIX_DEFS, RACES, CLASSES from content.js
+ * @mutates None — pure utility, returns new objects
+ */
 import { CLASSES, ITEM_DEFS, LOOT_AFFIX_DEFS, MONSTER_DEFS, RACES, SHOPS, SPELLS } from "../data/content.js";
 import { choice, randInt, shuffle, structuredCloneCompat } from "./utils.js";
 
@@ -265,6 +271,34 @@ export function getClass(id) {
   return CLASSES.find((role) => role.id === id);
 }
 
+const DESCRIBE_BONUS_SPECS = [
+  { fn: getItemAccuracyBonus, label: "accuracy", signed: true },
+  { fn: getItemCritBonus, label: "crit", prefix: "+" },
+  { fn: getItemGuardBonus, label: "guard", prefix: "" },
+  { fn: getItemWardBonus, label: "ward", prefix: "" },
+  { fn: getItemManaBonus, label: "mana", prefix: "+" },
+  { fn: getItemStrBonus, label: "strength", prefix: "+" },
+  { fn: getItemDexBonus, label: "dexterity", prefix: "+" },
+  { fn: getItemConBonus, label: "constitution", prefix: "+" },
+  { fn: getItemIntBonus, label: "intelligence", prefix: "+" },
+  { fn: getItemLightBonus, label: "sight", prefix: "+" },
+  { fn: getItemSearchBonus, label: "search", prefix: "+" },
+  { fn: getItemFireResist, label: "fire resist", prefix: "" },
+  { fn: getItemColdResist, label: "cold resist", prefix: "" },
+  { fn: getItemBonusVsUndead, label: "vs undead", prefix: "+" },
+  { fn: getItemOvercastRelief, label: "overcast loss", prefix: "-" },
+];
+
+function collectBonusDetails(item) {
+  const result = [];
+  for (const { fn, label, signed, prefix } of DESCRIBE_BONUS_SPECS) {
+    const v = fn(item);
+    if (!v) continue;
+    result.push(signed ? `${v > 0 ? "+" : ""}${v} ${label}` : `${prefix}${v} ${label}`);
+  }
+  return result;
+}
+
 export function describeItem(item) {
   if (!item.identified && canIdentify(item)) {
     if (item.kind === "weapon") {
@@ -277,90 +311,14 @@ export function describeItem(item) {
       return "Charged item with hidden power";
     }
   }
-  if (item.kind === "weapon") {
-    const details = [`Weapon, power ${getItemPower(item)}`];
+  if (item.kind === "weapon" || item.kind === "armor") {
+    const details = item.kind === "weapon"
+      ? [`Weapon, power ${getItemPower(item)}`]
+      : [`Armor ${getItemArmor(item)}`];
     if (item.affixId) {
       details.push(LOOT_AFFIX_DEFS[item.affixId]?.description || "specialized");
     }
-    if (getItemAccuracyBonus(item)) {
-      details.push(`${getItemAccuracyBonus(item) > 0 ? "+" : ""}${getItemAccuracyBonus(item)} accuracy`);
-    }
-    if (getItemCritBonus(item)) {
-      details.push(`+${getItemCritBonus(item)} crit`);
-    }
-    if (getItemManaBonus(item)) {
-      details.push(`+${getItemManaBonus(item)} mana`);
-    }
-    if (getItemStrBonus(item)) {
-      details.push(`+${getItemStrBonus(item)} strength`);
-    }
-    if (getItemDexBonus(item)) {
-      details.push(`+${getItemDexBonus(item)} dexterity`);
-    }
-    if (getItemConBonus(item)) {
-      details.push(`+${getItemConBonus(item)} constitution`);
-    }
-    if (getItemIntBonus(item)) {
-      details.push(`+${getItemIntBonus(item)} intelligence`);
-    }
-    if (getItemWardBonus(item)) {
-      details.push(`ward ${getItemWardBonus(item)}`);
-    }
-    if (getItemBonusVsUndead(item)) {
-      details.push(`+${getItemBonusVsUndead(item)} vs undead`);
-    }
-    if (getItemOvercastRelief(item)) {
-      details.push(`-${getItemOvercastRelief(item)} overcast loss`);
-    }
-    if (item.identified && item.cursed) {
-      details.push("cursed");
-    }
-    return details.join(", ");
-  }
-  if (item.kind === "armor") {
-    const details = [`Armor ${getItemArmor(item)}`];
-    if (item.affixId) {
-      details.push(LOOT_AFFIX_DEFS[item.affixId]?.description || "specialized");
-    }
-    if (getItemGuardBonus(item)) {
-      details.push(`guard ${getItemGuardBonus(item)}`);
-    }
-    if (getItemWardBonus(item)) {
-      details.push(`ward ${getItemWardBonus(item)}`);
-    }
-    if (getItemManaBonus(item)) {
-      details.push(`+${getItemManaBonus(item)} mana`);
-    }
-    if (getItemStrBonus(item)) {
-      details.push(`+${getItemStrBonus(item)} strength`);
-    }
-    if (getItemDexBonus(item)) {
-      details.push(`+${getItemDexBonus(item)} dexterity`);
-    }
-    if (getItemConBonus(item)) {
-      details.push(`+${getItemConBonus(item)} constitution`);
-    }
-    if (getItemIntBonus(item)) {
-      details.push(`+${getItemIntBonus(item)} intelligence`);
-    }
-    if (getItemLightBonus(item)) {
-      details.push(`+${getItemLightBonus(item)} sight`);
-    }
-    if (getItemSearchBonus(item)) {
-      details.push(`+${getItemSearchBonus(item)} search`);
-    }
-    if (getItemFireResist(item)) {
-      details.push(`fire resist ${getItemFireResist(item)}`);
-    }
-    if (getItemColdResist(item)) {
-      details.push(`cold resist ${getItemColdResist(item)}`);
-    }
-    if (getItemBonusVsUndead(item)) {
-      details.push(`+${getItemBonusVsUndead(item)} vs undead`);
-    }
-    if (getItemOvercastRelief(item)) {
-      details.push(`-${getItemOvercastRelief(item)} overcast loss`);
-    }
+    details.push(...collectBonusDetails(item));
     if (item.identified && item.cursed) {
       details.push("cursed");
     }
@@ -424,71 +382,33 @@ export function getItemArmor(item) {
   return Math.max(0, (item.armor || 0) + (item.enchantment || 0));
 }
 
-export function getItemAccuracyBonus(item) {
-  return item ? (item.accuracyBonus || 0) : 0;
-}
-
-export function getItemCritBonus(item) {
-  return item ? Math.max(0, item.critBonus || 0) : 0;
-}
-
-export function getItemManaBonus(item) {
-  if (!item) {
-    return 0;
+function getItemBonus(item, prop, spec) {
+  if (!item) return 0;
+  let base = item[prop] || 0;
+  if (spec && item.kind === "armor" && item.enchantment > (spec.minEnchant || 0)) {
+    const slots = spec.slots || (spec.slot ? [spec.slot] : []);
+    if (slots.length === 0 || slots.includes(item.slot)) {
+      base += spec.flat ?? item.enchantment;
+    }
   }
-  return (item.manaBonus || 0) + ((item.kind === "armor" && item.enchantment > 0 && item.slot === "ring") ? item.enchantment : 0);
+  return spec?.floor ? Math.max(0, base) : base;
 }
 
-export function getItemStrBonus(item) {
-  return item ? (item.strBonus || 0) : 0;
-}
-
-export function getItemDexBonus(item) {
-  if (!item) {
-    return 0;
-  }
-  return (item.dexBonus || 0) + ((item.kind === "armor" && item.enchantment > 0 && item.slot === "feet") ? 1 : 0);
-}
-
-export function getItemConBonus(item) {
-  return item ? (item.conBonus || 0) : 0;
-}
-
-export function getItemIntBonus(item) {
-  return item ? (item.intBonus || 0) : 0;
-}
-
-export function getItemLightBonus(item) {
-  return (item.lightBonus || 0) + ((item.kind === "armor" && item.enchantment > 1 && item.slot === "amulet") ? 1 : 0);
-}
-
-export function getItemGuardBonus(item) {
-  return (item.guardBonus || 0) + ((item.kind === "armor" && item.enchantment > 1 && item.slot === "offhand") ? 1 : 0);
-}
-
-export function getItemWardBonus(item) {
-  return (item.wardBonus || 0) + ((item.kind === "armor" && item.enchantment > 1 && (item.slot === "ring" || item.slot === "amulet" || item.slot === "cloak")) ? 1 : 0);
-}
-
-export function getItemFireResist(item) {
-  return item ? (item.fireResist || 0) : 0;
-}
-
-export function getItemColdResist(item) {
-  return item ? (item.coldResist || 0) : 0;
-}
-
-export function getItemSearchBonus(item) {
-  return item ? (item.searchBonus || 0) : 0;
-}
-
-export function getItemBonusVsUndead(item) {
-  return item ? (item.bonusVsUndead || 0) : 0;
-}
-
-export function getItemOvercastRelief(item) {
-  return item ? (item.overcastRelief || 0) : 0;
-}
+export function getItemAccuracyBonus(item) { return getItemBonus(item, "accuracyBonus"); }
+export function getItemCritBonus(item) { return getItemBonus(item, "critBonus", { floor: true }); }
+export function getItemManaBonus(item) { return getItemBonus(item, "manaBonus", { slot: "ring" }); }
+export function getItemStrBonus(item) { return getItemBonus(item, "strBonus"); }
+export function getItemDexBonus(item) { return getItemBonus(item, "dexBonus", { slot: "feet", flat: 1 }); }
+export function getItemConBonus(item) { return getItemBonus(item, "conBonus"); }
+export function getItemIntBonus(item) { return getItemBonus(item, "intBonus"); }
+export function getItemLightBonus(item) { return getItemBonus(item, "lightBonus", { slot: "amulet", minEnchant: 1, flat: 1 }); }
+export function getItemGuardBonus(item) { return getItemBonus(item, "guardBonus", { slot: "offhand", minEnchant: 1, flat: 1 }); }
+export function getItemWardBonus(item) { return getItemBonus(item, "wardBonus", { slots: ["ring", "amulet", "cloak"], minEnchant: 1, flat: 1 }); }
+export function getItemFireResist(item) { return getItemBonus(item, "fireResist"); }
+export function getItemColdResist(item) { return getItemBonus(item, "coldResist"); }
+export function getItemSearchBonus(item) { return getItemBonus(item, "searchBonus"); }
+export function getItemBonusVsUndead(item) { return getItemBonus(item, "bonusVsUndead"); }
+export function getItemOvercastRelief(item) { return getItemBonus(item, "overcastRelief"); }
 
 export function getItemValue(item) {
   let value = item.value || 0;

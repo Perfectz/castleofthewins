@@ -1,4 +1,11 @@
+/**
+ * @module gamepad
+ * @owns Gamepad polling, controller normalization, input intent mapping
+ * @reads navigator.getGamepads()
+ * @mutates None — returns intent objects
+ */
 import { nowTime } from "../core/utils.js";
+import { GAMEPAD_DEADZONE } from "../core/constants.js";
 
 export class GamepadInput {
   constructor() {
@@ -45,12 +52,12 @@ export class GamepadInput {
     const axes = pad.axes || [];
     const buttons = pad.buttons || [];
     const scrollRepeatReady = now - this.lastScrollAt > 140;
-    const dx = Math.abs(axes[0] || 0) > 0.45 ? Math.sign(axes[0]) : (buttons[15]?.pressed ? 1 : buttons[14]?.pressed ? -1 : 0);
-    const dy = Math.abs(axes[1] || 0) > 0.45 ? Math.sign(axes[1]) : (buttons[13]?.pressed ? 1 : buttons[12]?.pressed ? -1 : 0);
+    const dx = Math.abs(axes[0] || 0) > GAMEPAD_DEADZONE ? Math.sign(axes[0]) : (buttons[15]?.pressed ? 1 : buttons[14]?.pressed ? -1 : 0);
+    const dy = Math.abs(axes[1] || 0) > GAMEPAD_DEADZONE ? Math.sign(axes[1]) : (buttons[13]?.pressed ? 1 : buttons[12]?.pressed ? -1 : 0);
     const moveDirection = (dx || dy) ? `${dx},${dy}` : "";
     const moveRepeatReady = Boolean(moveDirection)
       && (moveDirection !== this.lastMoveDirection || now - this.lastMoveAt >= moveRepeatMs);
-    const scrollAxis = Math.abs(axes[3] || 0) > 0.45
+    const scrollAxis = Math.abs(axes[3] || 0) > GAMEPAD_DEADZONE
       ? Math.sign(axes[3])
       : buttons[7]?.pressed
         ? 1

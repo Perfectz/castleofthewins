@@ -1,3 +1,9 @@
+/**
+ * @module encounters
+ * @owns Monster pool selection, spawning, reinforcement waves
+ * @reads game.currentDepth, game.currentLevel
+ * @mutates game.currentLevel.actors (adds spawned monsters)
+ */
 import { DEPTH_THEMES, ENCOUNTER_TEMPLATES, MONSTER_DEFS, MONSTER_ROLES } from "../data/content.js";
 import { createMonster, weightedMonster } from "../core/entities.js";
 import { actorAt, isWalkable, randomRoomTile } from "../core/world.js";

@@ -1,3 +1,9 @@
+/**
+ * @module world
+ * @owns Tile manipulation, map generation, FOV/LOS, secret/visibility management
+ * @reads level.tiles, level.visible, level.explored, level.actors, level.items
+ * @mutates level.tiles[], level.visible[], level.explored[], level.actors[], level.items[], level.props[]
+ */
 import { MONSTER_DEFS } from "../data/content.js";
 import { choice, distance, randInt } from "./utils.js";
 import { createMonster, rollTreasure } from "./entities.js";

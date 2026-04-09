@@ -1,3 +1,9 @@
+/**
+ * @module inventory-ui
+ * @owns Item and spell classification for UI display
+ * @reads SPELLS from content.js, item properties
+ * @mutates None — pure UI model generation
+ */
 import {
   canIdentify,
   classifyItem,

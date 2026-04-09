@@ -1,4 +1,10 @@
-import { DUNGEON_DEPTH } from "../core/constants.js";
+/**
+ * @module exploration
+ * @owns Search and stair-travel commands
+ * @reads game.player, game.currentLevel, game.currentDepth, game.mode
+ * @mutates level.tiles (secret reveal), game.currentDepth, game.currentLevel
+ * @emits command-result effects (logs, sounds)
+ */
 import { addCommandLog, addCommandSound, createCommandResult } from "../core/command-result.js";
 import { getTile, inBounds, revealSecretTile } from "../core/world.js";
 import { randInt } from "../core/utils.js";
@@ -34,14 +40,14 @@ export function performSearchCommand(game) {
   if (game.increaseDanger) {
     game.increaseDanger("search", game.currentLevel?.floorResolved ? 2 : 1);
   }
-  const routeReveal = game.revealGuidedObjectiveRoute ? game.revealGuidedObjectiveRoute("search") : null;
+  const routeReveal = game.revealGuidedObjectiveRoute?.("search") ?? null;
   let message = found > 0
     ? `You discover ${found} hidden feature${found === 1 ? "" : "s"}.`
     : "You search carefully but find nothing.";
   let tone = found > 0 ? "good" : "warning";
   if (routeReveal?.revealed) {
-    const routeCue = game.getObjectiveRouteHint ? game.getObjectiveRouteHint() : game.getCurrentRouteCueText ? game.getCurrentRouteCueText() : "";
-    const pressureText = game.getPressureUiState ? game.getPressureUiState().shortLabel.toLowerCase() : "pressure";
+    const routeCue = game.getObjectiveRouteHint?.() ?? game.getCurrentRouteCueText?.() ?? "";
+    const pressureText = game.getPressureUiState?.()?.shortLabel?.toLowerCase() ?? "pressure";
     message = found > 0
       ? `${message} Searching raised pressure, but your route sketch now reaches farther ${routeReveal.direction}.`
       : routeReveal.complete
@@ -81,16 +87,8 @@ export function useStairsCommand(game, direction) {
       return result;
     }
     const nextDepth = game.currentDepth + 1;
-    if (nextDepth > DUNGEON_DEPTH) {
+    if (nextDepth >= game.levels.length) {
       addCommandLog(result, "No deeper path opens here.", "warning");
-      result.render = true;
-      return result;
-    }
-    if (typeof game.ensureWorldDepth === "function") {
-      game.ensureWorldDepth(nextDepth);
-    }
-    if (!game.levels[nextDepth]) {
-      addCommandLog(result, "The next floor is still unstable. Try the descent again.", "warning");
       result.render = true;
       return result;
     }
@@ -172,11 +170,11 @@ export function useStairsCommand(game, direction) {
       }
       if (previousLevel?.floorResolved) {
         const returnMeta = game.recordTownReturnSummary?.(previousLevel, game.currentDepth + 1);
-        if (returnMeta?.summary) {
-          game.storyFlags.postReturnBankPrompt = true;
-          if (!blockedByStorySurface) {
-            game.log("Bank is the cleanest next stop. Review town persistence before sending this adventurer north again.", "warning");
-          }
+        if (returnMeta?.summary && !blockedByStorySurface) {
+          game.showExtractionSummaryModal?.(returnMeta.summary, {
+            ...returnMeta,
+            level: previousLevel
+          });
         }
       }
     }

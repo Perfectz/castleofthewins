@@ -1,3 +1,9 @@
+/**
+ * @module town-meta
+ * @owns Town cycle progression, shop inventory, pricing, town reactions
+ * @reads game.townUnlocks, game.shopTiers, game.townState, game.rumorTable
+ * @mutates game.shopTiers, game.townState, game.townUnlocks
+ */
 import { ITEM_DEFS, RUMOR_DEFS, SHOPS, TOWN_REACTION_DEFS, TOWN_UNLOCK_DEFS } from "../data/content.js";
 import { getItemValue } from "../core/entities.js";
 import { shuffle } from "../core/utils.js";

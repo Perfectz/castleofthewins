@@ -1,3 +1,11 @@
+/**
+ * @module objectives
+ * @owns Floor objectives, optional greed encounters, objective/optional resolution
+ * @reads game.currentLevel, game.currentDepth, game.player, game.townUnlocks
+ * @mutates level.floorObjective, level.floorOptional, level.floorResolved,
+ *          level.items, level.actors, level.tiles
+ * @emits game.log, game.emitReadout
+ */
 import { BOON_DEFS, OBJECTIVE_DEFS, OPTIONAL_ENCOUNTER_DEFS, RELIC_DEFS, RUMOR_DEFS } from "../data/content.js";
 import { createItem, rollTreasure } from "../core/entities.js";
 import { actorAt, addLevelProp, centerOf, itemsAt, randomRoomTile, revealCircle, setTile, tileDef } from "../core/world.js";
@@ -518,9 +526,8 @@ export function handleOptionalInteraction(game, tile) {
   game.recordTelemetry?.("optional_triggered", {
     optionalId: optional.id
   });
-  const greedyPurseMultiplier = game.player?.relics?.includes("greedy_purse") ? 1.25 : 1;
-  const greedGoldMultiplier = (game.getGreedGoldMultiplier ? game.getGreedGoldMultiplier() : 1) * greedyPurseMultiplier;
-  const greedRumorBonus = game.getGreedRumorBonus ? game.getGreedRumorBonus() : 0;
+  const greedGoldMultiplier = game.getGreedGoldMultiplier?.() ?? 1;
+  const greedRumorBonus = game.getGreedRumorBonus?.() ?? 0;
 
   switch (optional.id) {
     case "cursed_cache": {
@@ -639,7 +646,7 @@ export function handleOptionalInteraction(game, tile) {
   }
 
   if (game.increaseDanger) {
-    const dangerBonus = game.getGreedDangerBonus ? game.getGreedDangerBonus() : 0;
+    const dangerBonus = game.getGreedDangerBonus?.() ?? 0;
     game.increaseDanger(`optional_${optional.id}`, (optional.id === "vault_room" ? 3 : 2) + dangerBonus);
   }
   if (game.recordChronicleEvent) {
@@ -763,23 +770,16 @@ export function grantObjectiveRumor(game) {
 
 export function getObjectiveRewardPreview(level) {
   if (!level || !level.floorObjective) {
-    if (level?.milestone?.rewardType === "perk") {
-      return `${level.milestone.name}: clearing the boss grants a perk pick instead of a relic.`;
-    }
-    if (level?.milestone?.rewardType === "relic") {
-      return `${level.milestone.name}: clearing the boss opens a relic draft.`;
-    }
     if (level?.milestone?.id === "depth7_stormwarden") {
-      return "Storm Warden: break the final guard and carry the Runestone back to town.";
+      return "Runestone objective";
     }
     return null;
   }
-  const label = level.floorObjective.shortLabel || level.floorObjective.label || "Floor objective";
   if (level.floorObjective.rewardType === "relic") {
-    return `${label}: clears into a 3-relic draft with survival, control, greed, mobility, or curse-tech payoffs.`;
+    return "Relic reward";
   }
   if (level.floorObjective.rewardType === "rumor") {
-    return `${label}: pays out rumor intel and a token instead of an immediate combat upgrade.`;
+    return "Rumor reward";
   }
-  return `${label}: clears into a 3-boon draft built from gold, healing, mana, and elite-bounty support.`;
+  return "Boon choice";
 }
