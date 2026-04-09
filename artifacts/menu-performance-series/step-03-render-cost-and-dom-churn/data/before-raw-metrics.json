@@ -1,0 +1,2410 @@
+{
+  "generatedAt": "2026-04-08T22:16:29.682Z",
+  "url": "http://127.0.0.1:4198/index.html",
+  "viewport": {
+    "width": 393,
+    "height": 852,
+    "deviceScaleFactor": 2
+  },
+  "results": {
+    "measurements": [
+      {
+        "label": "title_help_open",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"help\"]"
+        },
+        "readyKey": "help",
+        "readyResolved": true,
+        "handlerMs": 33.7,
+        "readyMs": 34.1,
+        "settledMs": 36.7,
+        "firstMutationMs": 33,
+        "mutationCount": 3,
+        "totalAddedNodes": 3,
+        "totalRemovedNodes": 3,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "title_help_open",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "How to Play",
+          "modalSurfaceKey": "help",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "current",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "modalNodeCount": 25,
+          "modalButtonCount": 1,
+          "actionBarButtonCount": 0,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "modal:close"
+        },
+        "callSummary": [
+          {
+            "name": "showHelpModal",
+            "count": 1,
+            "totalMs": 29.3,
+            "maxMs": 29.3
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 29.2,
+            "maxMs": 29.2
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showHelpModal",
+            "count": 1,
+            "totalMs": 29.3,
+            "maxMs": 29.3
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 29.2,
+            "maxMs": 29.2
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 33,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          },
+          {
+            "at": 33.4,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 33.4,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "title_help_close",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"close-modal\"]"
+        },
+        "readyKey": "title",
+        "readyResolved": true,
+        "handlerMs": 6.9,
+        "readyMs": 6.9,
+        "settledMs": 18.5,
+        "firstMutationMs": 6.8,
+        "mutationCount": 17,
+        "totalAddedNodes": 9,
+        "totalRemovedNodes": 8,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "title_help_close",
+          "mode": "title",
+          "depth": 0,
+          "modalTitle": "",
+          "modalSurfaceKey": "title",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "current",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "modalNodeCount": 21,
+          "modalButtonCount": 4,
+          "actionBarButtonCount": 0,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "DIV"
+        },
+        "callSummary": [
+          {
+            "name": "refreshChrome",
+            "count": 1,
+            "totalMs": 1.8,
+            "maxMs": 1.8
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "refreshChrome",
+            "count": 1,
+            "totalMs": 1.8,
+            "maxMs": 1.8
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 6.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 6.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 6.8,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          },
+          {
+            "at": 6.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 6.8,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 6.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 6.8,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 6.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "title_to_creation_open",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"new-game\"]"
+        },
+        "readyKey": "creation",
+        "readyResolved": true,
+        "handlerMs": 35.5,
+        "readyMs": 35.6,
+        "settledMs": 57.5,
+        "firstMutationMs": 35.4,
+        "mutationCount": 11,
+        "totalAddedNodes": 7,
+        "totalRemovedNodes": 7,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "title_to_creation_open",
+          "mode": "creation",
+          "depth": 0,
+          "modalTitle": "Create Adventurer",
+          "modalSurfaceKey": "creation",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "current",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "modalNodeCount": 111,
+          "modalButtonCount": 18,
+          "actionBarButtonCount": 0,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "creation:name"
+        },
+        "callSummary": [
+          {
+            "name": "refreshChrome",
+            "count": 1,
+            "totalMs": 22.3,
+            "maxMs": 22.3
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 2,
+            "totalMs": 0.5,
+            "maxMs": 0.4
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "refreshChrome",
+            "count": 1,
+            "totalMs": 22.3,
+            "maxMs": 22.3
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 2,
+            "totalMs": 0.5,
+            "maxMs": 0.4
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 35.4,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          },
+          {
+            "at": 35.5,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 35.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 35.5,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 35.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 35.5,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "BUTTON"
+          },
+          {
+            "at": 35.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 35.5,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "creation_to_town_start",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"begin-adventure\"]"
+        },
+        "readyKey": "town",
+        "readyResolved": true,
+        "handlerMs": 102.5,
+        "readyMs": 102.5,
+        "settledMs": 147.5,
+        "firstMutationMs": 102.5,
+        "mutationCount": 35,
+        "totalAddedNodes": 53,
+        "totalRemovedNodes": 38,
+        "longTaskCount": 1,
+        "totalLongTaskMs": 103,
+        "snapshot": {
+          "label": "creation_to_town_start",
+          "mode": "game",
+          "depth": 0,
+          "modalTitle": "",
+          "modalSurfaceKey": "",
+          "modalVisible": false,
+          "activeHubTab": "pack",
+          "activeJournalSection": "current",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "modalNodeCount": 0,
+          "modalButtonCount": 0,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "BODY"
+        },
+        "callSummary": [
+          {
+            "name": "render",
+            "count": 2,
+            "totalMs": 42.6,
+            "maxMs": 38.4
+          },
+          {
+            "name": "renderBoard",
+            "count": 5,
+            "totalMs": 27.5,
+            "maxMs": 15.3
+          },
+          {
+            "name": "getAdvisorModel",
+            "count": 2,
+            "totalMs": 21.2,
+            "maxMs": 20.7
+          },
+          {
+            "name": "renderMiniMap",
+            "count": 2,
+            "totalMs": 2,
+            "maxMs": 1.1
+          },
+          {
+            "name": "refreshChrome",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "renderEventTicker",
+            "count": 2,
+            "totalMs": 0.5,
+            "maxMs": 0.3
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 3,
+            "totalMs": 0.4,
+            "maxMs": 0.2
+          },
+          {
+            "name": "renderPanels",
+            "count": 2,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "renderActionBar",
+            "count": 2,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "render",
+            "count": 2,
+            "totalMs": 42.6,
+            "maxMs": 38.4
+          },
+          {
+            "name": "renderBoard",
+            "count": 5,
+            "totalMs": 27.5,
+            "maxMs": 15.3
+          },
+          {
+            "name": "getAdvisorModel",
+            "count": 2,
+            "totalMs": 21.2,
+            "maxMs": 20.7
+          },
+          {
+            "name": "renderMiniMap",
+            "count": 2,
+            "totalMs": 2,
+            "maxMs": 1.1
+          },
+          {
+            "name": "refreshChrome",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "renderEventTicker",
+            "count": 2,
+            "totalMs": 0.5,
+            "maxMs": 0.3
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 102.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 102.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 102.5,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          },
+          {
+            "at": 102.5,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 102.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 102.5,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "BUTTON"
+          },
+          {
+            "at": 102.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 102.5,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": true
+      },
+      {
+        "label": "utility_menu_open_town",
+        "trigger": {
+          "kind": "click",
+          "selector": "#utility-menu-button"
+        },
+        "readyKey": "utility",
+        "readyResolved": true,
+        "handlerMs": 8.6,
+        "readyMs": 8.6,
+        "settledMs": 30.8,
+        "firstMutationMs": 8.6,
+        "mutationCount": 6,
+        "totalAddedNodes": 28,
+        "totalRemovedNodes": 15,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "utility_menu_open_town",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Adventure Menu",
+          "modalSurfaceKey": "utility-menu",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "current",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "modalNodeCount": 70,
+          "modalButtonCount": 13,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "utility:briefing"
+        },
+        "callSummary": [
+          {
+            "name": "showUtilityMenu",
+            "count": 1,
+            "totalMs": 8.5,
+            "maxMs": 8.5
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showUtilityMenu",
+            "count": 1,
+            "totalMs": 8.5,
+            "maxMs": 8.5
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 8.6,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 8.6,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 8.6,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 25.5,
+            "type": "childList",
+            "added": 7,
+            "removed": 5,
+            "target": "DIV"
+          },
+          {
+            "at": 25.5,
+            "type": "childList",
+            "added": 13,
+            "removed": 5,
+            "target": "DIV"
+          },
+          {
+            "at": 25.5,
+            "type": "childList",
+            "added": 5,
+            "removed": 5,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "utility_to_journal_open",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"open-hub\"][data-tab=\"journal\"]"
+        },
+        "readyKey": "journal",
+        "readyResolved": true,
+        "handlerMs": 15.6,
+        "readyMs": 15.6,
+        "settledMs": 36.5,
+        "firstMutationMs": 15.6,
+        "mutationCount": 4,
+        "totalAddedNodes": 6,
+        "totalRemovedNodes": 4,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "utility_to_journal_open",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Field Guide",
+          "modalSurfaceKey": "hub:journal",
+          "modalVisible": true,
+          "activeHubTab": "journal",
+          "activeJournalSection": "mission",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Guide",
+          "activeSectionLabel": "Mission",
+          "activeFilterLabel": "All",
+          "modalNodeCount": 379,
+          "modalButtonCount": 41,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 15,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "journal:section:mission"
+        },
+        "callSummary": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 15.3,
+            "maxMs": 15.3
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 10.3,
+            "maxMs": 10.3
+          },
+          {
+            "name": "getPackHubMarkup",
+            "count": 1,
+            "totalMs": 7.4,
+            "maxMs": 7.4
+          },
+          {
+            "name": "getJournalHubMarkup",
+            "count": 1,
+            "totalMs": 2.5,
+            "maxMs": 2.5
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          },
+          {
+            "name": "getHubTabsMarkup",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 15.3,
+            "maxMs": 15.3
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 10.3,
+            "maxMs": 10.3
+          },
+          {
+            "name": "getPackHubMarkup",
+            "count": 1,
+            "totalMs": 7.4,
+            "maxMs": 7.4
+          },
+          {
+            "name": "getJournalHubMarkup",
+            "count": 1,
+            "totalMs": 2.5,
+            "maxMs": 2.5
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          },
+          {
+            "name": "getHubTabsMarkup",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 15.6,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          },
+          {
+            "at": 15.6,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 15.6,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 35.6,
+            "type": "childList",
+            "added": 3,
+            "removed": 1,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "journal_section_switch_chronicle",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"journal-section\"][data-section=\"chronicle\"]"
+        },
+        "readyKey": "journal",
+        "readyResolved": true,
+        "handlerMs": 11.9,
+        "readyMs": 11.9,
+        "settledMs": 34.1,
+        "firstMutationMs": 11.8,
+        "mutationCount": 4,
+        "totalAddedNodes": 4,
+        "totalRemovedNodes": 4,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "journal_section_switch_chronicle",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Field Guide",
+          "modalSurfaceKey": "hub:journal",
+          "modalVisible": true,
+          "activeHubTab": "journal",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Guide",
+          "activeSectionLabel": "Chronicle",
+          "activeFilterLabel": "All",
+          "modalNodeCount": 508,
+          "modalButtonCount": 41,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 15,
+          "spellButtonCount": 0,
+          "journalLogCount": 7,
+          "activeElement": "journal:section:chronicle"
+        },
+        "callSummary": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 11.6,
+            "maxMs": 11.6
+          },
+          {
+            "name": "getJournalHubMarkup",
+            "count": 1,
+            "totalMs": 0.6,
+            "maxMs": 0.6
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 11.6,
+            "maxMs": 11.6
+          },
+          {
+            "name": "getJournalHubMarkup",
+            "count": 1,
+            "totalMs": 0.6,
+            "maxMs": 0.6
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 11.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 11.8,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 11.9,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 11.9,
+            "type": "childList",
+            "added": 3,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "journal_section_switch_guide",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"journal-section\"][data-section=\"guide\"]"
+        },
+        "readyKey": "journalGuide",
+        "readyResolved": true,
+        "handlerMs": 5.5,
+        "readyMs": 5.6,
+        "settledMs": 53.1,
+        "firstMutationMs": 5.5,
+        "mutationCount": 4,
+        "totalAddedNodes": 4,
+        "totalRemovedNodes": 4,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "journal_section_switch_guide",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Field Guide",
+          "modalSurfaceKey": "hub:journal",
+          "modalVisible": true,
+          "activeHubTab": "journal",
+          "activeJournalSection": "guide",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Guide",
+          "activeSectionLabel": "Rules",
+          "activeFilterLabel": "All",
+          "modalNodeCount": 386,
+          "modalButtonCount": 41,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 15,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "journal:section:guide"
+        },
+        "callSummary": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 5.4,
+            "maxMs": 5.4
+          },
+          {
+            "name": "getJournalHubMarkup",
+            "count": 1,
+            "totalMs": 0.8,
+            "maxMs": 0.8
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 5.4,
+            "maxMs": 5.4
+          },
+          {
+            "name": "getJournalHubMarkup",
+            "count": 1,
+            "totalMs": 0.8,
+            "maxMs": 0.8
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 5.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 5.5,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 5.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 5.5,
+            "type": "childList",
+            "added": 3,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "journal_to_pack_tab_switch",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"open-hub\"][data-tab=\"pack\"]"
+        },
+        "readyKey": "pack",
+        "readyResolved": true,
+        "handlerMs": 31.7,
+        "readyMs": 31.9,
+        "settledMs": 38.8,
+        "firstMutationMs": 31.7,
+        "mutationCount": 5,
+        "totalAddedNodes": 1,
+        "totalRemovedNodes": 1,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "journal_to_pack_tab_switch",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Pack & Equipment",
+          "modalSurfaceKey": "hub:pack",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "guide",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Pack",
+          "activeSectionLabel": "Rules",
+          "activeFilterLabel": "All",
+          "modalNodeCount": 386,
+          "modalButtonCount": 41,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 15,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "hub:tab:pack"
+        },
+        "callSummary": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 31.6,
+            "maxMs": 31.6
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 31.6,
+            "maxMs": 31.6
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 31.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 31.7,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 31.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 31.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 31.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "pack_filter_switch_use",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"pack-filter\"][data-filter=\"use\"]"
+        },
+        "readyKey": "pack",
+        "readyResolved": true,
+        "handlerMs": 11.4,
+        "readyMs": 11.4,
+        "settledMs": 28.5,
+        "firstMutationMs": 11.4,
+        "mutationCount": 4,
+        "totalAddedNodes": 4,
+        "totalRemovedNodes": 4,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "pack_filter_switch_use",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Pack & Equipment",
+          "modalSurfaceKey": "hub:pack",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "guide",
+          "activePackFilter": "use",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Pack",
+          "activeSectionLabel": "Rules",
+          "activeFilterLabel": "Use",
+          "modalNodeCount": 330,
+          "modalButtonCount": 37,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 11,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "pack:filter:use"
+        },
+        "callSummary": [
+          {
+            "name": "getPackHubMarkup",
+            "count": 1,
+            "totalMs": 0.7,
+            "maxMs": 0.7
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "getPackHubMarkup",
+            "count": 1,
+            "totalMs": 0.7,
+            "maxMs": 0.7
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 11.4,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 11.4,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 11.4,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 11.4,
+            "type": "childList",
+            "added": 3,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "pack_select_second_item",
+        "trigger": {
+          "kind": "direct",
+          "action": "clickSecondPackRow"
+        },
+        "readyKey": "pack",
+        "readyResolved": true,
+        "handlerMs": 9.7,
+        "readyMs": 9.8,
+        "settledMs": 47.1,
+        "firstMutationMs": 9.7,
+        "mutationCount": 4,
+        "totalAddedNodes": 4,
+        "totalRemovedNodes": 4,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "pack_select_second_item",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Pack & Equipment",
+          "modalSurfaceKey": "hub:pack",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "guide",
+          "activePackFilter": "use",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Pack",
+          "activeSectionLabel": "Rules",
+          "activeFilterLabel": "Use",
+          "modalNodeCount": 330,
+          "modalButtonCount": 37,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 11,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "pack:item:2"
+        },
+        "callSummary": [
+          {
+            "name": "getPackHubMarkup",
+            "count": 1,
+            "totalMs": 0.6,
+            "maxMs": 0.6
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "getPackHubMarkup",
+            "count": 1,
+            "totalMs": 0.6,
+            "maxMs": 0.6
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 9.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 9.7,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 9.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 9.7,
+            "type": "childList",
+            "added": 3,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "pack_to_magic_tab_switch",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"open-hub\"][data-tab=\"magic\"]"
+        },
+        "readyKey": "magic",
+        "readyResolved": true,
+        "handlerMs": 9,
+        "readyMs": 9,
+        "settledMs": 39.8,
+        "firstMutationMs": 8.9,
+        "mutationCount": 6,
+        "totalAddedNodes": 4,
+        "totalRemovedNodes": 2,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "pack_to_magic_tab_switch",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Magic",
+          "modalSurfaceKey": "hub:magic",
+          "modalVisible": true,
+          "activeHubTab": "magic",
+          "activeJournalSection": "guide",
+          "activePackFilter": "use",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Magic",
+          "activeSectionLabel": "Rules",
+          "activeFilterLabel": "Use",
+          "modalNodeCount": 465,
+          "modalButtonCount": 68,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 11,
+          "spellButtonCount": 25,
+          "journalLogCount": 0,
+          "activeElement": "hub:tab:magic"
+        },
+        "callSummary": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 8.9,
+            "maxMs": 8.9
+          },
+          {
+            "name": "getMagicHubMarkup",
+            "count": 1,
+            "totalMs": 0.7,
+            "maxMs": 0.7
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 8.9,
+            "maxMs": 8.9
+          },
+          {
+            "name": "getMagicHubMarkup",
+            "count": 1,
+            "totalMs": 0.7,
+            "maxMs": 0.7
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 8.9,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 9,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 9,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 9,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 9,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 9,
+            "type": "childList",
+            "added": 3,
+            "removed": 1,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "magic_select_identify",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"spell-select\"][data-spell=\"identify\"]"
+        },
+        "readyKey": "magic",
+        "readyResolved": true,
+        "handlerMs": 7.5,
+        "readyMs": 7.6,
+        "settledMs": 50.5,
+        "firstMutationMs": 7.5,
+        "mutationCount": 4,
+        "totalAddedNodes": 4,
+        "totalRemovedNodes": 4,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "magic_select_identify",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Magic",
+          "modalSurfaceKey": "hub:magic",
+          "modalVisible": true,
+          "activeHubTab": "magic",
+          "activeJournalSection": "guide",
+          "activePackFilter": "use",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Magic",
+          "activeSectionLabel": "Rules",
+          "activeFilterLabel": "Use",
+          "modalNodeCount": 465,
+          "modalButtonCount": 68,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 11,
+          "spellButtonCount": 25,
+          "journalLogCount": 0,
+          "activeElement": "hub:spell:identify"
+        },
+        "callSummary": [
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.7,
+            "maxMs": 0.7
+          },
+          {
+            "name": "getMagicHubMarkup",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.7,
+            "maxMs": 0.7
+          },
+          {
+            "name": "getMagicHubMarkup",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 7.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 7.5,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 7.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 7.5,
+            "type": "childList",
+            "added": 3,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "magic_filter_switch_next",
+        "trigger": {
+          "kind": "direct",
+          "action": "clickMagicNextFilter"
+        },
+        "readyKey": "magic",
+        "readyResolved": true,
+        "handlerMs": 4.5,
+        "readyMs": 4.5,
+        "settledMs": 39.8,
+        "firstMutationMs": 4.4,
+        "mutationCount": 4,
+        "totalAddedNodes": 4,
+        "totalRemovedNodes": 4,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "magic_filter_switch_next",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Magic",
+          "modalSurfaceKey": "hub:magic",
+          "modalVisible": true,
+          "activeHubTab": "magic",
+          "activeJournalSection": "guide",
+          "activePackFilter": "use",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "Magic",
+          "activeSectionLabel": "Rules",
+          "activeFilterLabel": "Use",
+          "modalNodeCount": 377,
+          "modalButtonCount": 48,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 11,
+          "spellButtonCount": 5,
+          "journalLogCount": 0,
+          "activeElement": "magic:filter:offense"
+        },
+        "callSummary": [
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          },
+          {
+            "name": "getMagicHubMarkup",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          },
+          {
+            "name": "getMagicHubMarkup",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 4.4,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 4.5,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 4.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 4.5,
+            "type": "childList",
+            "added": 3,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "magic_to_journal_tab_switch",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"open-hub\"][data-tab=\"journal\"]"
+        },
+        "readyKey": "journal",
+        "readyResolved": true,
+        "handlerMs": 4.8,
+        "readyMs": 4.8,
+        "settledMs": 49.2,
+        "firstMutationMs": 4.8,
+        "mutationCount": 5,
+        "totalAddedNodes": 1,
+        "totalRemovedNodes": 1,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "magic_to_journal_tab_switch",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Field Guide",
+          "modalSurfaceKey": "hub:journal",
+          "modalVisible": true,
+          "activeHubTab": "journal",
+          "activeJournalSection": "guide",
+          "activePackFilter": "use",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "Guide",
+          "activeSectionLabel": "Rules",
+          "activeFilterLabel": "Use",
+          "modalNodeCount": 377,
+          "modalButtonCount": 48,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 11,
+          "spellButtonCount": 5,
+          "journalLogCount": 0,
+          "activeElement": "hub:tab:journal"
+        },
+        "callSummary": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 4.6,
+            "maxMs": 4.6
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 4.6,
+            "maxMs": 4.6
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 4.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 4.8,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 4.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 4.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 4.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "journal_close_to_game",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"close-modal\"]"
+        },
+        "readyKey": "modalClosedToGame",
+        "readyResolved": true,
+        "handlerMs": 2.2,
+        "readyMs": 2.2,
+        "settledMs": 54.7,
+        "firstMutationMs": 2.1,
+        "mutationCount": 3,
+        "totalAddedNodes": 0,
+        "totalRemovedNodes": 3,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "journal_close_to_game",
+          "mode": "game",
+          "depth": 0,
+          "modalTitle": "",
+          "modalSurfaceKey": "",
+          "modalVisible": false,
+          "activeHubTab": "pack",
+          "activeJournalSection": "guide",
+          "activePackFilter": "use",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "modalNodeCount": 0,
+          "modalButtonCount": 0,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "BODY"
+        },
+        "callSummary": [],
+        "topCalls": [],
+        "sampleMutations": [
+          {
+            "at": 2.1,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 2.1,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 2.1,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": true
+      },
+      {
+        "label": "provisioner_open_direct",
+        "trigger": {
+          "kind": "direct",
+          "action": "openTownService",
+          "service": "general"
+        },
+        "readyKey": "shopGeneral",
+        "readyResolved": true,
+        "handlerMs": 8,
+        "readyMs": 8,
+        "settledMs": 21.2,
+        "firstMutationMs": 8,
+        "mutationCount": 3,
+        "totalAddedNodes": 3,
+        "totalRemovedNodes": 0,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "provisioner_open_direct",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Provisioner",
+          "modalSurfaceKey": "shop:general",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "guide",
+          "activePackFilter": "use",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "Buy",
+          "modalNodeCount": 104,
+          "modalButtonCount": 9,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "shop:panel:buy"
+        },
+        "callSummary": [
+          {
+            "name": "showShopModal",
+            "count": 1,
+            "totalMs": 7.4,
+            "maxMs": 7.4
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 6,
+            "maxMs": 6
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showShopModal",
+            "count": 1,
+            "totalMs": 7.4,
+            "maxMs": 7.4
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 6,
+            "maxMs": 6
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 8,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "provisioner_panel_switch_sell",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"shop-panel\"][data-panel=\"sell\"]"
+        },
+        "readyKey": "shopSellPanel",
+        "readyResolved": true,
+        "handlerMs": 7.5,
+        "readyMs": 7.5,
+        "settledMs": 30.6,
+        "firstMutationMs": 7.5,
+        "mutationCount": 3,
+        "totalAddedNodes": 3,
+        "totalRemovedNodes": 3,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "provisioner_panel_switch_sell",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Provisioner",
+          "modalSurfaceKey": "shop:general",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "guide",
+          "activePackFilter": "use",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "Sell",
+          "modalNodeCount": 146,
+          "modalButtonCount": 12,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "shop:panel:sell"
+        },
+        "callSummary": [
+          {
+            "name": "showShopModal",
+            "count": 1,
+            "totalMs": 7.2,
+            "maxMs": 7.2
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 5.9,
+            "maxMs": 5.9
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showShopModal",
+            "count": 1,
+            "totalMs": 7.2,
+            "maxMs": 7.2
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 5.9,
+            "maxMs": 5.9
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 7.5,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          },
+          {
+            "at": 7.5,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 7.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "provisioner_close_to_game",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"close-modal\"]"
+        },
+        "readyKey": "modalClosedToGame",
+        "readyResolved": true,
+        "handlerMs": 2.5,
+        "readyMs": 2.5,
+        "settledMs": 19.9,
+        "firstMutationMs": 2.5,
+        "mutationCount": 3,
+        "totalAddedNodes": 0,
+        "totalRemovedNodes": 3,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "provisioner_close_to_game",
+          "mode": "game",
+          "depth": 0,
+          "modalTitle": "",
+          "modalSurfaceKey": "",
+          "modalVisible": false,
+          "activeHubTab": "pack",
+          "activeJournalSection": "guide",
+          "activePackFilter": "use",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "modalNodeCount": 0,
+          "modalButtonCount": 0,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "BODY"
+        },
+        "callSummary": [],
+        "topCalls": [],
+        "sampleMutations": [
+          {
+            "at": 2.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 2.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 2.5,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": true
+      },
+      {
+        "label": "town_bank_open_direct",
+        "trigger": {
+          "kind": "direct",
+          "action": "showBankModal"
+        },
+        "readyKey": "bank",
+        "readyResolved": true,
+        "handlerMs": 11.1,
+        "readyMs": 11.2,
+        "settledMs": 40.1,
+        "firstMutationMs": 11,
+        "mutationCount": 3,
+        "totalAddedNodes": 3,
+        "totalRemovedNodes": 0,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "town_bank_open_direct",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Bank",
+          "modalSurfaceKey": "bank",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "guide",
+          "activePackFilter": "use",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "modalNodeCount": 219,
+          "modalButtonCount": 19,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "bank:recommended-unlock"
+        },
+        "callSummary": [
+          {
+            "name": "showBankModal",
+            "count": 1,
+            "totalMs": 11,
+            "maxMs": 11
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 7.4,
+            "maxMs": 7.4
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showBankModal",
+            "count": 1,
+            "totalMs": 11,
+            "maxMs": 11
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 7.4,
+            "maxMs": 7.4
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 11,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 11.1,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 11.1,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "town_bank_close_to_game",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"close-modal\"]"
+        },
+        "readyKey": "modalClosedToGame",
+        "readyResolved": true,
+        "handlerMs": 1.5,
+        "readyMs": 1.5,
+        "settledMs": 34.3,
+        "firstMutationMs": 1.5,
+        "mutationCount": 3,
+        "totalAddedNodes": 0,
+        "totalRemovedNodes": 3,
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "town_bank_close_to_game",
+          "mode": "game",
+          "depth": 0,
+          "modalTitle": "",
+          "modalSurfaceKey": "",
+          "modalVisible": false,
+          "activeHubTab": "pack",
+          "activeJournalSection": "guide",
+          "activePackFilter": "use",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "modalNodeCount": 0,
+          "modalButtonCount": 0,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "BODY"
+        },
+        "callSummary": [],
+        "topCalls": [],
+        "sampleMutations": [
+          {
+            "at": 1.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 1.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 1.5,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": true
+      }
+    ],
+    "screenshots": [
+      {
+        "label": "title-screen",
+        "file": "screenshots/before/01-title-screen.png",
+        "modalTitle": "Title"
+      },
+      {
+        "label": "title_help_open",
+        "file": "screenshots/before/02-title-help.png",
+        "modalTitle": "How to Play",
+        "modalSurfaceKey": "help",
+        "readyMs": 34.1
+      },
+      {
+        "label": "title_to_creation_open",
+        "file": "screenshots/before/03-creation-screen.png",
+        "modalTitle": "Create Adventurer",
+        "modalSurfaceKey": "creation",
+        "readyMs": 35.6
+      },
+      {
+        "label": "creation_to_town_start",
+        "file": "screenshots/before/04-town-start.png",
+        "modalTitle": "",
+        "modalSurfaceKey": "",
+        "readyMs": 102.5
+      },
+      {
+        "label": "utility_menu_open_town",
+        "file": "screenshots/before/05-utility-menu.png",
+        "modalTitle": "Adventure Menu",
+        "modalSurfaceKey": "utility-menu",
+        "readyMs": 8.6
+      },
+      {
+        "label": "utility_to_journal_open",
+        "file": "screenshots/before/06-journal-current.png",
+        "modalTitle": "Field Guide",
+        "modalSurfaceKey": "hub:journal",
+        "readyMs": 15.6
+      },
+      {
+        "label": "journal_section_switch_chronicle",
+        "file": "screenshots/before/07-journal-chronicle.png",
+        "modalTitle": "Field Guide",
+        "modalSurfaceKey": "hub:journal",
+        "readyMs": 11.9
+      },
+      {
+        "label": "journal_section_switch_guide",
+        "file": "screenshots/before/08-journal-guide.png",
+        "modalTitle": "Field Guide",
+        "modalSurfaceKey": "hub:journal",
+        "readyMs": 5.6
+      },
+      {
+        "label": "journal_to_pack_tab_switch",
+        "file": "screenshots/before/09-pack.png",
+        "modalTitle": "Pack & Equipment",
+        "modalSurfaceKey": "hub:pack",
+        "readyMs": 31.9
+      },
+      {
+        "label": "pack_to_magic_tab_switch",
+        "file": "screenshots/before/10-magic.png",
+        "modalTitle": "Magic",
+        "modalSurfaceKey": "hub:magic",
+        "readyMs": 9
+      },
+      {
+        "label": "magic_filter_switch_next",
+        "file": "screenshots/before/11-magic-filtered.png",
+        "modalTitle": "Magic",
+        "modalSurfaceKey": "hub:magic",
+        "readyMs": 4.5
+      },
+      {
+        "label": "provisioner_open_direct",
+        "file": "screenshots/before/12-provisioner-buy.png",
+        "modalTitle": "Provisioner",
+        "modalSurfaceKey": "shop:general",
+        "readyMs": 8
+      },
+      {
+        "label": "provisioner_panel_switch_sell",
+        "file": "screenshots/before/13-provisioner-sell.png",
+        "modalTitle": "Provisioner",
+        "modalSurfaceKey": "shop:general",
+        "readyMs": 7.5
+      },
+      {
+        "label": "town_bank_open_direct",
+        "file": "screenshots/before/14-town-bank.png",
+        "modalTitle": "Bank",
+        "modalSurfaceKey": "bank",
+        "readyMs": 11.2
+      }
+    ],
+    "finalSnapshot": {
+      "label": "final",
+      "mode": "game",
+      "depth": 0,
+      "modalTitle": "",
+      "modalSurfaceKey": "",
+      "modalVisible": false,
+      "activeHubTab": "pack",
+      "activeJournalSection": "guide",
+      "activePackFilter": "use",
+      "activeMagicFilter": "offense",
+      "activeTabLabel": "",
+      "activeSectionLabel": "",
+      "activeFilterLabel": "",
+      "modalNodeCount": 0,
+      "modalButtonCount": 0,
+      "actionBarButtonCount": 4,
+      "inventoryRowCount": 0,
+      "spellButtonCount": 0,
+      "journalLogCount": 0,
+      "activeElement": "BODY"
+    }
+  }
+}

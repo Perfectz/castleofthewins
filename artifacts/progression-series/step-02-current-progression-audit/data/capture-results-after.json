@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-04-09T01:58:02.038Z",
+  "mode": "after",
+  "screenshots": [
+    {
+      "filename": "mobile-01-journal-reward-preview.png",
+      "path": "screenshots/after/mobile-01-journal-reward-preview.png",
+      "viewport": "mobile",
+      "screen": "Journal reward preview",
+      "howReached": "Started a rogue run, descended once, and opened the live journal current section.",
+      "whyCaptured": "Captures how clearly the current run build panel forecasts floor rewards."
+    },
+    {
+      "filename": "mobile-02-quick-hands-perk.png",
+      "path": "screenshots/after/mobile-02-quick-hands-perk.png",
+      "viewport": "mobile",
+      "screen": "Quick Hands perk choice",
+      "howReached": "Opened a staged live perk draft containing Quick Hands.",
+      "whyCaptured": "Shows whether the perk communicates a real, differentiated progression payoff."
+    },
+    {
+      "filename": "mobile-03-greedy-purse-relic.png",
+      "path": "screenshots/after/mobile-03-greedy-purse-relic.png",
+      "viewport": "mobile",
+      "screen": "Greedy Purse relic choice",
+      "howReached": "Opened a staged live relic draft containing Greedy Purse.",
+      "whyCaptured": "Shows whether the relic communicates an actual economy-versus-pressure tradeoff."
+    },
+    {
+      "filename": "desktop-01-journal-reward-preview.png",
+      "path": "screenshots/after/desktop-01-journal-reward-preview.png",
+      "viewport": "desktop",
+      "screen": "Journal reward preview",
+      "howReached": "Started a rogue run, descended once, and opened the live journal current section.",
+      "whyCaptured": "Captures how clearly the current run build panel forecasts floor rewards."
+    },
+    {
+      "filename": "desktop-02-quick-hands-perk.png",
+      "path": "screenshots/after/desktop-02-quick-hands-perk.png",
+      "viewport": "desktop",
+      "screen": "Quick Hands perk choice",
+      "howReached": "Opened a staged live perk draft containing Quick Hands.",
+      "whyCaptured": "Shows whether the perk communicates a real, differentiated progression payoff."
+    },
+    {
+      "filename": "desktop-03-greedy-purse-relic.png",
+      "path": "screenshots/after/desktop-03-greedy-purse-relic.png",
+      "viewport": "desktop",
+      "screen": "Greedy Purse relic choice",
+      "howReached": "Opened a staged live relic draft containing Greedy Purse.",
+      "whyCaptured": "Shows whether the relic communicates an actual economy-versus-pressure tradeoff."
+    }
+  ],
+  "stagingNotes": [
+    "Journal captures are staged on the first dungeon floor with visibility forced on so reward-preview copy is readable in one frame.",
+    "Perk and relic choice modals are staged from the live runtime using representative option sets tied to the audit changes.",
+    "The same capture script is run once before the fixes and once after the fixes."
+  ]
+}

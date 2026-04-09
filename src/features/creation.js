@@ -1,7 +1,7 @@
-import { CLASSES, RACES } from "../data/content.js";
+import { CLASSES, RACES, SPELLS } from "../data/content.js";
 import { CHARACTER_SHEET_PATH, PIXEL_ASSET_ROOT, TITLE_SCREEN_ASSETS } from "../data/assets.js";
 import { getClass, getRace } from "../core/entities.js";
-import { choiceCard, escapeHtml } from "../core/utils.js";
+import { escapeHtml } from "../core/utils.js";
 
 export const CREATION_STAT_KEYS = ["str", "dex", "con", "int"];
 export const CREATION_STAT_LABELS = {
@@ -9,12 +9,6 @@ export const CREATION_STAT_LABELS = {
   dex: "Dexterity",
   con: "Constitution",
   int: "Intelligence"
-};
-export const CREATION_STAT_NOTES = {
-  str: "Melee accuracy, damage, burden",
-  dex: "Evasion, armor read, searching",
-  con: "Health, recovery, overcast safety",
-  int: "Mana, spell power, searching"
 };
 export const CREATION_STAT_POINT_BUDGET = 6;
 export const CREATION_STAT_POINT_CAP = 4;
@@ -113,18 +107,26 @@ function renderPixelSprite(sprite, className = "", scale = 4) {
   return `<span class="pixel-sprite${className ? ` ${className}` : ""}" style="${styleMap(baseRules)}" aria-hidden="true"></span>`;
 }
 
-function buildChoiceArtMarkup(type, entry) {
-  const art = type === "race" ? getRaceArt(entry.id) : getClassArt(entry.id);
-  const tone = type === "race" ? art.accent : art.accent;
-  const sprite = type === "race" ? art.sprite : art.sprite;
-  return {
-    artHtml: `
-      <div class="choice-art-frame" style="${styleMap([`--choice-accent:${tone}`])}">
-        ${renderPixelSprite(sprite, "choice-art-sprite", 3)}
-      </div>
-    `,
-    metaHtml: `<span class="choice-chip">${escapeHtml(art.title)}</span>`
-  };
+function buildCreationChoiceButton(entry, type, selected) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `choice-card creation-choice-pill${selected ? " selected" : ""}`;
+  button.dataset[type] = entry.id;
+  button.setAttribute("aria-pressed", selected ? "true" : "false");
+  button.title = entry.summary || entry.name;
+  button.innerHTML = `<span class="creation-choice-label">${escapeHtml(entry.name)}</span>`;
+  return button;
+}
+
+function getCreationPreviewSummary(race, role) {
+  return `${race.summary} ${role.summary}`;
+}
+
+function getCreationSpellSummary(role) {
+  if (!Array.isArray(role.spells) || role.spells.length === 0) {
+    return "Steel only";
+  }
+  return role.spells.map((spellId) => SPELLS[spellId]?.name || spellId).join(", ");
 }
 
 function getRaceName(raceRef) {
@@ -303,6 +305,7 @@ export function showTitleScreen(game) {
   game.modalRoot.innerHTML = "";
   game.modalRoot.appendChild(fragment);
   game.modalRoot.classList.remove("hidden");
+  game.applyModalSurfacePresentation?.("title", game.modalRoot.querySelector(".title-screen"));
   game.refreshChrome();
   game.syncMusicToggleUi?.();
   game.syncSurfaceMusic?.();
@@ -334,54 +337,81 @@ export function showCreationModal(game, options = {}) {
   const classChoice = fragment.getElementById("class-choice");
   const statPoints = fragment.getElementById("creation-stat-points");
   const statAllocation = fragment.getElementById("creation-stat-allocation");
+  const previewPortrait = fragment.getElementById("creation-preview-portrait");
+  const previewTitle = fragment.getElementById("creation-preview-title");
+  const previewSubtitle = fragment.getElementById("creation-preview-subtitle");
+  const previewSummary = fragment.getElementById("creation-preview-summary");
+  const previewFacts = fragment.getElementById("creation-preview-facts");
+  const previewActions = fragment.getElementById("creation-preview-actions");
 
   nameInput.value = game.creationName;
   RACES.forEach((race) => {
-    const art = buildChoiceArtMarkup("race", race);
-    const element = choiceCard(race, "race", race.id === game.selectedRace, {
-      ...art,
-      className: "choice-card-compact",
-      noteText: race.summary
-    });
+    const element = buildCreationChoiceButton(race, "race", race.id === game.selectedRace);
     element.dataset.focusKey = `creation:race:${race.id}`;
     raceChoice.appendChild(element);
   });
   CLASSES.forEach((role) => {
-    const art = buildChoiceArtMarkup("class", role);
-    const element = choiceCard(role, "class", role.id === game.selectedClass, {
-      ...art,
-      className: "choice-card-compact",
-      noteText: role.summary
-    });
+    const element = buildCreationChoiceButton(role, "class", role.id === game.selectedClass);
     element.dataset.focusKey = `creation:class:${role.id}`;
     classChoice.appendChild(element);
   });
 
+  const race = getRace(game.selectedRace);
+  const role = getClass(game.selectedClass);
   const stats = game.getCreationStats();
   const pointsRemaining = game.getCreationPointsRemaining();
+  const raceArt = getRaceArt(race.id);
+  const classArt = getClassArt(role.id);
+  const baseHp = race.hp + role.bonuses.hp;
+  const baseMana = race.mana + role.bonuses.mana;
+  const recommendedContract = typeof game.getRecommendedContract === "function"
+    ? game.getRecommendedContract()
+    : null;
 
   statPoints.innerHTML = `Training points remaining: <strong>${pointsRemaining}</strong>`;
   statAllocation.innerHTML = CREATION_STAT_KEYS.map((stat) => `
     <div class="creation-stat-row">
-      <div class="creation-stat-copy">
-        <div class="creation-stat-title">${CREATION_STAT_LABELS[stat]}</div>
-        <div class="creation-stat-notes">
-          <span>${escapeHtml(CREATION_STAT_NOTES[stat])}</span>
-        </div>
-      </div>
+      <div class="creation-stat-title">${CREATION_STAT_LABELS[stat]}</div>
       <div class="creation-stat-stepper">
         <button class="tiny-button creation-stat-button" data-action="creation-adjust-stat" data-stat="${stat}" data-delta="-1" type="button" ${game.creationStatBonuses[stat] <= 0 ? "disabled" : ""}>-</button>
-        
         <div class="creation-stat-value">${stats[stat]}</div>
         <button class="tiny-button creation-stat-button" data-action="creation-adjust-stat" data-stat="${stat}" data-delta="1" type="button" ${(pointsRemaining <= 0 || game.creationStatBonuses[stat] >= CREATION_STAT_POINT_CAP) ? "disabled" : ""}>+</button>
       </div>
     </div>
   `).join("");
 
+  previewPortrait.innerHTML = `
+    <div class="creation-portrait-frame" style="${styleMap([`--creation-accent:${classArt.accent}`, `--creation-accent-soft:${raceArt.accent}`])}">
+      <div class="creation-portrait-runes" aria-hidden="true"></div>
+      ${renderPixelSprite(classArt.sprite, "creation-portrait-sprite", 6)}
+      <div class="creation-portrait-badge">
+        ${renderPixelSprite(raceArt.sprite, "creation-portrait-race-sprite", 3)}
+        <span>${escapeHtml(race.name)}</span>
+      </div>
+    </div>
+  `;
+  previewTitle.textContent = `${race.name.toUpperCase()} ${role.name.toUpperCase()}`;
+  previewSubtitle.textContent = `${raceArt.title} · ${classArt.title}`;
+  previewSummary.textContent = getCreationPreviewSummary(race, role);
+  previewFacts.innerHTML = `
+    <div class="creation-preview-fact"><span>Vitality</span><strong>${baseHp} HP</strong></div>
+    <div class="creation-preview-fact"><span>Mana</span><strong>${baseMana}</strong></div>
+    <div class="creation-preview-fact"><span>Starting Kit</span><strong>${role.startItems.length} pieces</strong></div>
+    <div class="creation-preview-fact"><span>Spells</span><strong>${escapeHtml(getCreationSpellSummary(role))}</strong></div>
+  `;
+  previewActions.innerHTML = recommendedContract?.id
+    ? `
+      <button class="action-button creation-preview-contract" data-action="contract-arm-recommended" data-focus-key="creation:contract:recommended" type="button">
+        ${escapeHtml(`Arm ${recommendedContract.name}`)}
+      </button>
+    `
+    : "";
+
   game.modalRoot.innerHTML = "";
   game.modalRoot.appendChild(fragment);
   game.modalRoot.classList.remove("hidden");
   game.modalSurfaceKey = "creation";
+  game.applyModalSurfacePresentation?.("creation", game.modalRoot.querySelector(".creation-sheet"));
   game.refreshChrome();
   game.syncMusicToggleUi?.();
   game.syncSurfaceMusic?.();

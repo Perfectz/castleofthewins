@@ -20,6 +20,7 @@
         <div id="pressure-status" class="utility-chip utility-chip-muted">Town Calm</div>
       </div>
       <div class="top-band-actions">
+        <button id="top-music-button" class="utility-menu-button" data-action="toggle-music" data-focus-key="top:music" type="button">Music Off</button>
         <button id="utility-menu-button" class="utility-menu-button" data-action="open-utility-menu" data-focus-key="top:menu" type="button">Menu</button>
       </div>
     </header>
@@ -31,9 +32,25 @@
             <canvas id="game-canvas" width="600" height="600" aria-label="Game board"></canvas>
           </div>
           <div class="board-overlays">
+            <section id="desktop-overlay" class="desktop-shell hidden" aria-live="polite">
+              <div class="desktop-shell-menu-row">
+                <button class="menu-button desktop-shell-surface" data-action="open-hub" data-tab="pack" data-focus-key="desktop:surface:pack" type="button">Pack</button>
+                <button class="menu-button desktop-shell-surface" data-action="open-hub" data-tab="journal" data-focus-key="desktop:surface:guide" type="button">Guide</button>
+                <button class="menu-button desktop-shell-surface" data-action="save-game" data-focus-key="desktop:surface:save" type="button">Save</button>
+                <button class="menu-button desktop-shell-surface" data-action="open-utility-menu" data-focus-key="desktop:surface:menu" type="button">Menu</button>
+              </div>
+              <div class="desktop-shell-verb-row">
+                <div id="desktop-verb-host" class="desktop-verb-host"></div>
+                <div id="desktop-quickslots-host" class="desktop-quickslots-host"></div>
+              </div>
+            </section>
+            <section id="desktop-aux-stack" class="desktop-aux-stack hidden" aria-live="polite">
+              <div id="desktop-overlay-map-host" class="desktop-map-host"></div>
+              <div id="desktop-status-host" class="desktop-status-host"></div>
+            </section>
             <button id="spell-tray-toggle-button" class="utility-menu-button map-chip-button spell-chip-button hidden" data-action="open-spell-tray" data-focus-key="top:spell-tray" type="button">Magic</button>
             <section id="spell-tray" class="spell-tray hidden" aria-live="polite"></section>
-            <div id="context-chip" class="context-chip hidden" aria-live="polite"></div>
+            <div id="event-ticker" class="message-log hidden" aria-live="polite"></div>
           </div>
         </section>
       </section>
@@ -51,9 +68,6 @@
         </section>
         <div id="player-capsule" class="stat-band"></div>
       </section>
-
-      <div id="event-ticker" class="message-log"></div>
-
       <section id="action-bar" class="action-bar classic-action-bar"></section>
 
       <section id="touch-controls" class="touch-controls">
@@ -112,44 +126,63 @@
 
   <template id="creation-template">
     <div class="modal mobile-sheet modal-large creation-sheet">
-      <div class="modal-title">Create Adventurer</div>
-      <div class="creation-intro text-block">
-        Build a travel-ready loadout. Keep the board readable, start light, and commit to an opening style you can sustain through the first floor.
-      </div>
-      <div class="creation-sheet-grid">
-        <section class="creation-sheet-main">
-          <label class="field-label" for="hero-name">Name</label>
-          <input class="field-input" id="hero-name" name="heroName" maxlength="20" value="Morgan" data-focus-key="creation:name">
-
-          <div class="field-group">
-            <div class="field-label">Race</div>
-            <div class="choice-grid" id="race-choice"></div>
+      <div class="creation-sheet-frame">
+        <div class="creation-sheet-header">
+          <div class="creation-sheet-heading">Create Your Hero</div>
+          <div class="creation-sheet-subheading">
+            Choose a bloodline, choose a calling, then spend your training points before the first descent.
           </div>
-
-          <div class="field-group">
-            <div class="field-label">Class</div>
-            <div class="choice-grid" id="class-choice"></div>
-          </div>
-
-          <div class="field-group">
-            <div class="creation-stat-header">
-              <div class="field-label">Attributes</div>
-              <button class="tiny-button" data-action="creation-reset-stats" data-focus-key="creation:reset-stats" type="button">Reset Points</button>
+        </div>
+        <div class="creation-sheet-grid">
+          <section class="creation-sheet-main">
+            <div class="creation-row">
+              <label class="field-label creation-label" for="hero-name">Name</label>
+              <input class="field-input creation-name-input" id="hero-name" name="heroName" maxlength="20" value="Morgan" data-focus-key="creation:name">
             </div>
-            <div id="creation-stat-points" class="creation-points-note"></div>
-            <div id="creation-stat-allocation" class="creation-stat-allocation"></div>
-          </div>
-        </section>
-      </div>
-      <div class="modal-actions">
-        <button class="action-button" data-action="close-modal" data-focus-key="creation:back" type="button">Back</button>
-        <button class="action-button primary" data-action="begin-adventure" data-focus-key="creation:begin" type="button">Begin Adventure</button>
+
+            <div class="field-group creation-choice-group">
+              <div class="field-label creation-label">Race</div>
+              <div class="choice-grid creation-choice-row" id="race-choice"></div>
+            </div>
+
+            <div class="field-group creation-choice-group">
+              <div class="field-label creation-label">Class</div>
+              <div class="choice-grid creation-choice-row" id="class-choice"></div>
+            </div>
+
+            <div class="field-group creation-stat-group">
+              <div class="creation-stat-header">
+                <div class="field-label creation-label">Attributes</div>
+                <button class="tiny-button" data-action="creation-reset-stats" data-focus-key="creation:reset-stats" type="button">Reset Points</button>
+              </div>
+              <div id="creation-stat-points" class="creation-points-note"></div>
+              <div id="creation-stat-allocation" class="creation-stat-allocation"></div>
+            </div>
+          </section>
+
+          <aside class="creation-sheet-preview">
+            <section class="creation-preview creation-preview-panel">
+              <div id="creation-preview-portrait" class="creation-preview-portrait"></div>
+              <div class="creation-preview-copy">
+                <div id="creation-preview-title" class="creation-preview-title"></div>
+                <div id="creation-preview-subtitle" class="creation-preview-subtitle"></div>
+                <div id="creation-preview-summary" class="creation-preview-summary"></div>
+                <div id="creation-preview-facts" class="creation-preview-facts"></div>
+                <div id="creation-preview-actions" class="creation-preview-actions"></div>
+              </div>
+            </section>
+          </aside>
+        </div>
+        <div class="modal-actions creation-actions">
+          <button class="action-button action-button-subtle" data-action="close-modal" data-focus-key="creation:back" type="button">Back</button>
+          <button class="action-button primary" data-action="begin-adventure" data-focus-key="creation:begin" type="button">Start Adventure</button>
+        </div>
       </div>
     </div>
   </template>
 
   <template id="list-modal-template">
-    <div class="modal mobile-sheet modal-large">
+    <div class="modal mobile-sheet modal-large modal-frame">
       <div class="modal-title" id="generic-modal-title"></div>
       <div class="modal-body" id="generic-modal-body"></div>
       <div class="modal-actions">
@@ -159,48 +192,42 @@
   </template>
 
   <template id="utility-menu-template">
-    <div class="modal mobile-sheet utility-menu-sheet">
+    <div class="modal mobile-sheet utility-menu-sheet modal-frame">
       <div class="modal-title">Adventure Menu</div>
       <div class="modal-body utility-menu-body">
-        <div class="utility-menu-actions">
-          <section class="utility-menu-group">
-            <div class="field-label">Run</div>
-            <div class="utility-menu-group-grid">
-              <button class="action-button" data-action="open-hub" data-tab="journal" data-journal-section="mission" data-focus-key="utility:briefing" type="button">Mission</button>
-              <button class="action-button" data-action="open-hub" data-tab="journal" data-journal-section="current" data-focus-key="utility:journal" type="button">Field Guide</button>
-              <button id="utility-stats-button" class="action-button" data-action="open-character-sheet" data-focus-key="utility:stats" type="button">Character</button>
-            </div>
-          </section>
-          <section class="utility-menu-group">
-            <div class="field-label">Saves</div>
-            <div class="utility-menu-group-grid">
-              <button id="utility-save-button" class="action-button" data-action="save-game" data-focus-key="utility:save" type="button">Save Slot</button>
-              <button id="utility-load-button" class="action-button" data-action="load-game" data-focus-key="utility:load" type="button">Load Slot</button>
-            </div>
-          </section>
-          <section class="utility-menu-group">
-            <div class="field-label">System</div>
-            <div class="utility-menu-group-grid">
-              <button class="action-button" data-action="view-map" data-focus-key="utility:map" type="button">Floor Map</button>
-              <button class="action-button" data-action="settings" data-focus-key="utility:settings" type="button">Settings</button>
-              <button class="action-button" data-action="open-hub" data-tab="journal" data-journal-section="guide" data-focus-key="utility:help" type="button">Rules</button>
-              <button class="action-button primary utility-menu-primary-action" data-action="close-modal" data-focus-key="utility:close" type="button">Return to Run</button>
-            </div>
-            <button class="action-button action-button-subtle utility-trace-button" data-action="export-telemetry" data-focus-key="utility:trace" type="button">Export Trace</button>
-          </section>
-        </div>
-        <section class="utility-menu-panel">
+        <section class="utility-command-summary">
           <div class="field-label">Right Now</div>
-          <div id="utility-run-summary" class="utility-menu-summary"></div>
+          <div id="utility-run-summary" class="utility-command-lead"></div>
+          <div class="utility-command-chips">
+            <div id="utility-save-summary" class="utility-command-chip utility-menu-summary"></div>
+            <div id="utility-control-summary" class="utility-command-chip utility-menu-summary"></div>
+          </div>
         </section>
-        <section class="utility-menu-panel">
-          <div class="field-label">Resume Point</div>
-          <div id="utility-save-summary" class="utility-menu-summary"></div>
+        <section class="utility-menu-group utility-menu-group-primary">
+          <div class="field-label">Primary</div>
+          <div class="utility-menu-group-grid utility-menu-group-grid-primary">
+            <button class="action-button" data-action="open-hub" data-tab="journal" data-journal-section="mission" data-focus-key="utility:briefing" type="button">Mission</button>
+            <button class="action-button" data-action="open-hub" data-tab="journal" data-journal-section="current" data-focus-key="utility:journal" type="button">Field Guide</button>
+            <button id="utility-stats-button" class="action-button" data-action="open-character-sheet" data-focus-key="utility:stats" type="button">Character</button>
+            <button id="utility-save-button" class="action-button" data-action="save-game" data-focus-key="utility:save" type="button">Save Slot</button>
+            <button id="utility-load-button" class="action-button" data-action="load-game" data-focus-key="utility:load" type="button">Load Slot</button>
+            <button class="action-button" data-action="settings" data-focus-key="utility:settings" type="button">Settings</button>
+          </div>
         </section>
-        <section class="utility-menu-panel">
-          <div class="field-label">Device & Controls</div>
-          <div id="utility-control-summary" class="utility-menu-summary"></div>
+        <section class="utility-menu-group utility-menu-group-secondary utility-menu-group-disclosure">
+          <button class="action-button action-button-subtle utility-more-toggle" data-action="toggle-utility-more" data-focus-key="utility:more-toggle" aria-expanded="false" type="button">
+            <span data-utility-more-label>More Tools</span>
+            <span data-utility-more-meta>Reveal map, rules, and trace</span>
+          </button>
+          <div class="utility-menu-secondary-links" data-utility-more-host hidden>
+            <button class="action-button action-button-subtle" data-action="view-map" data-focus-key="utility:map" type="button">Floor Map</button>
+            <button class="action-button action-button-subtle" data-action="open-hub" data-tab="journal" data-journal-section="guide" data-focus-key="utility:help" type="button">Rules</button>
+            <button class="action-button action-button-subtle utility-trace-button" data-action="export-telemetry" data-focus-key="utility:trace" type="button">Export Trace</button>
+          </div>
         </section>
+        <div class="modal-actions utility-command-actions">
+          <button class="action-button primary utility-menu-primary-action" data-action="close-modal" data-focus-key="utility:close" type="button">Return to Run</button>
+        </div>
       </div>
     </div>
   </template>

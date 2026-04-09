@@ -1,0 +1,147 @@
+diff --git a/src/game.js b/src/game.js
+--- a/src/game.js
++++ b/src/game.js
+@@
+ +    this.uiNavigationCache = {
+ +      root: null,
+ +      focusables: [],
+ +      focusKeyMap: new Map()
+ +    };
+@@
+ +  getUiNavigableSelector() {
+ +    return [
+ +      "button:not([disabled])",
+ +      "input:not([disabled])",
+ +      "select:not([disabled])",
+ +      "textarea:not([disabled])",
+ +      "[data-action]:not([disabled])",
+ +      "[data-move]:not([disabled])",
+ +      "[tabindex]:not([tabindex='-1'])"
+ +    ].join(", ");
+ +  }
+ +
+ +  resetUiNavigationCache() {
+ +    this.uiNavigationCache.root = null;
+ +    this.uiNavigationCache.focusables = [];
+ +    this.uiNavigationCache.focusKeyMap = new Map();
+ +  }
+ +
+ +  rebuildUiNavigationCache(root = this.getUiNavigationRoot()) {
+ +    const focusables = Array.from(root.querySelectorAll(this.getUiNavigableSelector()))
+ +      .filter((element) => this.isNavigableElement(element));
+ +    const focusKeyMap = new Map();
+ +    focusables.forEach((element) => {
+ +      const focusKey = element.dataset?.focusKey || "";
+ +      if (focusKey && !focusKeyMap.has(focusKey)) {
+ +        focusKeyMap.set(focusKey, element);
+ +      }
+ +    });
+ +    this.uiNavigationCache = { root, focusables, focusKeyMap };
+ +    return this.uiNavigationCache;
+ +  }
+@@
+ -  getUiNavigableElements(root = this.getUiNavigationRoot()) {
+ -    const selector = [
+ -      "button:not([disabled])",
+ -      "input:not([disabled])",
+ -      "select:not([disabled])",
+ -      "textarea:not([disabled])",
+ -      "[data-action]:not([disabled])",
+ -      "[data-move]:not([disabled])",
+ -      "[tabindex]:not([tabindex='-1'])"
+ -    ].join(", ");
+ -    const seen = new Set();
+ -    return Array.from(root.querySelectorAll(selector))
+ -      .filter((element) => {
+ -        if (!this.isNavigableElement(element) || seen.has(element)) {
+ -          return false;
+ -        }
+ -        seen.add(element);
+ -        return true;
+ -      });
+ +  getUiNavigableElements(root = this.getUiNavigationRoot()) {
+ +    return this.getUiNavigationCache(root).focusables;
+    }
+@@
+ -    const root = this.getUiNavigationRoot();
+ -    return Array.from(root.querySelectorAll("[data-focus-key]"))
+ -      .find((element) => element.dataset.focusKey === focusKey && element.offsetParent !== null && !element.disabled) || null;
+ +    const root = this.getUiNavigationRoot();
+ +    const cache = this.getUiNavigationCache(root);
+ +    const cached = cache.focusKeyMap.get(focusKey);
+ +    if (this.isNavigableElement(cached)) {
+ +      return cached;
+ +    }
+ +    return Array.from(root.querySelectorAll("[data-focus-key]"))
+ +      .find((element) => element.dataset.focusKey === focusKey && this.isNavigableElement(element)) || null;
+    }
+@@
+ +  applyHubNavigationMetadata(root) {
+ +    this.assignNavMetadata(Array.from(root.querySelectorAll(".hub-tabs .hub-tab")), "hub-tabs", 3);
+ +    if (this.activeHubTab === "pack") {
+ +      // pack-only metadata
+ +      return;
+ +    }
+ +    if (this.activeHubTab === "magic") {
+ +      // magic-only metadata
+ +      return;
+ +    }
+ +    // journal-only metadata
+ +  }
+ +
+ +  applyShopNavigationMetadata(root) {
+ +    // shop-only metadata
+ +  }
+ +
+ +  applyUtilityMenuNavigationMetadata(root) {
+ +    this.assignNavMetadata(Array.from(root.querySelectorAll(".utility-menu-actions .action-button")), "utility-menu", 2);
+ +  }
+ +
+ +  applySettingsNavigationMetadata(root) {
+ +    this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='setting-toggle']")), "settings", 1);
+ +  }
+ +
+ +  applyBankNavigationMetadata(root) {
+ +    this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='bank-deposit'], [data-action='bank-withdraw'], [data-action='town-rumor'], [data-action='town-unlock']")), "bank-actions", 4);
+ +  }
+@@
+ -  applyControllerNavigationMetadata() {
+ -    const modalVisible = this.modalRoot && !this.modalRoot.classList.contains("hidden");
+ -    if (modalVisible) {
+ -      this.applyModalNavigationMetadata(this.modalRoot);
+ -      return;
+ -    }
+ -    const root = this.appShell || document;
+ -    if (!root) {
+ -      return;
+ -    }
+ -    this.applyShellNavigationMetadata(root);
+ +  applyControllerNavigationMetadata() {
+ +    const modalVisible = this.modalRoot && !this.modalRoot.classList.contains("hidden");
+ +    if (modalVisible) {
+ +      this.applyModalNavigationMetadata(this.modalRoot);
+ +      this.rebuildUiNavigationCache(this.modalRoot);
+ +      return;
+ +    }
+ +    const root = this.appShell || document;
+ +    if (!root) {
+ +      this.resetUiNavigationCache();
+ +      return;
+ +    }
+ +    this.applyShellNavigationMetadata(root);
+ +    this.rebuildUiNavigationCache(root);
+    }
+@@
+ -  getScrollHostForElement(element) {
+ -    if (!(element instanceof HTMLElement)) {
+ -      return null;
+ -    }
+ -    return element.closest(".pack-list-panel, .message-log, .journal-log, .modal-body, .modal, .modal-root");
+ -  }
+ +  getScrollHostForElement(element) {
+ +    if (!(element instanceof HTMLElement)) {
+ +      return this.getModalScrollHost();
+ +    }
+ +    return element.closest(".pack-list-panel, .message-log, .journal-log, .modal-body, .modal, .modal-root")
+ +      || this.getModalScrollHost();
+ +  }

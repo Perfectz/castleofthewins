@@ -1,0 +1,154 @@
+diff --git a/src/game.js b/src/game.js
+--- a/src/game.js
++++ b/src/game.js
+@@
+ +    this.modalInteractionFeedback = { message: "", tone: "" };
+ +    this.pendingModalFeedbackHandle = 0;
+ +    this.pendingModalFeedbackMode = "";
+ +    this.uiInteractionAckHandles = new WeakMap();
+@@
+ +    const actionableTarget = event.target instanceof Element
+ +      ? event.target.closest("button, [data-action], [data-race], [data-class]")
+ +      : null;
+ +    if (
+ +      actionableTarget instanceof HTMLElement
+ +      && this.modalRoot?.contains(actionableTarget)
+ +      && !actionableTarget.matches(":disabled, [aria-disabled='true']")
+ +    ) {
+ +      this.flashUiInteractionTarget(actionableTarget);
+ +    }
+@@
+ +      if (event.detail === 0) {
+ +        this.flashUiInteractionTarget(action);
+ +      }
+ @@
+ +          this.flashUiInteractionTarget(target);
+ +          target.click();
+@@
+ +  flashUiInteractionTarget(element, options = {}) {
+ +    const target = this.getUiInteractionAckElement(element);
+ +    if (!(target instanceof HTMLElement)) {
+ +      return;
+ +    }
+ +    const durationMs = Math.max(60, Number(options.durationMs) || 90);
+ +    const previousAnimation = this.uiInteractionAckHandles.get(target);
+ +    if (previousAnimation && typeof previousAnimation.cancel === "function") {
+ +      previousAnimation.cancel();
+ +    }
+ +    if (typeof target.animate !== "function") {
+ +      return;
+ +    }
+ +    const animation = target.animate([
+ +      { filter: "brightness(1) saturate(1)", transform: "translateY(0)" },
+ +      { filter: "brightness(1.08) saturate(1.06)", transform: "translateY(-1px)" },
+ +      { filter: "brightness(1) saturate(1)", transform: "translateY(0)" }
+ +    ], {
+ +      duration: durationMs,
+ +      easing: "ease-out"
+ +    });
+ +    this.uiInteractionAckHandles.set(target, animation);
+ +  }
+@@
+ +  ensureModalInteractionFeedbackHost() {
+ +    const modal = this.getModalElement();
+ +    if (!(modal instanceof HTMLElement)) {
+ +      return null;
+ +    }
+ +    let host = modal.querySelector("[data-modal-interaction-feedback]");
+ +    if (host instanceof HTMLElement) {
+ +      return host;
+ +    }
+ +    host = document.createElement("div");
+ +    host.className = "modal-interaction-feedback";
+ +    host.hidden = true;
+ +    host.setAttribute("data-modal-interaction-feedback", "true");
+ +    host.setAttribute("role", "status");
+ +    host.setAttribute("aria-live", "polite");
+ +    const title = modal.querySelector(".modal-title");
+ +    if (title?.nextSibling) {
+ +      title.parentNode.insertBefore(host, title.nextSibling);
+ +    } else if (title?.parentNode) {
+ +      title.parentNode.appendChild(host);
+ +    } else {
+ +      modal.prepend(host);
+ +    }
+ +    return host;
+ +  }
+@@
+ +  showModalInteractionFeedback(message, tone = "info", options = {}) {
+ +    const text = typeof message === "string" ? message.trim() : "";
+ +    if (!text) {
+ +      this.clearModalInteractionFeedback();
+ +      return;
+ +    }
+ +    const persistMs = Math.max(0, Number(options.persistMs) || 1200);
+ +    this.cancelModalInteractionFeedback();
+ +    this.modalInteractionFeedback = {
+ +      message: text,
+ +      tone: tone || "info"
+ +    };
+ +    this.syncModalInteractionFeedbackHost();
+ +  }
+@@
+ -    if (this.modalRoot && this.modalRoot.contains(element) && typeof element.scrollIntoView === "function") {
+ -      element.scrollIntoView({ block: "nearest", inline: "nearest" });
+ +    if (this.modalRoot && this.modalRoot.contains(element)) {
+ +      const scrollHost = this.getScrollHostForElement(element);
+ +      this.ensureElementVisibleInScrollHost(element, scrollHost);
+      }
+@@
+ +      this.flashUiInteractionTarget(focusables[0], { durationMs: 80 });
+ @@
+ +      this.flashUiInteractionTarget(next, { durationMs: 80 });
+@@
+ +    this.clearModalInteractionFeedback();
+ +    this.ensureModalInteractionFeedbackHost();
+ +    this.syncModalInteractionFeedbackHost();
+@@
+ +    if (
+ +      this.mode === "modal"
+ +      && this.modalRoot
+ +      && !this.modalRoot.classList.contains("hidden")
+ +      && ["good", "warning", "bad"].includes(tone)
+ +    ) {
+ +      this.showModalInteractionFeedback(message, tone, {
+ +        persistMs: tone === "bad" ? 1600 : tone === "warning" ? 1350 : 1100
+ +      });
+ +    }
+
+diff --git a/styles.css b/styles.css
+--- a/styles.css
++++ b/styles.css
+@@
+ +.modal-interaction-feedback {
+ +  margin: 8px 0 0;
+ +  padding: 10px 12px;
+ +  border-radius: 14px;
+ +  border: 1px solid rgba(216, 194, 154, 0.2);
+ +  background:
+ +    linear-gradient(180deg, rgba(34, 42, 49, 0.96), rgba(16, 22, 27, 0.98));
+ +  color: var(--text);
+ +  font-size: 0.82rem;
+ +  line-height: 1.4;
+ +}
+ +
+ +.modal-interaction-feedback.good {
+ +  border-color: rgba(143, 218, 160, 0.34);
+ +  background:
+ +    linear-gradient(180deg, rgba(28, 58, 42, 0.96), rgba(14, 30, 24, 0.98));
+ +  color: #e5f8ea;
+ +}
+ +
+ +.modal-interaction-feedback.warning {
+ +  border-color: rgba(242, 194, 103, 0.42);
+ +  background:
+ +    linear-gradient(180deg, rgba(70, 51, 20, 0.96), rgba(33, 24, 10, 0.98));
+ +  color: #fff2cc;
+ +}
+ +
+ +.modal-interaction-feedback.bad {
+ +  border-color: rgba(240, 124, 103, 0.4);
+ +  background:
+ +    linear-gradient(180deg, rgba(72, 31, 26, 0.96), rgba(35, 15, 14, 0.98));
+ +  color: #ffe4df;
+ +}

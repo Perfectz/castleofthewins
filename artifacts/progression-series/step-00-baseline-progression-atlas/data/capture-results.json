@@ -1,0 +1,282 @@
+{
+  "generatedAt": "2026-04-09T01:32:46.476Z",
+  "screenshots": [
+    {
+      "filename": "mobile-01-creation.png",
+      "path": "screenshots/before/mobile-01-creation.png",
+      "viewport": "mobile",
+      "screen": "Character creation",
+      "howReached": "Opened New Game and restaged the live creation modal to an elf wizard draft.",
+      "whyCaptured": "Shows class, race, and stat-allocation differentiation."
+    },
+    {
+      "filename": "mobile-02-town-overview.png",
+      "path": "screenshots/before/mobile-02-town-overview.png",
+      "viewport": "mobile",
+      "screen": "Town overview",
+      "howReached": "Began a run from the creation screen.",
+      "whyCaptured": "Shows the town HUD before opening progression services."
+    },
+    {
+      "filename": "mobile-03-bank-progression.png",
+      "path": "screenshots/before/mobile-03-bank-progression.png",
+      "viewport": "mobile",
+      "screen": "Bank progression review",
+      "howReached": "Opened the live Bank modal with representative mastery and contract state.",
+      "whyCaptured": "Documents contracts, mastery, commendations, rumors, and town unlocks."
+    },
+    {
+      "filename": "mobile-04-armory.png",
+      "path": "screenshots/before/mobile-04-armory.png",
+      "viewport": "mobile",
+      "screen": "Armory",
+      "howReached": "Opened the live town service modal from town.",
+      "whyCaptured": "Shows equipment progression and gear comparison."
+    },
+    {
+      "filename": "mobile-05-guild.png",
+      "path": "screenshots/before/mobile-05-guild.png",
+      "viewport": "mobile",
+      "screen": "Wizard's Guild",
+      "howReached": "Opened the live town service modal from town.",
+      "whyCaptured": "Shows spellbook, wand, and mana-oriented build shaping."
+    },
+    {
+      "filename": "mobile-06-temple.png",
+      "path": "screenshots/before/mobile-06-temple.png",
+      "viewport": "mobile",
+      "screen": "Temple",
+      "howReached": "Opened the live town service modal from town.",
+      "whyCaptured": "Shows restoration and overcast recovery."
+    },
+    {
+      "filename": "mobile-07-sage.png",
+      "path": "screenshots/before/mobile-07-sage.png",
+      "viewport": "mobile",
+      "screen": "Sage's Tower",
+      "howReached": "Opened the live town service modal from town.",
+      "whyCaptured": "Shows identification as a build-shaping knowledge service."
+    },
+    {
+      "filename": "mobile-08-dungeon-overview.png",
+      "path": "screenshots/before/mobile-08-dungeon-overview.png",
+      "viewport": "mobile",
+      "screen": "Dungeon overview",
+      "howReached": "Descended to depth 1 and revealed the floor for documentation.",
+      "whyCaptured": "Provides the run context where progression interrupts play."
+    },
+    {
+      "filename": "mobile-09-pack-gear.png",
+      "path": "screenshots/before/mobile-09-pack-gear.png",
+      "viewport": "mobile",
+      "screen": "Pack gear comparison",
+      "howReached": "Added a representative armor upgrade and opened the pack hub on that item.",
+      "whyCaptured": "Documents gear-based build shaping."
+    },
+    {
+      "filename": "mobile-10-pack-spellbook.png",
+      "path": "screenshots/before/mobile-10-pack-spellbook.png",
+      "viewport": "mobile",
+      "screen": "Pack spellbook interaction",
+      "howReached": "Selected a staged spellbook in the live pack hub.",
+      "whyCaptured": "Shows one route for learning spells outside level-up."
+    },
+    {
+      "filename": "mobile-11-magic-hub.png",
+      "path": "screenshots/before/mobile-11-magic-hub.png",
+      "viewport": "mobile",
+      "screen": "Magic hub",
+      "howReached": "Added representative known spells and opened the magic hub.",
+      "whyCaptured": "Documents spell management separate from acquisition."
+    },
+    {
+      "filename": "mobile-12-level-up-perk.png",
+      "path": "screenshots/before/mobile-12-level-up-perk.png",
+      "viewport": "mobile",
+      "screen": "Level up perk choice",
+      "howReached": "Granted enough XP in the live run to trigger level-up.",
+      "whyCaptured": "Documents the perk-choice half of the level-up interrupt."
+    },
+    {
+      "filename": "mobile-13-spell-study.png",
+      "path": "screenshots/before/mobile-13-spell-study.png",
+      "viewport": "mobile",
+      "screen": "Spell study",
+      "howReached": "Advanced the same live level-up flow from perk choice into spell study.",
+      "whyCaptured": "Shows the spell-acquisition branch of level progression."
+    },
+    {
+      "filename": "mobile-14-relic-choice.png",
+      "path": "screenshots/before/mobile-14-relic-choice.png",
+      "viewport": "mobile",
+      "screen": "Relic choice",
+      "howReached": "Staged the live reward-choice modal with current relic options.",
+      "whyCaptured": "Documents objective-driven run shaping through relic rewards."
+    },
+    {
+      "filename": "mobile-15-boon-choice.png",
+      "path": "screenshots/before/mobile-15-boon-choice.png",
+      "viewport": "mobile",
+      "screen": "Boon choice",
+      "howReached": "Staged the live reward-choice modal with current boon options.",
+      "whyCaptured": "Documents the alternate reward branch that can redirect a run."
+    },
+    {
+      "filename": "desktop-01-creation.png",
+      "path": "screenshots/before/desktop-01-creation.png",
+      "viewport": "desktop",
+      "screen": "Character creation",
+      "howReached": "Opened New Game and restaged the live creation modal to an elf wizard draft.",
+      "whyCaptured": "Shows class, race, and stat-allocation differentiation."
+    },
+    {
+      "filename": "desktop-02-town-overview.png",
+      "path": "screenshots/before/desktop-02-town-overview.png",
+      "viewport": "desktop",
+      "screen": "Town overview",
+      "howReached": "Began a run from the creation screen.",
+      "whyCaptured": "Shows the town HUD before opening progression services."
+    },
+    {
+      "filename": "desktop-03-bank-progression.png",
+      "path": "screenshots/before/desktop-03-bank-progression.png",
+      "viewport": "desktop",
+      "screen": "Bank progression review",
+      "howReached": "Opened the live Bank modal with representative mastery and contract state.",
+      "whyCaptured": "Documents contracts, mastery, commendations, rumors, and town unlocks."
+    },
+    {
+      "filename": "desktop-04-armory.png",
+      "path": "screenshots/before/desktop-04-armory.png",
+      "viewport": "desktop",
+      "screen": "Armory",
+      "howReached": "Opened the live town service modal from town.",
+      "whyCaptured": "Shows equipment progression and gear comparison."
+    },
+    {
+      "filename": "desktop-05-guild.png",
+      "path": "screenshots/before/desktop-05-guild.png",
+      "viewport": "desktop",
+      "screen": "Wizard's Guild",
+      "howReached": "Opened the live town service modal from town.",
+      "whyCaptured": "Shows spellbook, wand, and mana-oriented build shaping."
+    },
+    {
+      "filename": "desktop-06-temple.png",
+      "path": "screenshots/before/desktop-06-temple.png",
+      "viewport": "desktop",
+      "screen": "Temple",
+      "howReached": "Opened the live town service modal from town.",
+      "whyCaptured": "Shows restoration and overcast recovery."
+    },
+    {
+      "filename": "desktop-07-sage.png",
+      "path": "screenshots/before/desktop-07-sage.png",
+      "viewport": "desktop",
+      "screen": "Sage's Tower",
+      "howReached": "Opened the live town service modal from town.",
+      "whyCaptured": "Shows identification as a build-shaping knowledge service."
+    },
+    {
+      "filename": "desktop-08-dungeon-overview.png",
+      "path": "screenshots/before/desktop-08-dungeon-overview.png",
+      "viewport": "desktop",
+      "screen": "Dungeon overview",
+      "howReached": "Descended to depth 1 and revealed the floor for documentation.",
+      "whyCaptured": "Provides the run context where progression interrupts play."
+    },
+    {
+      "filename": "desktop-09-pack-gear.png",
+      "path": "screenshots/before/desktop-09-pack-gear.png",
+      "viewport": "desktop",
+      "screen": "Pack gear comparison",
+      "howReached": "Added a representative armor upgrade and opened the pack hub on that item.",
+      "whyCaptured": "Documents gear-based build shaping."
+    },
+    {
+      "filename": "desktop-10-pack-spellbook.png",
+      "path": "screenshots/before/desktop-10-pack-spellbook.png",
+      "viewport": "desktop",
+      "screen": "Pack spellbook interaction",
+      "howReached": "Selected a staged spellbook in the live pack hub.",
+      "whyCaptured": "Shows one route for learning spells outside level-up."
+    },
+    {
+      "filename": "desktop-11-magic-hub.png",
+      "path": "screenshots/before/desktop-11-magic-hub.png",
+      "viewport": "desktop",
+      "screen": "Magic hub",
+      "howReached": "Added representative known spells and opened the magic hub.",
+      "whyCaptured": "Documents spell management separate from acquisition."
+    },
+    {
+      "filename": "desktop-12-level-up-perk.png",
+      "path": "screenshots/before/desktop-12-level-up-perk.png",
+      "viewport": "desktop",
+      "screen": "Level up perk choice",
+      "howReached": "Granted enough XP in the live run to trigger level-up.",
+      "whyCaptured": "Documents the perk-choice half of the level-up interrupt."
+    },
+    {
+      "filename": "desktop-13-spell-study.png",
+      "path": "screenshots/before/desktop-13-spell-study.png",
+      "viewport": "desktop",
+      "screen": "Spell study",
+      "howReached": "Advanced the same live level-up flow from perk choice into spell study.",
+      "whyCaptured": "Shows the spell-acquisition branch of level progression."
+    },
+    {
+      "filename": "desktop-14-relic-choice.png",
+      "path": "screenshots/before/desktop-14-relic-choice.png",
+      "viewport": "desktop",
+      "screen": "Relic choice",
+      "howReached": "Staged the live reward-choice modal with current relic options.",
+      "whyCaptured": "Documents objective-driven run shaping through relic rewards."
+    },
+    {
+      "filename": "desktop-15-boon-choice.png",
+      "path": "screenshots/before/desktop-15-boon-choice.png",
+      "viewport": "desktop",
+      "screen": "Boon choice",
+      "howReached": "Staged the live reward-choice modal with current boon options.",
+      "whyCaptured": "Documents the alternate reward branch that can redirect a run."
+    },
+    {
+      "filename": "mobile-progression-atlas-board.png",
+      "path": "screenshots/after/mobile-progression-atlas-board.png",
+      "viewport": "mobile",
+      "screen": "Mobile progression atlas board",
+      "howReached": "Generated from the before-side captures with the step-local board renderer.",
+      "whyCaptured": "Creates an annotated after-side atlas rather than a redesign."
+    },
+    {
+      "filename": "desktop-progression-atlas-board.png",
+      "path": "screenshots/after/desktop-progression-atlas-board.png",
+      "viewport": "desktop",
+      "screen": "Desktop progression atlas board",
+      "howReached": "Generated from the before-side captures with the step-local board renderer.",
+      "whyCaptured": "Creates an annotated after-side atlas rather than a redesign."
+    },
+    {
+      "filename": "progression-system-map-board.png",
+      "path": "screenshots/after/progression-system-map-board.png",
+      "viewport": "board",
+      "screen": "Progression system map board",
+      "howReached": "Generated from code-backed atlas findings.",
+      "whyCaptured": "Turns the baseline into a readable relationship diagram."
+    },
+    {
+      "filename": "build-path-board.png",
+      "path": "screenshots/after/build-path-board.png",
+      "viewport": "board",
+      "screen": "Build-path summary board",
+      "howReached": "Generated from the current class-family progression summary.",
+      "whyCaptured": "Adds publication-ready build-path summaries to the atlas."
+    }
+  ],
+  "stagingNotes": [
+    "Creation was staged to an elf wizard draft so spell-forward class differentiation is visible in one frame.",
+    "Bank progression was staged with representative mastery, contract, commendation, and bankroll values.",
+    "Pack, magic, relic, and boon captures use the live UI with representative runtime staging."
+  ]
+}

@@ -1,0 +1,7 @@
+# Menu Performance Series: Final Roadmap And Capstone
+
+This final pass was less about finding one more giant win and more about telling the truth about what the series had already accomplished. The biggest menu-adjacent stalls were solved earlier: `Begin Adventure` dropped from `185.2ms` to `56.9ms`, first descent dropped from `660.8ms` to `148.5ms`, the town utility menu dropped from `33.5ms` to `9.2ms`, and the focus system stopped spending `10.8ms` on a single focus-key lookup. By the time the series reached its capstone, the remaining friction was mostly in dense hub handoffs and browser-side settle behavior.
+
+That made the final code change deliberately small. Instead of reopening the menu architecture, the capstone removed the last modal-open blur from the background game layer and kept only a lighter dimming treatment. The result was exactly what a good final polish bundle should be: a few real improvements in settle-heavy flows like `Chronicle` and `Provisioner -> Sell`, some calmer post-click behavior in pack interactions, and a clear proof that the remaining big target is still `Field Guide -> Pack`, not another broad refactor.
+
+The strongest lesson from the full workflow is that menu performance is not one problem. Some of it is startup sequencing. Some of it is DOM churn. Some of it is focus metadata. Some of it is the reading burden created by dense screens. The series worked because each pass asked a narrower question, collected comparable evidence, and stayed honest about whether the result was a throughput win, a UX win, or both.

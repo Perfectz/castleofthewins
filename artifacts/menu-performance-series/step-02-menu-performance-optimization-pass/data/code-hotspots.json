@@ -1,0 +1,62 @@
+{
+  "generatedFrom": "data/raw-metrics.json",
+  "sourceFiles": [
+    "src/game.js",
+    "src/features/creation.js",
+    "src/features/exploration.js",
+    "src/features/persistence.js"
+  ],
+  "hotspots": [
+    {
+      "flow": "creation_to_town_start",
+      "notes": "Startup is still dominated by first interactive render work, not modal code.",
+      "calls": [
+        { "name": "render", "totalMs": 37.4 },
+        { "name": "renderBoard", "totalMs": 30.8 },
+        { "name": "getAdvisorModel", "totalMs": 14.0 }
+      ]
+    },
+    {
+      "flow": "utility_menu_open_town",
+      "notes": "Deferred summary hydration removed most synchronous open work.",
+      "calls": [
+        { "name": "showUtilityMenu", "totalMs": 6.8 },
+        { "name": "applyControllerNavigationMetadata", "totalMs": 0.2 }
+      ]
+    },
+    {
+      "flow": "journal_to_pack_tab_switch",
+      "notes": "The click path is now mostly shell/pane switching. Pack markup generation is no longer the main synchronous cost during the switch.",
+      "calls": [
+        { "name": "showHubModal", "totalMs": 40.3 },
+        { "name": "applyControllerNavigationMetadata", "totalMs": 0.7 }
+      ]
+    },
+    {
+      "flow": "pack_filter_switch_use",
+      "notes": "Pack filter refresh is relatively cheap in JS; remaining settle cost is likely paint/layout.",
+      "calls": [
+        { "name": "getPackHubMarkup", "totalMs": 1.3 },
+        { "name": "applyControllerNavigationMetadata", "totalMs": 0.6 }
+      ]
+    },
+    {
+      "flow": "pack_to_magic_tab_switch",
+      "notes": "Magic still pays for a real pane render on switch in the latest run.",
+      "calls": [
+        { "name": "showHubModal", "totalMs": 16.0 },
+        { "name": "getMagicHubMarkup", "totalMs": 1.6 },
+        { "name": "applyControllerNavigationMetadata", "totalMs": 0.9 }
+      ]
+    },
+    {
+      "flow": "descend_to_dungeon",
+      "notes": "The huge baseline stall is gone, but depth entry still spends most of its time in render work.",
+      "calls": [
+        { "name": "render", "totalMs": 10.4 },
+        { "name": "renderBoard", "totalMs": 8.2 },
+        { "name": "getAdvisorModel", "totalMs": 1.8 }
+      ]
+    }
+  ]
+}

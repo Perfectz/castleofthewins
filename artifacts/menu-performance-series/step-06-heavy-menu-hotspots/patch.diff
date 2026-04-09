@@ -1,0 +1,78 @@
+This repository already had a dirty working tree, so this patch file is a focused excerpt for the step-06 hotspot work rather than a full repository diff.
+
+diff --git a/src/features/inventory-ui.js b/src/features/inventory-ui.js
+--- a/src/features/inventory-ui.js
++++ b/src/features/inventory-ui.js
+@@
++const INVENTORY_PRESENTATION_CACHE = new WeakMap();
+@@
+-function stackGroupEntries(entries, selectedIndex) {
++function stackGroupEntries(entries) {
+@@
++function getInventoryPresentationCacheKey(game, filter = "all", shopId = "") {
++  // Cache derived inventory models by the current inventory, equipment, and runtime state.
++}
+@@
+-  const entries = game.player.inventory.map((item, index) => buildInventoryItemSemantics(game, item, index, { shopId }));
+-  const visibleEntries = entries.filter((entry) => matchesFilter(entry, filter, shopId, inTown));
+-  const groups = GROUP_DEFS.map((group) => {
+-    const groupedEntries = entries
+-      .filter((entry) => entry.groupKey === group.key)
+-      .filter((entry) => matchesFilter(entry, filter, shopId, inTown));
+-    const items = stackGroupEntries(groupedEntries, selectedIndex);
+-    ...
+-  });
++  // Reuse cached derived presentation state for repeated pack and shop interactions.
+
+diff --git a/src/game.js b/src/game.js
+--- a/src/game.js
++++ b/src/game.js
+@@
++  refreshPackHubContent(focusTarget = null, options = {}) {
++    // Update only pack regions that actually changed instead of rebuilding the full pane.
++  }
+@@
+-    if (this.mode === "modal" && this.activeHubTab === "pack") {
+-      this.updateHubModalContent("pack", {
++    if (this.mode === "modal" && this.activeHubTab === "pack") {
++      if (this.refreshPackHubContent(focusTarget, { ... })) {
++        return;
++      }
++      this.updateHubModalContent("pack", {
+@@
+-          <section class="hub-section pack-equipment-panel">
++          <div data-pack-equipment-host>
++            <section class="hub-section pack-equipment-panel">
+@@
+-            ${this.getPackFilterMarkup(inventoryModel)}
+-            <div class="inventory-list-panel pack-list-panel">
++            <div data-pack-filter-host>${this.getPackFilterMarkup(inventoryModel)}</div>
++            <div class="inventory-list-panel pack-list-panel" data-pack-list-host>
+@@
+-          ${this.getPackInspectorMarkup(model, inventoryModel)}
++          <div data-pack-inspector-host>${this.getPackInspectorMarkup(model, inventoryModel)}</div>
+@@
+-  refreshJournalHubSection(...) {
+-    wrapper.innerHTML = this.getJournalHubMarkup().trim();
+-    ...
+-    activeSectionHost.innerHTML = nextActiveSectionHost.innerHTML;
++  refreshJournalHubSection(...) {
++    activeSectionHost.innerHTML = this.getJournalActiveSectionMarkup(this.activeJournalSection);
+@@
+-  getJournalHubMarkup() {
+-    // Built all journal sections up front.
++  getJournalCurrentSectionMarkup() { ... }
++  getJournalMissionSectionMarkup() { ... }
++  getJournalGuideSectionMarkup() { ... }
++  getJournalChronicleSectionMarkup() { ... }
++  getJournalActiveSectionMarkup(activeSection) { ... }
++  getJournalHubMarkup() {
++    // Build only the active journal section.
+@@
+-  getShopModalBodyMarkup(shopId, shop) {
+-    // Built both buy and sell content every time.
++  getShopBuyPanelMarkup(shopId, shop, turnoverLabel) { ... }
++  getShopSellPanelMarkup(shopId) { ... }
++  getShopPanelBodyMarkup(shopId, shop, panel = this.activeShopPanel) { ... }
++  getShopModalBodyMarkup(shopId, shop) {
++    // Build only the visible shop panel.

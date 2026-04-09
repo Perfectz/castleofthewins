@@ -1,0 +1,3336 @@
+{
+  "generatedAt": "2026-04-08T23:42:55.928Z",
+  "url": "http://127.0.0.1:4198/index.html",
+  "viewport": {
+    "width": 393,
+    "height": 852,
+    "deviceScaleFactor": 2
+  },
+  "results": {
+    "measurements": [
+      {
+        "label": "title_to_creation_open",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"new-game\"]"
+        },
+        "readyKey": "creation",
+        "readyResolved": false,
+        "handlerMs": 23.6,
+        "readyMs": 1436.5,
+        "settledMs": 1469.8,
+        "firstMutationMs": 23.5,
+        "mutationCount": 11,
+        "totalAddedNodes": 7,
+        "totalRemovedNodes": 7,
+        "firstFocusMs": 23,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "title_to_creation_open",
+          "mode": "creation",
+          "depth": 0,
+          "modalTitle": "",
+          "modalSurfaceKey": "creation",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "current",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "focusKey": "creation:name",
+          "modalNodeCount": 95,
+          "modalButtonCount": 18,
+          "actionBarButtonCount": 0,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "creation:name",
+          "navigableCount": 15,
+          "navZoneCount": 5,
+          "focusKeyCount": 15,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 2,
+            "totalMs": 1,
+            "maxMs": 0.8
+          },
+          {
+            "name": "focusFirstUiElement",
+            "count": 1,
+            "totalMs": 0.8,
+            "maxMs": 0.8
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 2,
+            "totalMs": 0.7,
+            "maxMs": 0.5
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.7,
+            "maxMs": 0.7
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 12,
+            "totalMs": 0.2,
+            "maxMs": 0.1
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 2,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 2,
+            "totalMs": 1,
+            "maxMs": 0.8
+          },
+          {
+            "name": "focusFirstUiElement",
+            "count": 1,
+            "totalMs": 0.8,
+            "maxMs": 0.8
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 2,
+            "totalMs": 0.7,
+            "maxMs": 0.5
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.7,
+            "maxMs": 0.7
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 12,
+            "totalMs": 0.2,
+            "maxMs": 0.1
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 23.5,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          },
+          {
+            "at": 23.5,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 23.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 23.5,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 23.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 23.5,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "BUTTON"
+          },
+          {
+            "at": 23.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 23.6,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "creation_to_town_start",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"begin-adventure\"]"
+        },
+        "readyKey": "town",
+        "readyResolved": true,
+        "handlerMs": 54.7,
+        "readyMs": 54.7,
+        "settledMs": 79.6,
+        "firstMutationMs": 54.6,
+        "mutationCount": 35,
+        "totalAddedNodes": 53,
+        "totalRemovedNodes": 38,
+        "firstFocusMs": null,
+        "focusEventCount": 0,
+        "firstLogMs": 63.9,
+        "logEventCount": 3,
+        "lastLogMessage": "Open one town door to see what town can do. Then follow the north road straight into the keep.",
+        "lastLogTone": "warning",
+        "longTaskCount": 1,
+        "totalLongTaskMs": 54,
+        "snapshot": {
+          "label": "creation_to_town_start",
+          "mode": "game",
+          "depth": 0,
+          "modalTitle": "",
+          "modalSurfaceKey": "",
+          "modalVisible": false,
+          "activeHubTab": "pack",
+          "activeJournalSection": "current",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "focusKey": "",
+          "modalNodeCount": 0,
+          "modalButtonCount": 0,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "BODY",
+          "navigableCount": 17,
+          "navZoneCount": 4,
+          "focusKeyCount": 17,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 3,
+            "totalMs": 9.8,
+            "maxMs": 8.2
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          },
+          {
+            "name": "applyShellNavigationMetadata",
+            "count": 3,
+            "totalMs": 0.2,
+            "maxMs": 0.1
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 12,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 3,
+            "totalMs": 9.8,
+            "maxMs": 8.2
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          },
+          {
+            "name": "applyShellNavigationMetadata",
+            "count": 3,
+            "totalMs": 0.2,
+            "maxMs": 0.1
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 12,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 54.6,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 54.6,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 54.6,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          },
+          {
+            "at": 54.7,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 54.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 54.7,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "BUTTON"
+          },
+          {
+            "at": 54.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 54.7,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": true
+      },
+      {
+        "label": "utility_menu_open_town",
+        "trigger": {
+          "kind": "click",
+          "selector": "#utility-menu-button"
+        },
+        "readyKey": "utility",
+        "readyResolved": true,
+        "handlerMs": 7.1,
+        "readyMs": 7.2,
+        "settledMs": 26.8,
+        "firstMutationMs": 7,
+        "mutationCount": 8,
+        "totalAddedNodes": 29,
+        "totalRemovedNodes": 15,
+        "firstFocusMs": 7,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "utility_menu_open_town",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Adventure Menu",
+          "modalSurfaceKey": "utility-menu",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "current",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "focusKey": "utility:briefing",
+          "modalNodeCount": 71,
+          "modalButtonCount": 13,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "utility:briefing",
+          "navigableCount": 9,
+          "navZoneCount": 1,
+          "focusKeyCount": 9,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "showUtilityMenu",
+            "count": 1,
+            "totalMs": 6.8,
+            "maxMs": 6.8
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 5.4,
+            "maxMs": 5.4
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "focusFirstUiElement",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 3,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 2,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showUtilityMenu",
+            "count": 1,
+            "totalMs": 6.8,
+            "maxMs": 6.8
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 5.4,
+            "maxMs": 5.4
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "focusFirstUiElement",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 3,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 7,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 7,
+            "type": "childList",
+            "added": 1,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 15.7,
+            "type": "childList",
+            "added": 7,
+            "removed": 5,
+            "target": "DIV"
+          },
+          {
+            "at": 15.7,
+            "type": "childList",
+            "added": 13,
+            "removed": 5,
+            "target": "DIV"
+          },
+          {
+            "at": 15.7,
+            "type": "childList",
+            "added": 5,
+            "removed": 5,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "utility_to_journal_open",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"open-hub\"][data-tab=\"journal\"]"
+        },
+        "readyKey": "journal",
+        "readyResolved": true,
+        "handlerMs": 17,
+        "readyMs": 17,
+        "settledMs": 71.2,
+        "firstMutationMs": 17,
+        "mutationCount": 7,
+        "totalAddedNodes": 7,
+        "totalRemovedNodes": 4,
+        "firstFocusMs": 16.5,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "utility_to_journal_open",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Field Guide",
+          "modalSurfaceKey": "hub:journal",
+          "modalVisible": true,
+          "activeHubTab": "journal",
+          "activeJournalSection": "mission",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Guide",
+          "activeSectionLabel": "Mission",
+          "activeFilterLabel": "All",
+          "focusKey": "journal:section:mission",
+          "modalNodeCount": 381,
+          "modalButtonCount": 41,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 15,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "journal:section:mission",
+          "navigableCount": 8,
+          "navZoneCount": 3,
+          "focusKeyCount": 8,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 16.5,
+            "maxMs": 16.5
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 13.1,
+            "maxMs": 13.1
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 10.7,
+            "maxMs": 10.7
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.7,
+            "maxMs": 0.7
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 7,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 16.5,
+            "maxMs": 16.5
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 13.1,
+            "maxMs": 13.1
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 10.7,
+            "maxMs": 10.7
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.7,
+            "maxMs": 0.7
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 7,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 17,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 17,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          },
+          {
+            "at": 17,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 17,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 17,
+            "type": "childList",
+            "added": 1,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 17,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 42.2,
+            "type": "childList",
+            "added": 3,
+            "removed": 1,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "journal_section_switch_chronicle",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"journal-section\"][data-section=\"chronicle\"]"
+        },
+        "readyKey": "journalChronicle",
+        "readyResolved": true,
+        "handlerMs": 17.3,
+        "readyMs": 17.4,
+        "settledMs": 41.4,
+        "firstMutationMs": 17.3,
+        "mutationCount": 3,
+        "totalAddedNodes": 3,
+        "totalRemovedNodes": 3,
+        "firstFocusMs": 17.1,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "journal_section_switch_chronicle",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Field Guide",
+          "modalSurfaceKey": "hub:journal",
+          "modalVisible": true,
+          "activeHubTab": "journal",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Guide",
+          "activeSectionLabel": "Chronicle",
+          "activeFilterLabel": "All",
+          "focusKey": "journal:section:chronicle",
+          "modalNodeCount": 510,
+          "modalButtonCount": 41,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 15,
+          "spellButtonCount": 0,
+          "journalLogCount": 7,
+          "activeElement": "journal:section:chronicle",
+          "navigableCount": 8,
+          "navZoneCount": 3,
+          "focusKeyCount": 8,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "refreshJournalHubSection",
+            "count": 1,
+            "totalMs": 16.8,
+            "maxMs": 16.8
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 12.8,
+            "maxMs": 12.8
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.8,
+            "maxMs": 0.8
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.6,
+            "maxMs": 0.6
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 7,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "refreshJournalHubSection",
+            "count": 1,
+            "totalMs": 16.8,
+            "maxMs": 16.8
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 12.8,
+            "maxMs": 12.8
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.8,
+            "maxMs": 0.8
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.6,
+            "maxMs": 0.6
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 7,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 17.3,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 17.3,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 17.3,
+            "type": "childList",
+            "added": 3,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "journal_to_pack_tab_switch",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"open-hub\"][data-tab=\"pack\"]"
+        },
+        "readyKey": "pack",
+        "readyResolved": true,
+        "handlerMs": 39.8,
+        "readyMs": 39.8,
+        "settledMs": 82.3,
+        "firstMutationMs": 39.8,
+        "mutationCount": 6,
+        "totalAddedNodes": 1,
+        "totalRemovedNodes": 1,
+        "firstFocusMs": 39.6,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "journal_to_pack_tab_switch",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Pack & Equipment",
+          "modalSurfaceKey": "hub:pack",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Pack",
+          "activeSectionLabel": "Chronicle",
+          "activeFilterLabel": "All",
+          "focusKey": "hub:tab:pack",
+          "modalNodeCount": 510,
+          "modalButtonCount": 41,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 15,
+          "spellButtonCount": 0,
+          "journalLogCount": 7,
+          "activeElement": "hub:tab:pack",
+          "navigableCount": 38,
+          "navZoneCount": 6,
+          "focusKeyCount": 38,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 39.3,
+            "maxMs": 39.3
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 36.9,
+            "maxMs": 36.9
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.6,
+            "maxMs": 0.6
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 8,
+            "totalMs": 0.3,
+            "maxMs": 0.1
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 39.3,
+            "maxMs": 39.3
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 36.9,
+            "maxMs": 36.9
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.6,
+            "maxMs": 0.6
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 8,
+            "totalMs": 0.3,
+            "maxMs": 0.1
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 39.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 39.8,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 39.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 39.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 39.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 39.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "pack_focus_first_item",
+        "trigger": {
+          "kind": "direct",
+          "action": "focusBySelector",
+          "selector": "[data-action=\"inspect-pack-item\"][data-index=\"0\"]"
+        },
+        "readyKey": "packRowActive",
+        "readyResolved": true,
+        "handlerMs": 1.9,
+        "readyMs": 2,
+        "settledMs": 66.5,
+        "firstMutationMs": null,
+        "mutationCount": 0,
+        "totalAddedNodes": 0,
+        "totalRemovedNodes": 0,
+        "firstFocusMs": 1.2,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "pack_focus_first_item",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Pack & Equipment",
+          "modalSurfaceKey": "hub:pack",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Pack",
+          "activeSectionLabel": "Chronicle",
+          "activeFilterLabel": "All",
+          "focusKey": "pack:item:0",
+          "modalNodeCount": 510,
+          "modalButtonCount": 41,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 15,
+          "spellButtonCount": 0,
+          "journalLogCount": 7,
+          "activeElement": "pack:item:0",
+          "navigableCount": 38,
+          "navZoneCount": 6,
+          "focusKeyCount": 38,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 1.9,
+            "maxMs": 1.9
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 1.9,
+            "maxMs": 1.9
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [],
+        "modalHidden": false
+      },
+      {
+        "label": "pack_focus_move_down",
+        "trigger": {
+          "kind": "direct",
+          "action": "moveUiFocus",
+          "dx": 0,
+          "dy": 1
+        },
+        "readyKey": "packFocusMoved",
+        "readyResolved": true,
+        "handlerMs": 1.9,
+        "readyMs": 1.9,
+        "settledMs": 59.4,
+        "firstMutationMs": null,
+        "mutationCount": 0,
+        "totalAddedNodes": 0,
+        "totalRemovedNodes": 0,
+        "firstFocusMs": 1.5,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "pack_focus_move_down",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Pack & Equipment",
+          "modalSurfaceKey": "hub:pack",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Pack",
+          "activeSectionLabel": "Chronicle",
+          "activeFilterLabel": "All",
+          "focusKey": "pack:item:2",
+          "modalNodeCount": 510,
+          "modalButtonCount": 41,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 15,
+          "spellButtonCount": 0,
+          "journalLogCount": 7,
+          "activeElement": "pack:item:2",
+          "navigableCount": 38,
+          "navZoneCount": 6,
+          "focusKeyCount": 38,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "handleUiNavigationIntent",
+            "count": 1,
+            "totalMs": 1.8,
+            "maxMs": 1.8
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.8,
+            "maxMs": 0.8
+          },
+          {
+            "name": "findDirectionalUiTarget",
+            "count": 1,
+            "totalMs": 0.7,
+            "maxMs": 0.7
+          },
+          {
+            "name": "getUiNavMeta",
+            "count": 38,
+            "totalMs": 0.3,
+            "maxMs": 0.1
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 3,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "handleUiNavigationIntent",
+            "count": 1,
+            "totalMs": 1.8,
+            "maxMs": 1.8
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.8,
+            "maxMs": 0.8
+          },
+          {
+            "name": "findDirectionalUiTarget",
+            "count": 1,
+            "totalMs": 0.7,
+            "maxMs": 0.7
+          },
+          {
+            "name": "getUiNavMeta",
+            "count": 38,
+            "totalMs": 0.3,
+            "maxMs": 0.1
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 3,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [],
+        "modalHidden": false
+      },
+      {
+        "label": "pack_select_second_item",
+        "trigger": {
+          "kind": "direct",
+          "action": "clickSecondPackRow"
+        },
+        "readyKey": "packSelectionChanged",
+        "readyResolved": true,
+        "handlerMs": 19.8,
+        "readyMs": 20,
+        "settledMs": 70.2,
+        "firstMutationMs": 19.8,
+        "mutationCount": 5,
+        "totalAddedNodes": 4,
+        "totalRemovedNodes": 4,
+        "firstFocusMs": 19.6,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "pack_select_second_item",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Pack & Equipment",
+          "modalSurfaceKey": "hub:pack",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Pack",
+          "activeSectionLabel": "Chronicle",
+          "activeFilterLabel": "All",
+          "focusKey": "pack:item:9",
+          "modalNodeCount": 529,
+          "modalButtonCount": 41,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 15,
+          "spellButtonCount": 0,
+          "journalLogCount": 7,
+          "activeElement": "pack:item:9",
+          "navigableCount": 38,
+          "navZoneCount": 6,
+          "focusKeyCount": 38,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 13,
+            "maxMs": 13
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.6,
+            "maxMs": 0.6
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 8,
+            "totalMs": 0.2,
+            "maxMs": 0.1
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 13,
+            "maxMs": 13
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.6,
+            "maxMs": 0.6
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 8,
+            "totalMs": 0.2,
+            "maxMs": 0.1
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 19.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 19.8,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 19.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 19.8,
+            "type": "childList",
+            "added": 3,
+            "removed": 3,
+            "target": "DIV"
+          },
+          {
+            "at": 19.8,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "pack_to_magic_tab_switch",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"open-hub\"][data-tab=\"magic\"]"
+        },
+        "readyKey": "magic",
+        "readyResolved": true,
+        "handlerMs": 12.7,
+        "readyMs": 12.8,
+        "settledMs": 16.9,
+        "firstMutationMs": 12.7,
+        "mutationCount": 7,
+        "totalAddedNodes": 4,
+        "totalRemovedNodes": 2,
+        "firstFocusMs": 12.5,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "pack_to_magic_tab_switch",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Magic",
+          "modalSurfaceKey": "hub:magic",
+          "modalVisible": true,
+          "activeHubTab": "magic",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "all",
+          "activeTabLabel": "Magic",
+          "activeSectionLabel": "Chronicle",
+          "activeFilterLabel": "All",
+          "focusKey": "hub:tab:magic",
+          "modalNodeCount": 666,
+          "modalButtonCount": 72,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 15,
+          "spellButtonCount": 25,
+          "journalLogCount": 7,
+          "activeElement": "hub:tab:magic",
+          "navigableCount": 33,
+          "navZoneCount": 4,
+          "focusKeyCount": 33,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 12.4,
+            "maxMs": 12.4
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 9,
+            "maxMs": 9
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 6,
+            "totalMs": 0.3,
+            "maxMs": 0.2
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showHubModal",
+            "count": 1,
+            "totalMs": 12.4,
+            "maxMs": 12.4
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 9,
+            "maxMs": 9
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 6,
+            "totalMs": 0.3,
+            "maxMs": 0.2
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 12.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 12.7,
+            "type": "childList",
+            "added": 1,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 12.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 12.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 12.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 12.7,
+            "type": "childList",
+            "added": 3,
+            "removed": 1,
+            "target": "DIV"
+          },
+          {
+            "at": 12.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "magic_filter_switch_next",
+        "trigger": {
+          "kind": "direct",
+          "action": "clickMagicNextFilter"
+        },
+        "readyKey": "magic",
+        "readyResolved": true,
+        "handlerMs": 5.4,
+        "readyMs": 5.5,
+        "settledMs": 39.7,
+        "firstMutationMs": 5.4,
+        "mutationCount": 3,
+        "totalAddedNodes": 3,
+        "totalRemovedNodes": 11,
+        "firstFocusMs": 5.2,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "magic_filter_switch_next",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Magic",
+          "modalSurfaceKey": "hub:magic",
+          "modalVisible": true,
+          "activeHubTab": "magic",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "Magic",
+          "activeSectionLabel": "Chronicle",
+          "activeFilterLabel": "All",
+          "focusKey": "magic:filter:offense",
+          "modalNodeCount": 578,
+          "modalButtonCount": 52,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 15,
+          "spellButtonCount": 5,
+          "journalLogCount": 7,
+          "activeElement": "magic:filter:offense",
+          "navigableCount": 14,
+          "navZoneCount": 4,
+          "focusKeyCount": 14,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "refreshMagicHubContent",
+            "count": 1,
+            "totalMs": 5,
+            "maxMs": 5
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 1.7,
+            "maxMs": 1.7
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.8,
+            "maxMs": 0.8
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 6,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "refreshMagicHubContent",
+            "count": 1,
+            "totalMs": 5,
+            "maxMs": 5
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 1.7,
+            "maxMs": 1.7
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.8,
+            "maxMs": 0.8
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 6,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 5.4,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 5.4,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 5.4,
+            "type": "childList",
+            "added": 3,
+            "removed": 11,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "magic_focus_move_down",
+        "trigger": {
+          "kind": "direct",
+          "action": "moveUiFocus",
+          "dx": 0,
+          "dy": 1
+        },
+        "readyKey": "magic",
+        "readyResolved": true,
+        "handlerMs": 1,
+        "readyMs": 1,
+        "settledMs": 65.7,
+        "firstMutationMs": null,
+        "mutationCount": 0,
+        "totalAddedNodes": 0,
+        "totalRemovedNodes": 0,
+        "firstFocusMs": 0.8,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "magic_focus_move_down",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Magic",
+          "modalSurfaceKey": "hub:magic",
+          "modalVisible": true,
+          "activeHubTab": "magic",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "Magic",
+          "activeSectionLabel": "Chronicle",
+          "activeFilterLabel": "All",
+          "focusKey": "hub:spell:magicMissile",
+          "modalNodeCount": 578,
+          "modalButtonCount": 52,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 15,
+          "spellButtonCount": 5,
+          "journalLogCount": 7,
+          "activeElement": "hub:spell:magicMissile",
+          "navigableCount": 14,
+          "navZoneCount": 4,
+          "focusKeyCount": 14,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "handleUiNavigationIntent",
+            "count": 1,
+            "totalMs": 1,
+            "maxMs": 1
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.6,
+            "maxMs": 0.6
+          },
+          {
+            "name": "findDirectionalUiTarget",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 3,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "handleUiNavigationIntent",
+            "count": 1,
+            "totalMs": 1,
+            "maxMs": 1
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.6,
+            "maxMs": 0.6
+          },
+          {
+            "name": "findDirectionalUiTarget",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 3,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [],
+        "modalHidden": false
+      },
+      {
+        "label": "magic_escape_close",
+        "trigger": {
+          "kind": "keydown",
+          "key": "Escape"
+        },
+        "readyKey": "modalClosedToGame",
+        "readyResolved": true,
+        "handlerMs": 2.9,
+        "readyMs": 2.9,
+        "settledMs": 54.3,
+        "firstMutationMs": 2.9,
+        "mutationCount": 3,
+        "totalAddedNodes": 0,
+        "totalRemovedNodes": 3,
+        "firstFocusMs": null,
+        "focusEventCount": 0,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "magic_escape_close",
+          "mode": "game",
+          "depth": 0,
+          "modalTitle": "",
+          "modalSurfaceKey": "",
+          "modalVisible": false,
+          "activeHubTab": "pack",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "focusKey": "",
+          "modalNodeCount": 0,
+          "modalButtonCount": 0,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "BODY",
+          "navigableCount": 18,
+          "navZoneCount": 4,
+          "focusKeyCount": 18,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 2.9,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 2.9,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 2.9,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": true
+      },
+      {
+        "label": "provisioner_open_direct",
+        "trigger": {
+          "kind": "direct",
+          "action": "openTownService",
+          "service": "general"
+        },
+        "readyKey": "shopGeneral",
+        "readyResolved": true,
+        "handlerMs": 9.6,
+        "readyMs": 9.6,
+        "settledMs": 23.1,
+        "firstMutationMs": 9.6,
+        "mutationCount": 5,
+        "totalAddedNodes": 4,
+        "totalRemovedNodes": 0,
+        "firstFocusMs": 9.3,
+        "focusEventCount": 1,
+        "firstLogMs": 0.7,
+        "logEventCount": 1,
+        "lastLogMessage": "Provisioner checked. Town support is live for this adventurer. Town checked. Walk north and take the keep stairs.",
+        "lastLogTone": "good",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "provisioner_open_direct",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Provisioner",
+          "modalSurfaceKey": "shop:general",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "Buy",
+          "focusKey": "shop:panel:buy",
+          "modalNodeCount": 107,
+          "modalButtonCount": 9,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "shop:panel:buy",
+          "navigableCount": 9,
+          "navZoneCount": 3,
+          "focusKeyCount": 9,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "showShopModal",
+            "count": 1,
+            "totalMs": 8.7,
+            "maxMs": 8.7
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 7.1,
+            "maxMs": 7.1
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 6,
+            "maxMs": 6
+          },
+          {
+            "name": "focusFirstUiElement",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 6,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 2,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showShopModal",
+            "count": 1,
+            "totalMs": 8.7,
+            "maxMs": 8.7
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 7.1,
+            "maxMs": 7.1
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 6,
+            "maxMs": 6
+          },
+          {
+            "name": "focusFirstUiElement",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.4,
+            "maxMs": 0.4
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 9.6,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 9.6,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 9.6,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 9.6,
+            "type": "childList",
+            "added": 1,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 9.6,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "provisioner_panel_switch_sell",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"shop-panel\"][data-panel=\"sell\"]"
+        },
+        "readyKey": "shopSellPanel",
+        "readyResolved": true,
+        "handlerMs": 6.6,
+        "readyMs": 6.6,
+        "settledMs": 65.9,
+        "firstMutationMs": 6.6,
+        "mutationCount": 3,
+        "totalAddedNodes": 3,
+        "totalRemovedNodes": 3,
+        "firstFocusMs": 6.4,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "provisioner_panel_switch_sell",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Provisioner",
+          "modalSurfaceKey": "shop:general",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "Sell",
+          "focusKey": "shop:panel:sell",
+          "modalNodeCount": 149,
+          "modalButtonCount": 12,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "shop:panel:sell",
+          "navigableCount": 18,
+          "navZoneCount": 3,
+          "focusKeyCount": 18,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "updateShopModalPanel",
+            "count": 1,
+            "totalMs": 6.1,
+            "maxMs": 6.1
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 2.8,
+            "maxMs": 2.8
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 6,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "updateShopModalPanel",
+            "count": 1,
+            "totalMs": 6.1,
+            "maxMs": 6.1
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 2.8,
+            "maxMs": 2.8
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 6,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 6.6,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 6.6,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "BUTTON"
+          },
+          {
+            "at": 6.6,
+            "type": "childList",
+            "added": 3,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "provisioner_escape_close",
+        "trigger": {
+          "kind": "keydown",
+          "key": "Escape"
+        },
+        "readyKey": "modalClosedToGame",
+        "readyResolved": true,
+        "handlerMs": 2.5,
+        "readyMs": 2.5,
+        "settledMs": 43.3,
+        "firstMutationMs": 2.5,
+        "mutationCount": 3,
+        "totalAddedNodes": 0,
+        "totalRemovedNodes": 3,
+        "firstFocusMs": null,
+        "focusEventCount": 0,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "provisioner_escape_close",
+          "mode": "game",
+          "depth": 0,
+          "modalTitle": "",
+          "modalSurfaceKey": "",
+          "modalVisible": false,
+          "activeHubTab": "pack",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "focusKey": "",
+          "modalNodeCount": 0,
+          "modalButtonCount": 0,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "BODY",
+          "navigableCount": 18,
+          "navZoneCount": 4,
+          "focusKeyCount": 18,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 2.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 2.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 2.5,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": true
+      },
+      {
+        "label": "settings_open_direct",
+        "trigger": {
+          "kind": "direct",
+          "action": "openSettings"
+        },
+        "readyKey": "settings",
+        "readyResolved": true,
+        "handlerMs": 5.5,
+        "readyMs": 5.7,
+        "settledMs": 30.2,
+        "firstMutationMs": 5.5,
+        "mutationCount": 5,
+        "totalAddedNodes": 4,
+        "totalRemovedNodes": 0,
+        "firstFocusMs": 5.4,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "settings_open_direct",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Device Settings",
+          "modalSurfaceKey": "settings",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "focusKey": "setting-toggle:touchControlsEnabled",
+          "modalNodeCount": 49,
+          "modalButtonCount": 8,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "setting-toggle:touchControlsEnabled",
+          "navigableCount": 8,
+          "navZoneCount": 2,
+          "focusKeyCount": 8,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "showSettingsModal",
+            "count": 1,
+            "totalMs": 5.5,
+            "maxMs": 5.5
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 5.4,
+            "maxMs": 5.4
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 3.6,
+            "maxMs": 3.6
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.9,
+            "maxMs": 0.9
+          },
+          {
+            "name": "focusFirstUiElement",
+            "count": 1,
+            "totalMs": 0.9,
+            "maxMs": 0.9
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 4,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 2,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showSettingsModal",
+            "count": 1,
+            "totalMs": 5.5,
+            "maxMs": 5.5
+          },
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 5.4,
+            "maxMs": 5.4
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 3.6,
+            "maxMs": 3.6
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.9,
+            "maxMs": 0.9
+          },
+          {
+            "name": "focusFirstUiElement",
+            "count": 1,
+            "totalMs": 0.9,
+            "maxMs": 0.9
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.2,
+            "maxMs": 0.2
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 5.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 5.5,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 5.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 5.5,
+            "type": "childList",
+            "added": 1,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 5.5,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "settings_focus_move_down",
+        "trigger": {
+          "kind": "direct",
+          "action": "moveUiFocus",
+          "dx": 0,
+          "dy": 1
+        },
+        "readyKey": "settings",
+        "readyResolved": true,
+        "handlerMs": 2,
+        "readyMs": 2,
+        "settledMs": 65.9,
+        "firstMutationMs": null,
+        "mutationCount": 0,
+        "totalAddedNodes": 0,
+        "totalRemovedNodes": 0,
+        "firstFocusMs": 1.6,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "settings_focus_move_down",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Device Settings",
+          "modalSurfaceKey": "settings",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "focusKey": "setting-toggle:controllerHintsEnabled",
+          "modalNodeCount": 49,
+          "modalButtonCount": 8,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "setting-toggle:controllerHintsEnabled",
+          "navigableCount": 8,
+          "navZoneCount": 2,
+          "focusKeyCount": 8,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "handleUiNavigationIntent",
+            "count": 1,
+            "totalMs": 2,
+            "maxMs": 2
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 1.4,
+            "maxMs": 1.4
+          },
+          {
+            "name": "getUiNavMeta",
+            "count": 8,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "findDirectionalUiTarget",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 3,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "handleUiNavigationIntent",
+            "count": 1,
+            "totalMs": 2,
+            "maxMs": 2
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 1.4,
+            "maxMs": 1.4
+          },
+          {
+            "name": "getUiNavMeta",
+            "count": 8,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "findDirectionalUiTarget",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 3,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [],
+        "modalHidden": false
+      },
+      {
+        "label": "settings_escape_close",
+        "trigger": {
+          "kind": "keydown",
+          "key": "Escape"
+        },
+        "readyKey": "modalClosedToGame",
+        "readyResolved": true,
+        "handlerMs": 1.4,
+        "readyMs": 1.4,
+        "settledMs": 67.8,
+        "firstMutationMs": 1.4,
+        "mutationCount": 3,
+        "totalAddedNodes": 0,
+        "totalRemovedNodes": 3,
+        "firstFocusMs": null,
+        "focusEventCount": 0,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "settings_escape_close",
+          "mode": "game",
+          "depth": 0,
+          "modalTitle": "",
+          "modalSurfaceKey": "",
+          "modalVisible": false,
+          "activeHubTab": "pack",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "focusKey": "",
+          "modalNodeCount": 0,
+          "modalButtonCount": 0,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "BODY",
+          "navigableCount": 18,
+          "navZoneCount": 4,
+          "focusKeyCount": 18,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "findUiElementByFocusKey",
+            "count": 1,
+            "totalMs": 0.3,
+            "maxMs": 0.3
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 1.4,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 1.4,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 1.4,
+            "type": "childList",
+            "added": 0,
+            "removed": 3,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": true
+      },
+      {
+        "label": "sage_open_low_gold",
+        "trigger": {
+          "kind": "direct",
+          "action": "openSageLowGold",
+          "gold": 0
+        },
+        "readyKey": "sage",
+        "readyResolved": true,
+        "handlerMs": 3.9,
+        "readyMs": 4,
+        "settledMs": 16.8,
+        "firstMutationMs": 3.9,
+        "mutationCount": 5,
+        "totalAddedNodes": 4,
+        "totalRemovedNodes": 0,
+        "firstFocusMs": 3.7,
+        "focusEventCount": 1,
+        "firstLogMs": null,
+        "logEventCount": 0,
+        "lastLogMessage": "",
+        "lastLogTone": "",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "sage_open_low_gold",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Sage's Tower",
+          "modalSurfaceKey": "sage",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "focusKey": "sage:identifyAll",
+          "modalNodeCount": 26,
+          "modalButtonCount": 3,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "sage:identifyAll",
+          "navigableCount": 3,
+          "navZoneCount": 1,
+          "focusKeyCount": 2,
+          "interactionFeedbackText": "",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 3.4,
+            "maxMs": 3.4
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 2.1,
+            "maxMs": 2.1
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "focusFirstUiElement",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 4,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "resolveModalFocusTarget",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          },
+          {
+            "name": "getUiNavigableElements",
+            "count": 2,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "showSimpleModal",
+            "count": 1,
+            "totalMs": 3.4,
+            "maxMs": 3.4
+          },
+          {
+            "name": "applyControllerNavigationMetadata",
+            "count": 1,
+            "totalMs": 2.1,
+            "maxMs": 2.1
+          },
+          {
+            "name": "focusUiElement",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "focusFirstUiElement",
+            "count": 1,
+            "totalMs": 0.5,
+            "maxMs": 0.5
+          },
+          {
+            "name": "applyModalNavigationMetadata",
+            "count": 1,
+            "totalMs": 0.1,
+            "maxMs": 0.1
+          },
+          {
+            "name": "assignNavMetadata",
+            "count": 4,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 3.9,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 3.9,
+            "type": "childList",
+            "added": 3,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 3.9,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 3.9,
+            "type": "childList",
+            "added": 1,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 3.9,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      },
+      {
+        "label": "sage_identify_blocked",
+        "trigger": {
+          "kind": "click",
+          "selector": "[data-action=\"service-use\"][data-service=\"identifyAll\"]"
+        },
+        "readyKey": "warningLog",
+        "readyResolved": true,
+        "handlerMs": 0.7,
+        "readyMs": 0.7,
+        "settledMs": 70.6,
+        "firstMutationMs": 0.6,
+        "mutationCount": 2,
+        "totalAddedNodes": 1,
+        "totalRemovedNodes": 0,
+        "firstFocusMs": null,
+        "focusEventCount": 0,
+        "firstLogMs": 0.4,
+        "logEventCount": 1,
+        "lastLogMessage": "The sage will not work for free.",
+        "lastLogTone": "warning",
+        "longTaskCount": 0,
+        "totalLongTaskMs": 0,
+        "snapshot": {
+          "label": "sage_identify_blocked",
+          "mode": "modal",
+          "depth": 0,
+          "modalTitle": "Sage's Tower",
+          "modalSurfaceKey": "sage",
+          "modalVisible": true,
+          "activeHubTab": "pack",
+          "activeJournalSection": "chronicle",
+          "activePackFilter": "all",
+          "activeMagicFilter": "offense",
+          "activeTabLabel": "",
+          "activeSectionLabel": "",
+          "activeFilterLabel": "",
+          "focusKey": "sage:identifyAll",
+          "modalNodeCount": 26,
+          "modalButtonCount": 3,
+          "actionBarButtonCount": 4,
+          "inventoryRowCount": 0,
+          "spellButtonCount": 0,
+          "journalLogCount": 0,
+          "activeElement": "sage:identifyAll",
+          "navigableCount": 3,
+          "navZoneCount": 1,
+          "focusKeyCount": 2,
+          "interactionFeedbackText": "The sage will not work for free.",
+          "interactionFeedbackTone": "",
+          "interactionAckCount": 0
+        },
+        "callSummary": [
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "topCalls": [
+          {
+            "name": "getUiNavigableElements",
+            "count": 1,
+            "totalMs": 0,
+            "maxMs": 0
+          }
+        ],
+        "sampleMutations": [
+          {
+            "at": 0.6,
+            "type": "childList",
+            "added": 1,
+            "removed": 0,
+            "target": "DIV"
+          },
+          {
+            "at": 0.7,
+            "type": "attributes",
+            "added": 0,
+            "removed": 0,
+            "target": "DIV"
+          }
+        ],
+        "modalHidden": false
+      }
+    ],
+    "screenshots": [
+      {
+        "label": "utility_menu_open_town",
+        "file": "screenshots/after/01-utility-menu.png",
+        "modalTitle": "Adventure Menu",
+        "modalSurfaceKey": "utility-menu",
+        "readyMs": 7.2
+      },
+      {
+        "label": "utility_to_journal_open",
+        "file": "screenshots/after/02-journal-current.png",
+        "modalTitle": "Field Guide",
+        "modalSurfaceKey": "hub:journal",
+        "readyMs": 17
+      },
+      {
+        "label": "journal_section_switch_chronicle",
+        "file": "screenshots/after/03-journal-chronicle.png",
+        "modalTitle": "Field Guide",
+        "modalSurfaceKey": "hub:journal",
+        "readyMs": 17.4
+      },
+      {
+        "label": "journal_to_pack_tab_switch",
+        "file": "screenshots/after/04-pack.png",
+        "modalTitle": "Pack & Equipment",
+        "modalSurfaceKey": "hub:pack",
+        "readyMs": 39.8
+      },
+      {
+        "label": "pack_to_magic_tab_switch",
+        "file": "screenshots/after/05-magic.png",
+        "modalTitle": "Magic",
+        "modalSurfaceKey": "hub:magic",
+        "readyMs": 12.8
+      },
+      {
+        "label": "magic_filter_switch_next",
+        "file": "screenshots/after/06-magic-filtered.png",
+        "modalTitle": "Magic",
+        "modalSurfaceKey": "hub:magic",
+        "readyMs": 5.5
+      },
+      {
+        "label": "provisioner_open_direct",
+        "file": "screenshots/after/07-provisioner-buy.png",
+        "modalTitle": "Provisioner",
+        "modalSurfaceKey": "shop:general",
+        "readyMs": 9.6
+      },
+      {
+        "label": "provisioner_panel_switch_sell",
+        "file": "screenshots/after/08-provisioner-sell.png",
+        "modalTitle": "Provisioner",
+        "modalSurfaceKey": "shop:general",
+        "readyMs": 6.6
+      },
+      {
+        "label": "settings_open_direct",
+        "file": "screenshots/after/09-settings.png",
+        "modalTitle": "Device Settings",
+        "modalSurfaceKey": "settings",
+        "readyMs": 5.7
+      },
+      {
+        "label": "sage_open_low_gold",
+        "file": "screenshots/after/10-sage-low-gold.png",
+        "modalTitle": "Sage's Tower",
+        "modalSurfaceKey": "sage",
+        "readyMs": 4
+      },
+      {
+        "label": "sage_identify_blocked",
+        "file": "screenshots/after/11-sage-blocked.png",
+        "modalTitle": "Sage's Tower",
+        "modalSurfaceKey": "sage",
+        "readyMs": 0.7
+      }
+    ],
+    "finalSnapshot": {
+      "label": "final",
+      "mode": "modal",
+      "depth": 0,
+      "modalTitle": "Sage's Tower",
+      "modalSurfaceKey": "sage",
+      "modalVisible": true,
+      "activeHubTab": "pack",
+      "activeJournalSection": "chronicle",
+      "activePackFilter": "all",
+      "activeMagicFilter": "offense",
+      "activeTabLabel": "",
+      "activeSectionLabel": "",
+      "activeFilterLabel": "",
+      "focusKey": "sage:identifyAll",
+      "modalNodeCount": 26,
+      "modalButtonCount": 3,
+      "actionBarButtonCount": 4,
+      "inventoryRowCount": 0,
+      "spellButtonCount": 0,
+      "journalLogCount": 0,
+      "activeElement": "sage:identifyAll",
+      "navigableCount": 3,
+      "navZoneCount": 1,
+      "focusKeyCount": 2,
+      "interactionFeedbackText": "The sage will not work for free.",
+      "interactionFeedbackTone": "",
+      "interactionAckCount": 0
+    }
+  }
+}

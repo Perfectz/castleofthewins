@@ -32,6 +32,7 @@ export class SoundBoard {
   }
 
   syncMusic(track = "") {
+    const wasPlaying = this.isMusicPlaying();
     this.musicTrack = track || "";
     if (!this.musicTrack || !this.settings.musicEnabled) {
       this.stopMusic();
@@ -45,6 +46,9 @@ export class SoundBoard {
       music.dataset.track = this.musicTrack;
       music.src = this.musicTrack;
       music.currentTime = 0;
+      if (wasPlaying) {
+        this.resumeMusic();
+      }
     }
   }
 

@@ -323,6 +323,28 @@ function buildDockSlots(game, actions) {
   ];
 }
 
+function buildActionBarMarkup(dockSlots = []) {
+  return dockSlots.map((slot) => `
+    <button class="action-button dock-action dock-slot dock-slot-${slot.key} dock-tone-${slot.tone}${slot.tone === "primary" ? " recommended" : ""}${slot.active ? " is-active" : ""}" data-action="${slot.action}"${slot.tab ? ` data-tab="${slot.tab}"` : ""}${slot.service ? ` data-service="${slot.service}"` : ""} data-focus-key="dock:${slot.key}" type="button">
+      <span class="context-slot">${escapeHtml(slot.prompt)}</span>
+      <span class="context-copy">
+        <span class="context-main">${escapeHtml(slot.label)}</span>
+        <span class="context-note">${escapeHtml(slot.note)}</span>
+      </span>
+    </button>
+  `).join("");
+}
+
+function syncMarkup(game, cacheKey, element, markup) {
+  if (!element) {
+    return;
+  }
+  if (game[cacheKey] !== markup) {
+    element.innerHTML = markup;
+    game[cacheKey] = markup;
+  }
+}
+
 export function getAdvisorModel(game) {
   if (!game.player || !game.currentLevel) {
     return {
@@ -473,53 +495,53 @@ export function getAdvisorModel(game) {
     ${directiveLine ? `<div class="objective-band-line accent-line">${escapeHtml(directiveLine)}</div>` : ""}
   `;
 
-  return { statsHtml, objectiveHtml, fieldHtml, dockSlots };
+  return {
+    actionBarHtml: buildActionBarMarkup(dockSlots),
+    burdenState: burdenUi.state,
+    dockSlots,
+    fieldHtml,
+    objectiveHtml,
+    statsHtml
+  };
 }
 
-export function renderPanels(game) {
+export function renderPanels(game, advisor = null) {
+  const emptyStatsHtml = "<div class='muted'>No active run.</div>";
+  const emptyObjectiveHtml = "<div class='muted'>No active directive.</div>";
+  const emptyFieldHtml = "<div class='field-summary-head'><span class='advisor-label'>Field Read</span><span class='field-summary-state'>No active run</span></div><div class='field-brief-text'>Create a character to begin.</div>";
   if (!game.player) {
-    if (game.playerCapsule) {
-      game.playerCapsule.innerHTML = "<div class='muted'>No active run.</div>";
-    }
-    if (game.threatCapsule) {
-      game.threatCapsule.innerHTML = "<div class='muted'>No active directive.</div>";
-    }
-    if (game.advisorStrip) {
-      game.advisorStrip.innerHTML = "<div class='field-summary-head'><span class='advisor-label'>Field Read</span><span class='field-summary-state'>No active run</span></div><div class='field-brief-text'>Create a character to begin.</div>";
+    syncMarkup(game, "lastAdvisorStatsMarkup", game.playerCapsule, emptyStatsHtml);
+    syncMarkup(game, "lastAdvisorObjectiveMarkup", game.threatCapsule, emptyObjectiveHtml);
+    syncMarkup(game, "lastAdvisorFieldMarkup", game.advisorStrip, emptyFieldHtml);
+    if (game.playerCapsule?.dataset?.burdenState) {
+      delete game.playerCapsule.dataset.burdenState;
     }
     return;
   }
 
-  const advisor = getAdvisorModel(game);
+  const nextAdvisor = advisor || getAdvisorModel(game);
   if (game.playerCapsule) {
-    game.playerCapsule.innerHTML = advisor.statsHtml;
-    game.playerCapsule.dataset.burdenState = game.getBurdenUiState().state;
+    syncMarkup(game, "lastAdvisorStatsMarkup", game.playerCapsule, nextAdvisor.statsHtml);
+    if (game.playerCapsule.dataset.burdenState !== nextAdvisor.burdenState) {
+      game.playerCapsule.dataset.burdenState = nextAdvisor.burdenState;
+    }
   }
-  if (game.threatCapsule) {
-    game.threatCapsule.innerHTML = advisor.objectiveHtml;
-  }
-  if (game.advisorStrip) {
-    game.advisorStrip.innerHTML = advisor.fieldHtml;
-  }
+  syncMarkup(game, "lastAdvisorObjectiveMarkup", game.threatCapsule, nextAdvisor.objectiveHtml);
+  syncMarkup(game, "lastAdvisorFieldMarkup", game.advisorStrip, nextAdvisor.fieldHtml);
 }
 
-export function renderActionBar(game) {
+export function renderActionBar(game, advisor = null) {
   if (!game.actionBar) {
     return;
   }
   if (!game.player) {
-    game.actionBar.innerHTML = "";
+    syncMarkup(game, "lastActionBarMarkup", game.actionBar, "");
     return;
   }
-  const advisor = getAdvisorModel(game);
-  game.actionBar.dataset.mode = game.targetMode ? "target" : "field";
-  game.actionBar.innerHTML = advisor.dockSlots.map((slot) => `
-    <button class="action-button dock-action dock-slot dock-slot-${slot.key} dock-tone-${slot.tone}${slot.tone === "primary" ? " recommended" : ""}${slot.active ? " is-active" : ""}" data-action="${slot.action}"${slot.tab ? ` data-tab="${slot.tab}"` : ""}${slot.service ? ` data-service="${slot.service}"` : ""} data-focus-key="dock:${slot.key}" type="button">
-      <span class="context-slot">${escapeHtml(slot.prompt)}</span>
-      <span class="context-copy">
-        <span class="context-main">${escapeHtml(slot.label)}</span>
-        <span class="context-note">${escapeHtml(slot.note)}</span>
-      </span>
-    </button>
-  `).join("");
+  const nextAdvisor = advisor || getAdvisorModel(game);
+  const mode = game.targetMode ? "target" : "field";
+  if (game.actionBar.dataset.mode !== mode) {
+    game.actionBar.dataset.mode = mode;
+  }
+  syncMarkup(game, "lastActionBarMarkup", game.actionBar, nextAdvisor.actionBarHtml);
 }

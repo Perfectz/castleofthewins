@@ -121,9 +121,15 @@ export function resolveTurn(game, advanceTurn = true) {
   advanceDangerTurn(game);
   for (let index = 0; index < monsterActions; index += 1) {
     game.processMonsters();
+    if (!game.player || game.player.hp <= 0 || game.mode !== "game") {
+      return;
+    }
   }
   if (monsterActions > 0 && encumbrance >= 2 && game.currentDepth > 0) {
     game.processMonsters();
+    if (!game.player || game.player.hp <= 0 || game.mode !== "game") {
+      return;
+    }
   }
   if ((game.player.slowed || 0) > 0) {
     game.player.slowed -= 1;

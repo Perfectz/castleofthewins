@@ -74,6 +74,8 @@ const EFFECT_ALIASES = {
   clairvoyance: "mapping"
 };
 
+const INVENTORY_PRESENTATION_CACHE = new WeakMap();
+
 export function getSpellEffectKey(spellId = "") {
   if (!spellId) {
     return "";
@@ -214,7 +216,7 @@ function getSemanticScanTags(item, context = {}) {
   if (unknown || cursed || recommendation === "Identify first") {
     tags.push("cursed-risk");
   }
-  if (sellHereTag || groupKey === "sell" || item.markedForSale) {
+  if (sellHereTag || groupKey === "sell") {
     tags.push("sell");
   }
   return [...new Set(tags)];
@@ -471,6 +473,30 @@ function getUpgradeSummary(game, item) {
   };
 }
 
+function getComparisonTone(item, context = {}) {
+  const {
+    unknown = false,
+    cursed = false,
+    upgrade = null
+  } = context;
+  if (!item?.slot || (item.kind !== "weapon" && item.kind !== "armor")) {
+    return "";
+  }
+  if (cursed) {
+    return "bad";
+  }
+  if (unknown) {
+    return "neutral";
+  }
+  if (upgrade?.fillsGap || upgrade?.isUpgrade) {
+    return "good";
+  }
+  if ((upgrade?.score || 0) < 0) {
+    return "bad";
+  }
+  return "neutral";
+}
+
 export function buildInventoryItemSemantics(game, item, index, options = {}) {
   const { shopId = "" } = options;
   const hpRatio = game.player.maxHp > 0 ? game.player.hp / game.player.maxHp : 1;
@@ -639,6 +665,11 @@ export function buildInventoryItemSemantics(game, item, index, options = {}) {
     groupKey,
     recommendation
   });
+  const compareTone = getComparisonTone(item, {
+    unknown,
+    cursed,
+    upgrade
+  });
 
   return {
     index,
@@ -657,13 +688,14 @@ export function buildInventoryItemSemantics(game, item, index, options = {}) {
     kindLabel: classifyItem(item),
     effectKey: itemEffectKey,
     isKnownEffect,
+    compareTone,
     categoryKey,
     categoryLabel,
     scanTags
   };
 }
 
-function stackGroupEntries(entries, selectedIndex) {
+function stackGroupEntries(entries) {
   const stacks = new Map();
   entries.forEach((entry) => {
     const shouldStack = entry.item.kind === "consumable";
@@ -674,15 +706,13 @@ function stackGroupEntries(entries, selectedIndex) {
       stacks.set(stackKey, {
         ...entry,
         indexes: [entry.index],
-        count: 1,
-        isSelected: entry.index === selectedIndex
+        count: 1
       });
       return;
     }
     const stack = stacks.get(stackKey);
     stack.indexes.push(entry.index);
     stack.count += 1;
-    stack.isSelected = stack.isSelected || entry.index === selectedIndex;
   });
 
   return [...stacks.values()].sort((a, b) => b.sortScore - a.sortScore || a.index - b.index);
@@ -698,48 +728,117 @@ function matchesFilter(entry, filter, shopId = "", inTown = false) {
       if (shopId) {
         return Boolean(entry.sellHereTag);
       }
-      return Boolean(entry.item.markedForSale);
+      return !entry.item.doNotSell;
     default:
       return true;
   }
 }
 
+function getInventoryPresentationCache(game) {
+  let cache = INVENTORY_PRESENTATION_CACHE.get(game);
+  if (!cache) {
+    cache = new Map();
+    INVENTORY_PRESENTATION_CACHE.set(game, cache);
+  }
+  return cache;
+}
+
+function serializeInventoryStateItem(item) {
+  if (!item) {
+    return "";
+  }
+  return [
+    item.id || "",
+    item.kind || "",
+    item.slot || "",
+    item.spell || "",
+    item.effect || "",
+    item.affixId || "",
+    item.identified ? "1" : "0",
+    item.cursed ? "1" : "0",
+    item.doNotSell ? "1" : "0",
+    item.charges ?? "",
+    item.maxCharges ?? "",
+    item.power ?? "",
+    item.armor ?? "",
+    item.value ?? "",
+    item.weight ?? ""
+  ].join("~");
+}
+
+function getInventoryPresentationCacheKey(game, filter = "all", shopId = "") {
+  const player = game.player || {};
+  const inventorySig = (player.inventory || []).map(serializeInventoryStateItem).join("|");
+  const equipmentSig = Object.values(player.equipment || {}).map(serializeInventoryStateItem).join("|");
+  const spellSig = (player.spellsKnown || []).join(",");
+  const visibleEnemies = getVisibleEnemyCount(game);
+  return [
+    filter,
+    shopId,
+    game.currentDepth ?? "",
+    player.hp ?? "",
+    player.maxHp ?? "",
+    player.mana ?? "",
+    player.maxMana ?? "",
+    spellSig,
+    visibleEnemies,
+    equipmentSig,
+    inventorySig
+  ].join("::");
+}
+
 export function buildInventoryPresentationModel(game, options = {}) {
   const { filter = "all", selectedIndex = -1, shopId = "" } = options;
+  const cacheKey = getInventoryPresentationCacheKey(game, filter, shopId);
+  const cache = getInventoryPresentationCache(game);
+  let baseModel = cache.get(cacheKey);
   const inTown = game.currentDepth === 0;
-  const entries = game.player.inventory.map((item, index) => buildInventoryItemSemantics(game, item, index, { shopId }));
-  const visibleEntries = entries.filter((entry) => matchesFilter(entry, filter, shopId, inTown));
-  const groups = GROUP_DEFS.map((group) => {
-    const groupedEntries = entries
-      .filter((entry) => entry.groupKey === group.key)
-      .filter((entry) => matchesFilter(entry, filter, shopId, inTown));
-    const items = stackGroupEntries(groupedEntries, selectedIndex);
-    return {
-      ...group,
-      items,
-      sections: INVENTORY_CATEGORY_DEFS.map((category) => ({
-        ...category,
-        items: items.filter((entry) => entry.categoryKey === category.key)
-      })).filter((section) => section.items.length > 0)
-    };
-  }).filter((group) => group.items.length > 0);
-  const sortedVisibleEntries = groups.flatMap((group) => group.items);
+  if (!baseModel) {
+    const entries = game.player.inventory.map((item, index) => buildInventoryItemSemantics(game, item, index, { shopId }));
+    const visibleEntries = entries.filter((entry) => matchesFilter(entry, filter, shopId, inTown));
+    const groups = GROUP_DEFS.map((group) => {
+      const groupedEntries = visibleEntries.filter((entry) => entry.groupKey === group.key);
+      const items = stackGroupEntries(groupedEntries);
+      return {
+        ...group,
+        items,
+        sections: INVENTORY_CATEGORY_DEFS.map((category) => ({
+          ...category,
+          items: items.filter((entry) => entry.categoryKey === category.key)
+        })).filter((section) => section.items.length > 0)
+      };
+    }).filter((group) => group.items.length > 0);
+    const sortedVisibleEntries = groups.flatMap((group) => group.items);
 
-  const filterDefs = FILTER_DEFS.filter((filterDef) => filterDef.key !== "sell" || inTown || shopId).map((filterDef) => ({
-    ...filterDef,
-    label: filterDef.key === "sell" ? (shopId ? "Sell Here" : "Sell") : filterDef.label
-  }));
+    baseModel = {
+      entries,
+      visibleEntries,
+      groups,
+      filterDefs: FILTER_DEFS.filter((filterDef) => filterDef.key !== "sell" || inTown || shopId).map((filterDef) => ({
+        ...filterDef,
+        label: filterDef.key === "sell" ? (shopId ? "Sell Here" : "Sell") : filterDef.label
+      })),
+      burdenUi: game.getBurdenUiState(),
+      buildSummary: getBuildSummary(game),
+      firstVisibleIndex: sortedVisibleEntries.length > 0 ? sortedVisibleEntries[0].index : -1,
+      visibleCount: visibleEntries.length
+    };
+    if (cache.size >= 24) {
+      cache.clear();
+    }
+    cache.set(cacheKey, baseModel);
+  }
 
   return {
-    entries,
-    groups,
-    filterDefs,
-    burdenUi: game.getBurdenUiState(),
-    buildSummary: getBuildSummary(game),
-    selectedEntry: entries.find((entry) => entry.index === selectedIndex) || null,
-    selectedVisible: visibleEntries.some((entry) => entry.index === selectedIndex),
-    firstVisibleIndex: sortedVisibleEntries.length > 0 ? sortedVisibleEntries[0].index : -1,
-    visibleCount: visibleEntries.length
+    entries: baseModel.entries,
+    groups: baseModel.groups,
+    filterDefs: baseModel.filterDefs,
+    burdenUi: baseModel.burdenUi,
+    buildSummary: baseModel.buildSummary,
+    selectedEntry: baseModel.entries.find((entry) => entry.index === selectedIndex) || null,
+    selectedVisible: baseModel.visibleEntries.some((entry) => entry.index === selectedIndex),
+    firstVisibleIndex: baseModel.firstVisibleIndex,
+    visibleCount: baseModel.visibleCount
   };
 }
 

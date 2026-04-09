@@ -13,6 +13,7 @@ const ACTION_LABELS = {
   town_service: "Town Door",
   town_rumor: "Buy Intel"
 };
+
 function scoreEntry(entry, currentTurn) {
   const message = entry?.message || "";
   const age = Math.max(0, currentTurn - (entry?.turn || 0));
@@ -55,6 +56,21 @@ function getStickyEvent(game) {
     turnLabel: `T${best.turn}`,
     tone: best.tone || "ticker-context",
     text: best.message
+  };
+}
+
+function getTileActionLine(game) {
+  if (!game.player || !game.currentLevel || typeof game.getTileActionPrompt !== "function") {
+    return null;
+  }
+  const tileAction = game.getTileActionPrompt();
+  if (!tileAction) {
+    return null;
+  }
+  return {
+    turnLabel: tileAction.label || "Use",
+    tone: tileAction.tone === "good" ? "ticker-good" : tileAction.tone === "bad" ? "ticker-bad" : tileAction.tone === "warning" ? "ticker-warning" : "ticker-context",
+    text: tileAction.detail || ""
   };
 }
 
@@ -140,65 +156,72 @@ function getThreatLine(game) {
   };
 }
 
-function buildDrawerMarkup(game) {
-  const entries = (game.messages || []).slice(-12).reverse();
-  if (entries.length === 0) {
-    return "<div class='event-feed-drawer-empty'>No recent messages.</div>";
-  }
-  return entries.map((entry) => `
-    <div class="event-feed-drawer-line ${entry.tone ? `ticker-${entry.tone}` : ""}">
-      <span class="event-feed-drawer-turn">T${entry.turn}</span>
-      <span class="event-feed-drawer-text">${escapeHtml(entry.message)}</span>
-    </div>
-  `).join("");
+function getRecentMessageLines(game, limit = 6) {
+  const currentTurn = game.turn || 0;
+  return [...(game.messages || [])]
+    .slice(-24)
+    .map((entry) => ({
+      turn: entry.turn || 0,
+      score: scoreEntry(entry, currentTurn),
+      line: {
+        turnLabel: `T${entry.turn}`,
+        tone: entry.tone ? `ticker-${entry.tone}` : "ticker-context",
+        text: entry.message
+      }
+    }))
+    .sort((left, right) => right.score - left.score || right.turn - left.turn)
+    .slice(0, limit)
+    .map((entry) => entry.line);
 }
 
 export function buildHudFeedModel(game) {
   const stickyEvent = getStickyEvent(game);
   const dedupe = new Set();
-  const lines = [getObjectiveLine(game), getPressureLine(game), getThreatLine(game)]
-    .filter(Boolean)
-    .filter((line) => {
-      const key = `${line.turnLabel}:${line.text}`;
-      if (dedupe.has(key)) {
-        return false;
-      }
-      dedupe.add(key);
-      return true;
-    })
-    .slice(0, 3);
+  const visible = Boolean(game.player && game.currentLevel);
+  const rows = [];
+  const pushRow = (line) => {
+    if (!line) {
+      return;
+    }
+    const key = `${line.turnLabel}:${line.text}`;
+    if (dedupe.has(key)) {
+      return;
+    }
+    dedupe.add(key);
+    rows.push(line);
+  };
+
+  pushRow(stickyEvent);
+  [
+    getObjectiveLine(game),
+    getTileActionLine(game),
+    getPressureLine(game),
+    getThreatLine(game),
+    ...getRecentMessageLines(game, 18)
+  ].filter(Boolean).forEach((line) => {
+    const key = `${line.turnLabel}:${line.text}`;
+    if (dedupe.has(key)) {
+      return;
+    }
+    dedupe.add(key);
+    rows.push(line);
+  });
+
   return {
-    stickyEvent,
-    lines,
-    historyAvailable: Boolean((game.messages || []).length > 0)
+    rows,
+    visible
   };
 }
 
-export function renderHudFeed(game) {
-  const model = typeof game.getLiveFeedModel === "function" ? game.getLiveFeedModel() : buildHudFeedModel(game);
-  const stickyMarkup = model.stickyEvent
-    ? `
-      <div class="event-feed-sticky ${model.stickyEvent.tone || "ticker-context"}">
-        <span class="event-feed-sticky-turn">${escapeHtml(model.stickyEvent.turnLabel || "Now")}</span>
-        <span class="event-feed-sticky-text">${escapeHtml(model.stickyEvent.text || "")}</span>
-      </div>
-    `
-    : "";
-  const linesMarkup = (model.lines || []).map((line) => `
+export function renderHudFeed(game, model = null) {
+  const resolvedModel = model || (typeof game.getLiveFeedModel === "function" ? game.getLiveFeedModel() : buildHudFeedModel(game));
+  if (!resolvedModel.visible || (resolvedModel.rows || []).length === 0) {
+    return "";
+  }
+  return (resolvedModel.rows || []).map((line) => `
     <div class="event-ticker-line ${line.tone || ""}">
-      <span class="event-ticker-turn">${escapeHtml(line.turnLabel)}</span>
-      <span class="event-ticker-text">${escapeHtml(line.text)}</span>
+      <span class="event-ticker-turn">${escapeHtml(line.turnLabel || "Now")}</span>
+      <span class="event-ticker-text">${escapeHtml(line.text || "")}</span>
     </div>
   `).join("");
-  return `
-    <button class="event-feed-toggle" data-action="toggle-feed-log" data-focus-key="feed:toggle" type="button" aria-expanded="${game.feedDrawerOpen ? "true" : "false"}">
-      <span class="event-feed-toggle-label">Live Feed</span>
-      <span class="event-feed-toggle-note">${game.feedDrawerOpen ? "Hide recent log" : "Show recent log"}</span>
-    </button>
-    ${stickyMarkup}
-    <div class="event-feed-lines">${linesMarkup}</div>
-    <div class="event-feed-drawer${game.feedDrawerOpen ? "" : " hidden"}">
-      ${buildDrawerMarkup(game)}
-    </div>
-  `;
 }

@@ -411,10 +411,10 @@ export function migrateSnapshot(snapshot) {
 }
 
 export function saveGame(game, options = {}) {
-  if (!game.player) {
+  if (!game.player || game.player.hp <= 0) {
     return;
   }
-  const { silent = false, slotId = null } = options;
+  const { silent = false, slotId = null, skipUiRefresh = false } = options;
   recordTelemetry(game, "save_game", {
     saveMode: silent ? "autosave" : "manual"
   });
@@ -425,8 +425,10 @@ export function saveGame(game, options = {}) {
   if (!silent) {
     game.log(`Game saved to slot ${resolvedSlotId}.`, "good");
   }
-  game.refreshChrome();
-  game.render();
+  if (!skipUiRefresh) {
+    game.refreshChrome();
+    game.render();
+  }
 }
 
 export function loadGame(game, options = {}) {

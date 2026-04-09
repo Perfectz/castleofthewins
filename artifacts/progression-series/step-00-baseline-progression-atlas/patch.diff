@@ -1,0 +1,1317 @@
+diff --git a/artifacts/progression-series/SERIES_INDEX.md b/artifacts/progression-series/SERIES_INDEX.md
+new file mode 100644
+index 0000000..4beca76
+--- /dev/null
++++ b/artifacts/progression-series/SERIES_INDEX.md
+@@ -0,0 +1,10 @@
++# Progression Series
++
++## Step 00: Baseline Progression Atlas
++
++- Folder path: `artifacts/progression-series/step-00-baseline-progression-atlas/`
++- Three-sentence summary: This step establishes the current baseline for progression using code inspection plus live Playwright captures rather than redesign assumptions. It documents how race, class, level-ups, spells, perks, relics, boons, town services, mastery, contracts, commendations, and town unlocks currently interact across a run and across multiple runs. The after-side artifacts reorganize that baseline into annotated atlas boards, a system map, and build-path summaries so later redesign work has a fixed, publication-ready reference point.
++- Key progression systems documented: character creation, stat formulas and growth, spell acquisition and management, perk choice, relic choice, boon choice, objective reward types, spellbooks, town service growth loops, class mastery, commendations, contracts, run archives, and durable town unlocks
++- Key screenshots: `screenshots/before/mobile-01-creation.png`, `screenshots/before/mobile-03-bank-progression.png`, `screenshots/before/mobile-11-magic-hub.png`, `screenshots/before/mobile-12-level-up-perk.png`, `screenshots/before/mobile-14-relic-choice.png`, `screenshots/after/mobile-progression-atlas-board.png`, `screenshots/after/progression-system-map-board.png`, `screenshots/after/build-path-board.png`
++- What this step proved: The current game already has a deep multi-layer progression stack, and build assembly is genuinely one of its strongest pillars. It also proved that the progression story is distributed across many surfaces, which means later redesign work should begin by clarifying emphasis and legibility rather than by adding new systems immediately.
++- What the next step should investigate: Determine which current layers are doing the most real work for player identity and long-term motivation, and which ones are currently underwired, under-surfaced, or redundant. Then evaluate whether the progression presentation should be consolidated around clearer run-local versus persistent layers before any mechanical redesign is proposed.
+diff --git a/artifacts/progression-series/step-00-baseline-progression-atlas/README.md b/artifacts/progression-series/step-00-baseline-progression-atlas/README.md
+new file mode 100644
+index 0000000..06fb634
+--- /dev/null
++++ b/artifacts/progression-series/step-00-baseline-progression-atlas/README.md
+@@ -0,0 +1,16 @@
++# Step 00: Baseline Progression Atlas
++
++This step establishes the current baseline for ability, spell, skill, and build progression before any redesign work begins. It combines code-backed analysis with Playwright screenshots from live runtime states in both phone-sized and desktop viewports.
++
++The atlas covers character creation, town growth services, spell access, inventory-based build shaping, level-up interrupts, objective reward branches, and the persistent bank/mastery/contract layer. The after-side artifacts do not redesign the game; they reorganize the baseline into annotated boards, system maps, and build-path summaries that make the shipped progression stack easier to study.
++
++The next step should investigate which progression layers are carrying the clearest player fantasy and which ones are currently duplicative, underused, or too lightly surfaced. The most important follow-up question is not "what should the new system look like," but "which current layers deserve to be deepened, merged, simplified, or cut."
++
++Key references:
++
++- Raw captures: `./screenshots/before/`
++- After-side atlas boards: `./screenshots/after/`
++- Capture data: `./data/capture-results.json`
++- Capture script: `./data/capture-progression-atlas.mjs`
++- System report: `./report.md`
++- Screenshot manifest: `./screenshot-manifest.md`
+diff --git a/artifacts/progression-series/step-00-baseline-progression-atlas/blog-ready.md b/artifacts/progression-series/step-00-baseline-progression-atlas/blog-ready.md
+new file mode 100644
+index 0000000..5b02e05
+--- /dev/null
++++ b/artifacts/progression-series/step-00-baseline-progression-atlas/blog-ready.md
+@@ -0,0 +1,17 @@
++# Baseline Progression Atlas
++
++Before changing a progression system, it is worth proving what is already there. This baseline pass does that for the current browser build of *Castle of the Winds*: not as a redesign pitch, but as a code-backed atlas of how abilities, spells, perks, relics, boons, unlocks, and next-run systems currently work.
++
++The headline finding is that the game already has a richer progression stack than a quick play session suggests. Character growth is not just XP and items. Race and class define the opening shape. Level-ups trigger both random stat growth and a two-part choice sequence: first a class-family perk, then a spell study choice. Spellbooks offer a second acquisition route for spells outside level-up. Objective rewards branch into relic, boon, or rumor outcomes. Then the bank layer carries value forward through mastery, commendations, contracts, town unlocks, and run archives.
++
++That layered structure is a strength. It means the game already supports build assembly through several parallel systems instead of through one dominant upgrade ladder. A Fighter can lean harder into guard and survival. A Rogue can steer toward scouting, control, and pressure discipline. A Wizard can compound spell quality, mana economy, and overcast tolerance. Gear, spellbooks, town access, and floor rewards all push those paths around in useful ways.
++
++The baseline also found an important structural truth: progression is distributed across many surfaces. The creation screen owns identity. The armory and guild own acquisition. The pack owns gear fit and spellbook use. The magic hub owns spell management. Level-up modals own perk and spell study decisions. Objective rewards own relic and boon branches. The bank owns persistence review, mastery, contracts, commendations, rumors, and town projects. That distribution creates depth, but it also means the full progression story is easy to miss unless the player reads several different surfaces carefully.
++
++Playwright helped make that visible. The screenshot pass captured character creation, town progression services, inventory build shaping, the magic hub, level-up perk choice, spell study, relic choice, and boon choice in both phone-sized and desktop layouts. Those raw captures are useful evidence, but the after-side boards are what make them readable. The phone and desktop progression atlas boards compress the baseline into one scanable artifact. The system map board clarifies the relationship between run-local and persistent growth. The build-path board summarizes the current Fighter, Rogue, and Wizard growth shapes without pretending a redesign has already been chosen.
++
++The code pass surfaced a second important truth: some progression content is more fully defined than fully realized. A few perks, relics, or currencies appear clearly in data but are not as obviously wired into the gameplay layer. That is not a criticism for its own sake. It is exactly the kind of baseline fact that should influence redesign scope later. If a future redesign invests heavily in a system that is still only lightly implemented, it risks polishing a promise instead of strengthening a proven pillar.
++
++So what did this step prove? First, the current game already has enough progression depth to justify a serious redesign study instead of a superficial UI pass. Second, the strongest existing pillar really is build assembly, because multiple independent systems are already feeding it. Third, the next redesign step should not begin by inventing new progression layers. It should begin by deciding which current layers are carrying the clearest player value, which ones are under-surfaced, and which ones are only half-activated today.
++
++That is what a baseline is for. It keeps the next step honest.
+diff --git a/artifacts/progression-series/step-00-baseline-progression-atlas/changes.md b/artifacts/progression-series/step-00-baseline-progression-atlas/changes.md
+new file mode 100644
+index 0000000..e45644d
+--- /dev/null
++++ b/artifacts/progression-series/step-00-baseline-progression-atlas/changes.md
+@@ -0,0 +1,34 @@
++# Changes
++
++This step intentionally does not redesign or rebalance the game. The work is an evidence pass plus a publication-ready artifact pass.
++
++What was created:
++
++- A new progression series root folder at `artifacts/progression-series/`
++- A new step folder at `artifacts/progression-series/step-00-baseline-progression-atlas/`
++- A step-local Playwright capture script at `data/capture-progression-atlas.mjs`
++- A raw screenshot set in `screenshots/before/`
++- Annotated atlas boards in `screenshots/after/`
++- A structured capture log in `data/capture-results.json`
++- Publication-ready written outputs covering the code baseline, screenshots, comparisons, teaching notes, and blog-ready framing
++
++What was staged versus reached directly:
++
++- Creation was restaged to an `Elf Wizard` draft so spell-forward class differentiation is visible in one creation frame.
++- The bank screen was populated with representative mastery, contract, commendation, and currency state so the persistent progression layer is legible in one capture.
++- Pack, magic, relic, and boon screens were staged through the live runtime UI rather than waiting for a long organic run to produce each state.
++- Level-up and spell-study were reached through the actual level-up flow by granting enough XP to trigger the built-in interrupt.
++
++What changed in the repo outside the step folder:
++
++- `artifacts/progression-series/SERIES_INDEX.md` was added or updated to register this step.
++
++What did not change:
++
++- No runtime source files under `src/`
++- No UI structure in `index.html`
++- No CSS in `styles.css`
++- No build scripts
++- No generated gameplay bundle ordering
++
++This is a baseline documentation shipment, not a product behavior shipment.
+diff --git a/artifacts/progression-series/step-00-baseline-progression-atlas/comparison.md b/artifacts/progression-series/step-00-baseline-progression-atlas/comparison.md
+new file mode 100644
+index 0000000..355ea5a
+--- /dev/null
++++ b/artifacts/progression-series/step-00-baseline-progression-atlas/comparison.md
+@@ -0,0 +1,24 @@
++# Comparison
++
++The raw before-side screenshots are necessary evidence, but they are slow to interpret in sequence. The after-side artifacts add structure, annotation, and cross-screen grouping so a reviewer can understand the shipped progression stack as one system rather than as isolated PNGs.
++
++What the after-side artifacts add:
++
++- `screenshots/after/mobile-progression-atlas-board.png` turns the most important phone-sized progression screens into one annotated contact sheet.
++- `screenshots/after/desktop-progression-atlas-board.png` does the same for desktop so responsive differences are visible immediately.
++- `screenshots/after/progression-system-map-board.png` converts the baseline into a relationship diagram that distinguishes run start, in-run growth, level gates, and persistent carry-forward systems.
++- `screenshots/after/build-path-board.png` summarizes how Fighter, Rogue, and Wizard progression currently diverge without pretending that a redesign has already been chosen.
++
++Compared with the raw baseline captures, the after-side artifacts reduce three forms of friction:
++
++- Discovery friction: reviewers no longer need to remember filenames or open each progression state one by one.
++- Interpretation friction: the boards call out where the system is creation-driven, level-driven, loot-driven, or persistence-driven.
++- Publishing friction: the boards can be dropped into planning docs, design reviews, and posts without additional layout work.
++
++What the after-side artifacts do not do:
++
++- They do not redesign the progression systems.
++- They do not normalize the live UI into an idealized mockup.
++- They do not hide which screens were lightly staged for documentation instead of reached through a long organic run.
++
++That distinction is important. This step is a baseline atlas, not a proposal deck.
+diff --git a/artifacts/progression-series/step-00-baseline-progression-atlas/changed-files.txt b/artifacts/progression-series/step-00-baseline-progression-atlas/changed-files.txt
+new file mode 100644
+index 0000000..36359bb
+--- /dev/null
++++ b/artifacts/progression-series/step-00-baseline-progression-atlas/changed-files.txt
+@@ -0,0 +1,48 @@
++artifacts/progression-series/SERIES_INDEX.md
++artifacts/progression-series/step-00-baseline-progression-atlas/blog-ready.md
++artifacts/progression-series/step-00-baseline-progression-atlas/changed-files.txt
++artifacts/progression-series/step-00-baseline-progression-atlas/changes.md
++artifacts/progression-series/step-00-baseline-progression-atlas/comparison.md
++artifacts/progression-series/step-00-baseline-progression-atlas/data/capture-progression-atlas.mjs
++artifacts/progression-series/step-00-baseline-progression-atlas/data/capture-results.json
++artifacts/progression-series/step-00-baseline-progression-atlas/linked-post.md
++artifacts/progression-series/step-00-baseline-progression-atlas/patch.diff
++artifacts/progression-series/step-00-baseline-progression-atlas/prompt.md
++artifacts/progression-series/step-00-baseline-progression-atlas/README.md
++artifacts/progression-series/step-00-baseline-progression-atlas/report.md
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshot-manifest.md
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/after/build-path-board.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/after/desktop-progression-atlas-board.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/after/mobile-progression-atlas-board.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/after/progression-system-map-board.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-01-creation.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-02-town-overview.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-03-bank-progression.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-04-armory.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-05-guild.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-06-temple.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-07-sage.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-08-dungeon-overview.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-09-pack-gear.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-10-pack-spellbook.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-11-magic-hub.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-12-level-up-perk.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-13-spell-study.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-14-relic-choice.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/desktop-15-boon-choice.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-01-creation.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-02-town-overview.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-03-bank-progression.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-04-armory.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-05-guild.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-06-temple.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-07-sage.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-08-dungeon-overview.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-09-pack-gear.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-10-pack-spellbook.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-11-magic-hub.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-12-level-up-perk.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-13-spell-study.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-14-relic-choice.png
++artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/mobile-15-boon-choice.png
++artifacts/progression-series/step-00-baseline-progression-atlas/teaching-notes.md
+diff --git a/artifacts/progression-series/step-00-baseline-progression-atlas/data/capture-progression-atlas.mjs b/artifacts/progression-series/step-00-baseline-progression-atlas/data/capture-progression-atlas.mjs
+new file mode 100644
+index 0000000..c89b4d1
+--- /dev/null
++++ b/artifacts/progression-series/step-00-baseline-progression-atlas/data/capture-progression-atlas.mjs
+@@ -0,0 +1,509 @@
++import { mkdir, readFile, writeFile } from "node:fs/promises";
++import http from "node:http";
++import path from "node:path";
++import { chromium } from "playwright";
++
++const ROOT = process.cwd();
++const STEP = path.join(ROOT, "artifacts", "progression-series", "step-00-baseline-progression-atlas");
++const BEFORE = path.join(STEP, "screenshots", "before");
++const AFTER = path.join(STEP, "screenshots", "after");
++const DATA = path.join(STEP, "data");
++const PORT = 4208;
++const VIEWS = [
++  { id: "mobile", width: 430, height: 932, scale: 2 },
++  { id: "desktop", width: 1440, height: 1200, scale: 1 }
++];
++const SERVICES = ["armory", "guild", "temple", "sage"];
++const TYPES = {
++  ".css": "text/css; charset=utf-8",
++  ".html": "text/html; charset=utf-8",
++  ".jpeg": "image/jpeg",
++  ".jpg": "image/jpeg",
++  ".js": "text/javascript; charset=utf-8",
++  ".json": "application/json; charset=utf-8",
++  ".mjs": "text/javascript; charset=utf-8",
++  ".png": "image/png",
++  ".svg": "image/svg+xml; charset=utf-8"
++};
++
++const report = {
++  generatedAt: new Date().toISOString(),
++  screenshots: [],
++  stagingNotes: [
++    "Creation was staged to an elf wizard draft so spell-forward class differentiation is visible in one frame.",
++    "Bank progression was staged with representative mastery, contract, commendation, and bankroll values.",
++    "Pack, magic, relic, and boon captures use the live UI with representative runtime staging."
++  ]
++};
++
++const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
++
++function mime(filePath) {
++  return TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream";
++}
++
++async function server(rootDir) {
++  const instance = http.createServer(async (req, res) => {
++    try {
++      const pathname = new URL(req.url, "http://127.0.0.1").pathname;
++      const rel = pathname === "/" ? "index.html" : decodeURIComponent(pathname.replace(/^\/+/, ""));
++      const target = path.resolve(rootDir, rel);
++      const safe = path.relative(rootDir, target);
++      if (safe.startsWith("..") || path.isAbsolute(safe)) {
++        res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
++        res.end("Forbidden");
++        return;
++      }
++      const body = await readFile(target);
++      res.writeHead(200, { "Content-Type": mime(target) });
++      res.end(body);
++    } catch (error) {
++      res.writeHead(error?.code === "ENOENT" ? 404 : 500, { "Content-Type": "text/plain; charset=utf-8" });
++      res.end(error?.code === "ENOENT" ? "Not found" : "Server error");
++    }
++  });
++  await new Promise((resolve, reject) => {
++    instance.once("error", reject);
++    instance.listen(PORT, "127.0.0.1", () => resolve());
++  });
++  return instance;
++}
++
++async function waitFor(url) {
++  for (let i = 0; i < 40; i += 1) {
++    try {
++      const response = await fetch(url);
++      if (response.ok) {
++        return;
++      }
++    } catch {}
++    await wait(150);
++  }
++  throw new Error(`Server did not respond at ${url}`);
++}
++
++async function browser() {
++  for (const options of [{ headless: true }, { channel: "msedge", headless: true }, { channel: "chrome", headless: true }]) {
++    try {
++      return await chromium.launch(options);
++    } catch {}
++  }
++  throw new Error("Unable to launch Chromium.");
++}
++
++async function shot(page, rel, meta) {
++  await page.screenshot({ path: path.join(STEP, rel), fullPage: true });
++  report.screenshots.push({ filename: path.basename(rel), path: rel.replace(/\\/g, "/"), ...meta });
++}
++
++async function ready(page) {
++  await page.waitForFunction(() => Boolean(window.castleOfTheWindsWeb));
++  await page.waitForTimeout(250);
++}
++
++async function close(page) {
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    if (game?.mode === "modal" || game?.mode === "levelup") {
++      game.closeModal?.();
++      game.render?.();
++    }
++  });
++  await page.waitForTimeout(150);
++}
++
++async function openCreation(page) {
++  await page.click('[data-action="new-game"]');
++  await page.waitForSelector('[data-action="begin-adventure"]');
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    game.selectedRace = "elf";
++    game.selectedClass = "wizard";
++    game.creationName = "Atlas Mage";
++    game.creationStatBonuses = { str: 0, dex: 2, con: 0, int: 4 };
++    game.showCreationModal();
++  });
++  await page.waitForTimeout(250);
++}
++
++async function begin(page) {
++  await page.click('[data-action="begin-adventure"]');
++  await page.waitForFunction(() => {
++    const game = window.castleOfTheWindsWeb;
++    return game?.mode === "game" || game?.mode === "modal";
++  });
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    if (game?.mode === "modal") {
++      game.closeModal?.();
++    }
++    game.render?.();
++  });
++  await page.waitForTimeout(300);
++}
++
++async function bankStage(page) {
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    game.player.gold = 620;
++    game.player.bankGold = 260;
++    game.player.runCurrencies.rumorTokens = 2;
++    game.classMasteries = { fighter: 1, rogue: 0, wizard: 2 };
++    game.contracts = {
++      unlocked: ["pressed_descent", "greed_ledger", "scholar_road", "hunters_call"],
++      activeId: "scholar_road",
++      currentRunId: ""
++    };
++    game.commendations = {
++      clean_extract: true,
++      greed_specialist: false,
++      elite_hunter: true,
++      route_reader: false,
++      curse_survivor: false,
++      class_loyalist: false
++    };
++    game.runSummaryHistory = [{
++      outcome: "extract",
++      extractedDepth: 2,
++      returnValue: 188,
++      greedCount: 1,
++      searchCount: 3,
++      eliteKills: 2,
++      restCount: 1,
++      waitCount: 1,
++      classId: "wizard"
++    }];
++    game.openTownService("bank");
++  });
++  await page.waitForTimeout(250);
++}
++
++async function service(page, id) {
++  await page.evaluate((serviceId) => window.castleOfTheWindsWeb.openTownService(serviceId), id);
++  await page.waitForTimeout(250);
++}
++
++async function descend(page) {
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    game.closeModal?.();
++    if (game.currentDepth === 0) {
++      game.placePlayerAt(game.currentLevel.stairsDown.x, game.currentLevel.stairsDown.y);
++      game.useStairs("down");
++    }
++    game.currentLevel.explored.fill(true);
++    game.currentLevel.visible.fill(true);
++    game.render();
++  });
++  await page.waitForTimeout(350);
++}
++
++async function packStage(page) {
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    if (!game.player.inventory.find((item) => item.id === "atlas-chainmail")) {
++      game.player.inventory.push(
++        { id: "atlas-chainmail", name: "Chain Mail", kind: "armor", slot: "body", armor: 5, guardBonus: 1, value: 88, weight: 8, visualId: "armor", identified: true, cursed: false },
++        { id: "atlas-spellbook-shield", name: "Spellbook of Shield", kind: "spellbook", spell: "shield", value: 82, weight: 1, visualId: "spellbook", identified: true, cursed: false }
++      );
++    }
++    const index = game.player.inventory.findIndex((item) => item.id === "atlas-chainmail");
++    game.activePackFilter = "all";
++    game.showHubModal("pack", { selection: { type: "inventory", value: index >= 0 ? index : 0 } });
++  });
++  await page.waitForTimeout(250);
++}
++
++async function spellbookStage(page) {
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    const index = game.player.inventory.findIndex((item) => item.id === "atlas-spellbook-shield");
++    game.activePackFilter = "all";
++    game.showHubModal("pack", { selection: { type: "inventory", value: index >= 0 ? index : 0 } });
++  });
++  await page.waitForTimeout(250);
++}
++
++async function magicStage(page) {
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    const known = new Set(game.player.spellsKnown || []);
++    ["magicMissile", "healMinor", "shield", "identify", "slowMonster", "clairvoyance"].forEach((spellId) => known.add(spellId));
++    game.player.spellsKnown = [...known];
++    game.player.spellTrayIds = game.player.spellsKnown.slice(0, 6);
++    game.showHubModal("magic");
++  });
++  await page.waitForTimeout(250);
++}
++
++async function levelStage(page) {
++  await page.evaluate(() => {
++    const game = window.castleOfTheWindsWeb;
++    game.closeModal?.();
++    game.mode = "game";
++    game.player.exp = game.player.nextLevelExp;
++    game.checkLevelUp();
++  });
++  await page.waitForTimeout(250);
++}
++
++async function rewardStage(page, type) {
++  const options = type === "relic"
++    ? ["survivor_talisman", "greedy_purse", "warding_lens"]
++    : ["windfall", "field_medicine", "aether_cache"];
++  await page.evaluate(({ rewardType, rewardOptions }) => {
++    const game = window.castleOfTheWindsWeb;
++    game.closeModal?.();
++    game.mode = "game";
++    game.pendingPerkChoices = 0;
++    game.pendingSpellChoices = 0;
++    game.pendingRewardQueue = [];
++    game.pendingRewardChoice = { type: rewardType, source: rewardType, options: rewardOptions };
++    game.showRewardChoiceModal(game.pendingRewardChoice);
++  }, { rewardType: type, rewardOptions: options });
++  await page.waitForTimeout(250);
++}
++
++async function captureView(runBrowser, baseUrl, view) {
++  const context = await runBrowser.newContext({
++    viewport: { width: view.width, height: view.height },
++    deviceScaleFactor: view.scale
++  });
++  const page = await context.newPage();
++  await page.goto(`${baseUrl}/index.html`, { waitUntil: "networkidle" });
++  await ready(page);
++
++  await openCreation(page);
++  await shot(page, `screenshots/before/${view.id}-01-creation.png`, {
++    viewport: view.id,
++    screen: "Character creation",
++    howReached: "Opened New Game and restaged the live creation modal to an elf wizard draft.",
++    whyCaptured: "Shows class, race, and stat-allocation differentiation."
++  });
++
++  await begin(page);
++  await shot(page, `screenshots/before/${view.id}-02-town-overview.png`, {
++    viewport: view.id,
++    screen: "Town overview",
++    howReached: "Began a run from the creation screen.",
++    whyCaptured: "Shows the town HUD before opening progression services."
++  });
++
++  await bankStage(page);
++  await shot(page, `screenshots/before/${view.id}-03-bank-progression.png`, {
++    viewport: view.id,
++    screen: "Bank progression review",
++    howReached: "Opened the live Bank modal with representative mastery and contract state.",
++    whyCaptured: "Documents contracts, mastery, commendations, rumors, and town unlocks."
++  });
++
++  for (const [index, id] of SERVICES.entries()) {
++    await close(page);
++    await service(page, id);
++    await shot(page, `screenshots/before/${view.id}-0${index + 4}-${id}.png`, {
++      viewport: view.id,
++      screen: id === "guild" ? "Wizard's Guild" : id === "temple" ? "Temple" : id === "sage" ? "Sage's Tower" : "Armory",
++      howReached: "Opened the live town service modal from town.",
++      whyCaptured: id === "guild"
++        ? "Shows spellbook, wand, and mana-oriented build shaping."
++        : id === "temple"
++          ? "Shows restoration and overcast recovery."
++          : id === "sage"
++            ? "Shows identification as a build-shaping knowledge service."
++            : "Shows equipment progression and gear comparison."
++    });
++  }
++
++  await close(page);
++  await descend(page);
++  await shot(page, `screenshots/before/${view.id}-08-dungeon-overview.png`, {
++    viewport: view.id,
++    screen: "Dungeon overview",
++    howReached: "Descended to depth 1 and revealed the floor for documentation.",
++    whyCaptured: "Provides the run context where progression interrupts play."
++  });
++
++  await packStage(page);
++  await shot(page, `screenshots/before/${view.id}-09-pack-gear.png`, {
++    viewport: view.id,
++    screen: "Pack gear comparison",
++    howReached: "Added a representative armor upgrade and opened the pack hub on that item.",
++    whyCaptured: "Documents gear-based build shaping."
++  });
++
++  await spellbookStage(page);
++  await shot(page, `screenshots/before/${view.id}-10-pack-spellbook.png`, {
++    viewport: view.id,
++    screen: "Pack spellbook interaction",
++    howReached: "Selected a staged spellbook in the live pack hub.",
++    whyCaptured: "Shows one route for learning spells outside level-up."
++  });
++
++  await magicStage(page);
++  await shot(page, `screenshots/before/${view.id}-11-magic-hub.png`, {
++    viewport: view.id,
++    screen: "Magic hub",
++    howReached: "Added representative known spells and opened the magic hub.",
++    whyCaptured: "Documents spell management separate from acquisition."
++  });
++
++  await levelStage(page);
++  await shot(page, `screenshots/before/${view.id}-12-level-up-perk.png`, {
++    viewport: view.id,
++    screen: "Level up perk choice",
++    howReached: "Granted enough XP in the live run to trigger level-up.",
++    whyCaptured: "Documents the perk-choice half of the level-up interrupt."
++  });
++
++  await page.locator('[data-action="choose-reward"]').first().click();
++  await page.waitForTimeout(250);
++  await shot(page, `screenshots/before/${view.id}-13-spell-study.png`, {
++    viewport: view.id,
++    screen: "Spell study",
++    howReached: "Advanced the same live level-up flow from perk choice into spell study.",
++    whyCaptured: "Shows the spell-acquisition branch of level progression."
++  });
++
++  await rewardStage(page, "relic");
++  await shot(page, `screenshots/before/${view.id}-14-relic-choice.png`, {
++    viewport: view.id,
++    screen: "Relic choice",
++    howReached: "Staged the live reward-choice modal with current relic options.",
++    whyCaptured: "Documents objective-driven run shaping through relic rewards."
++  });
++
++  await rewardStage(page, "boon");
++  await shot(page, `screenshots/before/${view.id}-15-boon-choice.png`, {
++    viewport: view.id,
++    screen: "Boon choice",
++    howReached: "Staged the live reward-choice modal with current boon options.",
++    whyCaptured: "Documents the alternate reward branch that can redirect a run."
++  });
++
++  await context.close();
++}
++
++function atlasHtml(baseUrl, viewId) {
++  const cells = [
++    ["01-creation", "Creation"],
++    ["03-bank-progression", "Bank Meta"],
++    ["05-guild", "Spell Access"],
++    ["09-pack-gear", "Gear Fit"],
++    ["11-magic-hub", "Spell Management"],
++    ["12-level-up-perk", "Level-Up"]
++  ].map(([slug, title]) => `
++    <figure class="card">
++      <img src="${baseUrl}/artifacts/progression-series/step-00-baseline-progression-atlas/screenshots/before/${viewId}-${slug}.png" alt="${title}">
++      <figcaption><strong>${title}</strong><span>${title === "Bank Meta" ? "Persistent layer." : title === "Spell Access" ? "Town acquisition layer." : title === "Gear Fit" ? "Inventory-driven build shaping." : title === "Spell Management" ? "Execution layer." : title === "Level-Up" ? "Perk plus spell interrupt." : "Starting identity and stat routing."}</span></figcaption>
++    </figure>
++  `).join("");
++  return `<!doctype html><html><head><meta charset="utf-8"><style>
++    body{margin:0;font-family:Georgia,serif;background:#f2eadc;color:#1d2523}
++    main{width:2000px;padding:72px}
++    h1{font-size:72px;margin:0 0 14px}.dek{font-size:28px;line-height:1.35;margin:0 0 26px;color:#5c5c57}
++    .grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}.card{margin:0;background:#fff9f0;border:2px solid #b49568;border-radius:20px;overflow:hidden}
++    img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;background:#d6c8af}.card figcaption{padding:16px 18px;display:grid;gap:8px;font-size:23px;line-height:1.3}
++    strong{font-size:30px}
++  </style></head><body><main><h1>${viewId === "mobile" ? "Phone-Sized" : "Desktop"} Progression Atlas</h1><p class="dek">These are annotated study boards, not redesign comps. They compress the most important progression surfaces into one reviewable artifact.</p><section class="grid">${cells}</section></main></body></html>`;
++}
++
++function textBoard(title, dek, cards) {
++  return `<!doctype html><html><head><meta charset="utf-8"><style>
++    body{margin:0;font-family:Georgia,serif;background:#efe7d9;color:#1a2222}main{width:2100px;padding:76px}
++    h1{font-size:74px;margin:0 0 14px}.dek{font-size:30px;line-height:1.35;color:#5f615d;margin:0 0 28px}
++    .grid{display:grid;grid-template-columns:repeat(${cards.length},1fr);gap:22px}.card{background:#fffaf2;border:2px solid #ac906b;border-radius:20px;padding:22px}
++    .card h2{margin:0 0 12px;font-size:34px}.card p{margin:0;font-size:24px;line-height:1.35;color:#5f615d}
++  </style></head><body><main><h1>${title}</h1><p class="dek">${dek}</p><section class="grid">${cards.map((card) => `<article class="card"><h2>${card.title}</h2><p>${card.text}</p></article>`).join("")}</section></main></body></html>`;
++}
++
++async function board(runBrowser, width, height, html, output) {
++  const page = await runBrowser.newPage({ viewport: { width, height } });
++  await page.setContent(html, { waitUntil: "load" });
++  await page.waitForTimeout(300);
++  await page.screenshot({ path: output, fullPage: true });
++  await page.close();
++}
++
++async function buildBoards(runBrowser, baseUrl) {
++  for (const view of VIEWS) {
++    await board(runBrowser, 2000, 2300, atlasHtml(baseUrl, view.id), path.join(AFTER, `${view.id}-progression-atlas-board.png`));
++    report.screenshots.push({
++      filename: `${view.id}-progression-atlas-board.png`,
++      path: `screenshots/after/${view.id}-progression-atlas-board.png`,
++      viewport: view.id,
++      screen: view.id === "mobile" ? "Mobile progression atlas board" : "Desktop progression atlas board",
++      howReached: "Generated from the before-side captures with the step-local board renderer.",
++      whyCaptured: "Creates an annotated after-side atlas rather than a redesign."
++    });
++  }
++
++  await board(runBrowser, 2100, 1200, textBoard(
++    "Progression System Map",
++    "The current game mixes run-local and persistent growth. Creation, pickups, level gates, and bank-layer systems all contribute to build assembly.",
++    [
++      { title: "Run Start", text: "Creation chooses race, class, base stats, starter kit, starter spells, and any carried-forward mastery or contract bonuses." },
++      { title: "During Run", text: "XP, gear, spellbooks, town service access, objective rewards, relics, and boons all change the shape of the current run." },
++      { title: "Level Gates", text: "Every level-up grants random stat growth, a perk choice, a spell study choice, a derived-stat recalculation, and a full HP and mana refill." },
++      { title: "Persistent Layer", text: "Class mastery, commendations, contracts, and town unlocks push value forward into future starts." }
++    ]
++  ), path.join(AFTER, "progression-system-map-board.png"));
++  report.screenshots.push({
++    filename: "progression-system-map-board.png",
++    path: "screenshots/after/progression-system-map-board.png",
++    viewport: "board",
++    screen: "Progression system map board",
++    howReached: "Generated from code-backed atlas findings.",
++    whyCaptured: "Turns the baseline into a readable relationship diagram."
++  });
++
++  await board(runBrowser, 2100, 1200, textBoard(
++    "Build-Path Summaries",
++    "These are baseline summaries of current fighter, rogue, and wizard growth patterns. They describe the shipped system and do not propose redesign.",
++    [
++      { title: "Fighter", text: "Heavy front-line start, defensive spell access through study and mastery, and perks that compound armor, guard, and melee pressure." },
++      { title: "Rogue", text: "Lighter start, stronger route and control tools, and perks that reward scouting, burden discipline, and opportunistic play." },
++      { title: "Wizard", text: "Fragile opening, broadest direct spell growth, and a progression path centered on mana economy, spell quality, and overcast safety." }
++    ]
++  ), path.join(AFTER, "build-path-board.png"));
++  report.screenshots.push({
++    filename: "build-path-board.png",
++    path: "screenshots/after/build-path-board.png",
++    viewport: "board",
++    screen: "Build-path summary board",
++    howReached: "Generated from the current class-family progression summary.",
++    whyCaptured: "Adds publication-ready build-path summaries to the atlas."
++  });
++}
++
++async function main() {
++  await mkdir(BEFORE, { recursive: true });
++  await mkdir(AFTER, { recursive: true });
++  await mkdir(DATA, { recursive: true });
++
++  let runServer = null;
++  let runBrowser = null;
++  try {
++    runServer = await server(ROOT);
++    const baseUrl = `http://127.0.0.1:${PORT}`;
++    await waitFor(`${baseUrl}/index.html`);
++    runBrowser = await browser();
++    for (const view of VIEWS) {
++      await captureView(runBrowser, baseUrl, view);
++    }
++    await buildBoards(runBrowser, baseUrl);
++    await writeFile(path.join(DATA, "capture-results.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
++    console.log(path.join(DATA, "capture-results.json"));
++  } finally {
++    if (runBrowser) {
++      await runBrowser.close();
++    }
++    if (runServer) {
++      await new Promise((resolve) => runServer.close(resolve));
++    }
++  }
++}
++
++main().catch((error) => {
++  console.error(error);
++  process.exit(1);
++});
+diff --git a/artifacts/progression-series/step-00-baseline-progression-atlas/data/capture-results.json b/artifacts/progression-series/step-00-baseline-progression-atlas/data/capture-results.json
+new file mode 100644
+index 0000000..c24b82e
+--- /dev/null
++++ b/artifacts/progression-series/step-00-baseline-progression-atlas/data/capture-results.json
+@@ -0,0 +1,282 @@
++{
++  "generatedAt": "2026-04-09T01:32:46.476Z",
++  "screenshots": [
++    {
++      "filename": "mobile-01-creation.png",
++      "path": "screenshots/before/mobile-01-creation.png",
++      "viewport": "mobile",
++      "screen": "Character creation",
++      "howReached": "Opened New Game and restaged the live creation modal to an elf wizard draft.",
++      "whyCaptured": "Shows class, race, and stat-allocation differentiation."
++    },
++    {
++      "filename": "mobile-02-town-overview.png",
++      "path": "screenshots/before/mobile-02-town-overview.png",
++      "viewport": "mobile",
++      "screen": "Town overview",
++      "howReached": "Began a run from the creation screen.",
++      "whyCaptured": "Shows the town HUD before opening progression services."
++    },
++    {
++      "filename": "mobile-03-bank-progression.png",
++      "path": "screenshots/before/mobile-03-bank-progression.png",
++      "viewport": "mobile",
++      "screen": "Bank progression review",
++      "howReached": "Opened the live Bank modal with representative mastery and contract state.",
++      "whyCaptured": "Documents contracts, mastery, commendations, rumors, and town unlocks."
++    },
++    {
++      "filename": "mobile-04-armory.png",
++      "path": "screenshots/before/mobile-04-armory.png",
++      "viewport": "mobile",
++      "screen": "Armory",
++      "howReached": "Opened the live town service modal from town.",
++      "whyCaptured": "Shows equipment progression and gear comparison."
++    },
++    {
++      "filename": "mobile-05-guild.png",
++      "path": "screenshots/before/mobile-05-guild.png",
++      "viewport": "mobile",
++      "screen": "Wizard's Guild",
++      "howReached": "Opened the live town service modal from town.",
++      "whyCaptured": "Shows spellbook, wand, and mana-oriented build shaping."
++    },
++    {
++      "filename": "mobile-06-temple.png",
++      "path": "screenshots/before/mobile-06-temple.png",
++      "viewport": "mobile",
++      "screen": "Temple",
++      "howReached": "Opened the live town service modal from town.",
++      "whyCaptured": "Shows restoration and overcast recovery."
++    },
++    {
++      "filename": "mobile-07-sage.png",
++      "path": "screenshots/before/mobile-07-sage.png",
++      "viewport": "mobile",
++      "screen": "Sage's Tower",
++      "howReached": "Opened the live town service modal from town.",
++      "whyCaptured": "Shows identification as a build-shaping knowledge service."
++    },
++    {
++      "filename": "mobile-08-dungeon-overview.png",
++      "path": "screenshots/before/mobile-08-dungeon-overview.png",
++      "viewport": "mobile",
++      "screen": "Dungeon overview",
++      "howReached": "Descended to depth 1 and revealed the floor for documentation.",
++      "whyCaptured": "Provides the run context where progression interrupts play."
++    },
++    {
++      "filename": "mobile-09-pack-gear.png",
++      "path": "screenshots/before/mobile-09-pack-gear.png",
++      "viewport": "mobile",
++      "screen": "Pack gear comparison",
++      "howReached": "Added a representative armor upgrade and opened the pack hub on that item.",
++      "whyCaptured": "Documents gear-based build shaping."
++    },
++    {
++      "filename": "mobile-10-pack-spellbook.png",
++      "path": "screenshots/before/mobile-10-pack-spellbook.png",
++      "viewport": "mobile",
++      "screen": "Pack spellbook interaction",
++      "howReached": "Selected a staged spellbook in the live pack hub.",
++      "whyCaptured": "Shows one route for learning spells outside level-up."
++    },
++    {
++      "filename": "mobile-11-magic-hub.png",
++      "path": "screenshots/before/mobile-11-magic-hub.png",
++      "viewport": "mobile",
++      "screen": "Magic hub",
++      "howReached": "Added representative known spells and opened the magic hub.",
++      "whyCaptured": "Documents spell management separate from acquisition."
++    },
++    {
++      "filename": "mobile-12-level-up-perk.png",
++      "path": "screenshots/before/mobile-12-level-up-perk.png",
++      "viewport": "mobile",
++      "screen": "Level up perk choice",
++      "howReached": "Granted enough XP in the live run to trigger level-up.",
++      "whyCaptured": "Documents the perk-choice half of the level-up interrupt."
++    },
++    {
++      "filename": "mobile-13-spell-study.png",
++      "path": "screenshots/before/mobile-13-spell-study.png",
++      "viewport": "mobile",
++      "screen": "Spell study",
++      "howReached": "Advanced the same live level-up flow from perk choice into spell study.",
++      "whyCaptured": "Shows the spell-acquisition branch of level progression."
++    },
++    {
++      "filename": "mobile-14-relic-choice.png",
++      "path": "screenshots/before/mobile-14-relic-choice.png",
++      "viewport": "mobile",
++      "screen": "Relic choice",
++      "howReached": "Staged the live reward-choice modal with current relic options.",
++      "whyCaptured": "Documents objective-driven run shaping through relic rewards."
++    },
++    {
++      "filename": "mobile-15-boon-choice.png",
++      "path": "screenshots/before/mobile-15-boon-choice.png",
++      "viewport": "mobile",
++      "screen": "Boon choice",
++      "howReached": "Staged the live reward-choice modal with current boon options.",
++      "whyCaptured": "Documents the alternate reward branch that can redirect a run."
++    },
++    {
++      "filename": "desktop-01-creation.png",
++      "path": "screenshots/before/desktop-01-creation.png",
++      "viewport": "desktop",
++      "screen": "Character creation",
++      "howReached": "Opened New Game and restaged the live creation modal to an elf wizard draft.",
++      "whyCaptured": "Shows class, race, and stat-allocation differentiation."
++    },
++    {
++      "filename": "desktop-02-town-overview.png",
++      "path": "screenshots/before/desktop-02-town-overview.png",
++      "viewport": "desktop",
++      "screen": "Town overview",
++      "howReached": "Began a run from the creation screen.",
++      "whyCaptured": "Shows the town HUD before opening progression services."
++    },
++    {
++      "filename": "desktop-03-bank-progression.png",
++      "path": "screenshots/before/desktop-03-bank-progression.png",
++      "viewport": "desktop",
++      "screen": "Bank progression review",
++      "howReached": "Opened the live Bank modal with representative mastery and contract state.",
++      "whyCaptured": "Documents contracts, mastery, commendations, rumors, and town unlocks."
++    },
++    {
++      "filename": "desktop-04-armory.png",
++      "path": "screenshots/before/desktop-04-armory.png",
++      "viewport": "desktop",
++      "screen": "Armory",
++      "howReached": "Opened the live town service modal from town.",
++      "whyCaptured": "Shows equipment progression and gear comparison."
++    },
++    {
++      "filename": "desktop-05-guild.png",
++      "path": "screenshots/before/desktop-05-guild.png",
++      "viewport": "desktop",
++      "screen": "Wizard's Guild",
++      "howReached": "Opened the live town service modal from town.",
++      "whyCaptured": "Shows spellbook, wand, and mana-oriented build shaping."
++    },
++    {
++      "filename": "desktop-06-temple.png",
++      "path": "screenshots/before/desktop-06-temple.png",
++      "viewport": "desktop",
++      "screen": "Temple",
++      "howReached": "Opened the live town service modal from town.",
++      "whyCaptured": "Shows restoration and overcast recovery."
++    },
++    {
++      "filename": "desktop-07-sage.png",
++      "path": "screenshots/before/desktop-07-sage.png",
++      "viewport": "desktop",
++      "screen": "Sage's Tower",
++      "howReached": "Opened the live town service modal from town.",
++      "whyCaptured": "Shows identification as a build-shaping knowledge service."
++    },
++    {
++      "filename": "desktop-08-dungeon-overview.png",
++      "path": "screenshots/before/desktop-08-dungeon-overview.png",
++      "viewport": "desktop",
++      "screen": "Dungeon overview",
++      "howReached": "Descended to depth 1 and revealed the floor for documentation.",
++      "whyCaptured": "Provides the run context where progression interrupts play."
++    },
++    {
++      "filename": "desktop-09-pack-gear.png",
++      "path": "screenshots/before/desktop-09-pack-gear.png",
++      "viewport": "desktop",
++      "screen": "Pack gear comparison",
++      "howReached": "Added a representative armor upgrade and opened the pack hub on that item.",
++      "whyCaptured": "Documents gear-based build shaping."
++    },
++    {
++      "filename": "desktop-10-pack-spellbook.png",
++      "path": "screenshots/before/desktop-10-pack-spellbook.png",
++      "viewport": "desktop",
++      "screen": "Pack spellbook interaction",
++      "howReached": "Selected a staged spellbook in the live pack hub.",
++      "whyCaptured": "Shows one route for learning spells outside level-up."
++    },
++    {
++      "filename": "desktop-11-magic-hub.png",
++      "path": "screenshots/before/desktop-11-magic-hub.png",
++      "viewport": "desktop",
++      "screen": "Magic hub",
++      "howReached": "Added representative known spells and opened the magic hub.",
++      "whyCaptured": "Documents spell management separate from acquisition."
++    },
++    {
++      "filename": "desktop-12-level-up-perk.png",
++      "path": "screenshots/before/desktop-12-level-up-perk.png",
++      "viewport": "desktop",
++      "screen": "Level up perk choice",
++      "howReached": "Granted enough XP in the live run to trigger level-up.",
++      "whyCaptured": "Documents the perk-choice half of the level-up interrupt."
++    },
++    {
++      "filename": "desktop-13-spell-study.png",
++      "path": "screenshots/before/desktop-13-spell-study.png",
++      "viewport": "desktop",
++      "screen": "Spell study",
++      "howReached": "Advanced the same live level-up flow from perk choice into spell study.",
++      "whyCaptured": "Shows the spell-acquisition branch of level progression."
++    },
++    {
++      "filename": "desktop-14-relic-choice.png",
++      "path": "screenshots/before/desktop-14-relic-choice.png",
++      "viewport": "desktop",
++      "screen": "Relic choice",
++      "howReached": "Staged the live reward-choice modal with current relic options.",
++      "whyCaptured": "Documents objective-driven run shaping through relic rewards."
++    },
++    {
++      "filename": "desktop-15-boon-choice.png",
++      "path": "screenshots/before/desktop-15-boon-choice.png",
++      "viewport": "desktop",
++      "screen": "Boon choice",
++      "howReached": "Staged the live reward-choice modal with current boon options.",
++      "whyCaptured": "Documents the alternate reward branch that can redirect a run."
++    },
++    {
++      "filename": "mobile-progression-atlas-board.png",
++      "path": "screenshots/after/mobile-progression-atlas-board.png",
++      "viewport": "mobile",
++      "screen": "Mobile progression atlas board",
++      "howReached": "Generated from the before-side captures with the step-local board renderer.",
++      "whyCaptured": "Creates an annotated after-side atlas rather than a redesign."
++    },
++    {
++      "filename": "desktop-progression-atlas-board.png",
++      "path": "screenshots/after/desktop-progression-atlas-board.png",
++      "viewport": "desktop",
++      "screen": "Desktop progression atlas board",
++      "howReached": "Generated from the before-side captures with the step-local board renderer.",
++      "whyCaptured": "Creates an annotated after-side atlas rather than a redesign."
++    },
++    {
++      "filename": "progression-system-map-board.png",
++      "path": "screenshots/after/progression-system-map-board.png",
++      "viewport": "board",
++      "screen": "Progression system map board",
++      "howReached": "Generated from code-backed atlas findings.",
++      "whyCaptured": "Turns the baseline into a readable relationship diagram."
++    },
++    {
++      "filename": "build-path-board.png",
++      "path": "screenshots/after/build-path-board.png",
++      "viewport": "board",
++      "screen": "Build-path summary board",
++      "howReached": "Generated from the current class-family progression summary.",
++      "whyCaptured": "Adds publication-ready build-path summaries to the atlas."
++    }
++  ],
++  "stagingNotes": [
++    "Creation was staged to an elf wizard draft so spell-forward class differentiation is visible in one frame.",
++    "Bank progression was staged with representative mastery, contract, commendation, and bankroll values.",
++    "Pack, magic, relic, and boon captures use the live UI with representative runtime staging."
++  ]
++}
+diff --git a/artifacts/progression-series/step-00-baseline-progression-atlas/linked-post.md b/artifacts/progression-series/step-00-baseline-progression-atlas/linked-post.md
+new file mode 100644
+index 0000000..b1e7173
+--- /dev/null
++++ b/artifacts/progression-series/step-00-baseline-progression-atlas/linked-post.md
+@@ -0,0 +1,14 @@
++# Linked Post
++
++Step 00 of the progression series is complete: a baseline atlas of the current game's ability, spell, perk, relic, boon, unlock, and build-progression systems.
++
++This was not a redesign pass. It was a code-backed evidence pass with Playwright captures in mobile and desktop viewports, plus after-side atlas boards that turn the raw screenshots into a readable progression map.
++
++Main takeaway: the current game already has a multi-layer progression stack. Growth is coming from creation, level-up, spellbooks, objective rewards, town services, mastery, contracts, commendations, and funded town unlocks, not from XP alone. That is a strong foundation, but it is also spread across many surfaces, which means the next step should focus on clarity and system emphasis rather than adding new layers immediately.
++
++Artifacts:
++
++- `screenshots/before/` for raw runtime captures
++- `screenshots/after/` for the annotated atlas boards
++- `report.md` for the baseline analysis
++- `comparison.md` for what the organized after-side artifacts add
+diff --git a/artifacts/progression-series/step-00-baseline-progression-atlas/prompt.md b/artifacts/progression-series/step-00-baseline-progression-atlas/prompt.md
+new file mode 100644
+index 0000000..c438ff2
+--- /dev/null
++++ b/artifacts/progression-series/step-00-baseline-progression-atlas/prompt.md
+@@ -0,0 +1,82 @@
++You are a senior systems design analyst working inside a real game repo with code access and Playwright access.
++
++Context:
++- This is a phone-first, browser-playable, single-player, turn-based dungeon crawler.
++- One of the game’s strongest existing pillars is build assembly through gear, spells, perks, relics, and progression choices.
++- This step is meant to establish the current baseline for ability, spell, and skill progression before redesign work begins.
++
++Task:
++Create a baseline progression atlas of the game’s current ability, spell, and skill progression systems, and save a publication-ready artifact trail.
++
++You must:
++1. Create or update the root folder: artifacts/progression-series/
++2. Create or update: artifacts/progression-series/SERIES_INDEX.md
++3. Create this step folder: artifacts/progression-series/step-00-baseline-progression-atlas/
++4. Inside the step folder create:
++   - prompt.md
++   - README.md
++   - report.md
++   - comparison.md
++   - changes.md
++   - teaching-notes.md
++   - blog-ready.md
++   - linked-post.md
++   - changed-files.txt
++   - screenshot-manifest.md
++   - screenshots/before/
++   - screenshots/after/
++   - data/
++   - patch.diff if git is available
++5. Save this exact prompt into prompt.md
++6. Inspect the codebase and identify all implemented progression-related systems, including:
++   - level-ups
++   - stat growth
++   - skills
++   - spells
++   - perks
++   - relics
++   - boons
++   - rewards
++   - unlocks
++   - ability acquisition
++   - class/race differentiation
++7. Launch the game with Playwright and capture screenshots of all reachable progression-related states, such as:
++   - character creation
++   - spell menus
++   - level-up choices
++   - reward selection screens
++   - perk/relic/boon screens
++   - inventory interactions that shape builds
++   - town/service screens related to growth
++8. Capture both desktop and phone-sized screenshots when possible
++9. For the “after” side of this step, create a documented atlas rather than redesigning the systems yet:
++   - annotated screenshots
++   - progression maps
++   - system relationship diagrams
++   - build-path summaries
++10. Update SERIES_INDEX.md with:
++   - step number and title
++   - folder path
++   - 3-sentence summary
++   - key progression systems documented
++   - key screenshots
++   - what this step proved
++   - what the next step should investigate
++
++Required report sections:
++- Current progression systems
++- Current spell systems
++- Current skill/perk systems
++- Current build-shaping mechanics
++- How progression currently works across a run
++- Strengths of the current design
++- Weaknesses or unclear areas
++- Gaps or underused systems
++- Open questions
++
++Important rules:
++- Do not redesign yet
++- Ground conclusions in actual code and observable runtime behavior
++- Keep the artifact trail publication-ready
++
++Finish by summarizing what you created and the exact folder path.
+diff --git a/artifacts/progression-series/step-00-baseline-progression-atlas/report.md b/artifacts/progression-series/step-00-baseline-progression-atlas/report.md
+new file mode 100644
+index 0000000..79e4cb5
+--- /dev/null
++++ b/artifacts/progression-series/step-00-baseline-progression-atlas/report.md
+@@ -0,0 +1,148 @@
++# Report
++
++## Current progression systems
++
++The current game has four distinct progression layers that overlap rather than forming one linear tree.
++
++1. Creation-layer progression defines the starting build through race stats, class bonuses, starter items, starter spells, and allocatable training points in [`src/features/creation.js`](../../../src/features/creation.js) plus [`src/data/content.js`](../../../src/data/content.js).
++2. Run-local progression grows the current character through monster XP, random stat growth, level-up perk choice, spell study, gear pickups, spellbooks, objective rewards, optional greed rewards, and town shopping or services in [`src/features/combat.js`](../../../src/features/combat.js), [`src/features/builds.js`](../../../src/features/builds.js), [`src/features/objectives.js`](../../../src/features/objectives.js), [`src/features/town-meta.js`](../../../src/features/town-meta.js), and [`src/game.js`](../../../src/game.js).
++3. Persistent progression carries value across runs through class mastery ranks, commendations, contract unlocks, town unlock investments, run archives, and recommendation logic in [`src/features/meta-progression.js`](../../../src/features/meta-progression.js).
++4. Derived-stat progression recalculates power continuously from race, class, level, gear, curses, constitution loss, relics, and perks in [`src/game.js`](../../../src/game.js) and [`src/features/builds.js`](../../../src/features/builds.js).
++
++Mechanically, the core stat formulas are simple and readable. Attack scales from weapon power plus half Strength, armor from half Dexterity, evade from Dexterity, search radius from Dexterity and Intelligence thresholds, HP from Constitution plus level plus Fighter bias, and mana from Intelligence plus Wizard bias in [`src/game.js`](../../../src/game.js).
++
++Level-ups are not just number bumps. When XP reaches `nextLevelExp`, the player gains a level, `nextLevelExp` scales upward, each primary stat gains `0` or `1` randomly, derived stats are recalculated, HP and mana refill, one spell choice is queued, and one perk choice is queued in [`src/features/combat.js`](../../../src/features/combat.js).
++
++## Current spell systems
++
++The spell layer is broad and structured.
++
++- There are 20 implemented spells in [`src/data/content.js`](../../../src/data/content.js).
++- Spells carry explicit metadata for school, tier, class affinity, learn level, cost, target mode, and description.
++- The current affinities break into Fighter, Rogue, Wizard, and Shared families.
++- Spell learning at level-up is filtered by current level, excludes already known spells, and sorts by class affinity first, then learn level, then mana cost in [`src/game.js`](../../../src/game.js).
++
++Current spell acquisition routes:
++
++1. Class start: Fighters begin with no spells, Rogues with `Magic Missile`, Wizards with `Magic Missile` and `Cure Light Wounds`.
++2. Level-up spell study: Each level-up queues one spell-learning choice.
++3. Spellbooks: Using a spellbook immediately teaches the spell if unknown, adds it to the tray when possible, and consumes the book in [`src/game.js`](../../../src/game.js).
++4. Class mastery: Later mastery ranks can grant permanent starting spells such as `Shield`, `Identify`, and `Clairvoyance` in [`src/data/content.js`](../../../src/data/content.js) and [`src/features/meta-progression.js`](../../../src/features/meta-progression.js).
++
++Spell use itself also shapes progression because mana economy matters. `Spell Efficiency` lowers mana cost, `Warding` increases mana, gear can add mana and warding, and overcasting converts mana shortage into Constitution loss with `Overcast Control` reducing that penalty in [`src/features/builds.js`](../../../src/features/builds.js) and [`src/game.js`](../../../src/game.js).
++
++## Current skill/perk systems
++
++The game does not currently expose a separate skill-tree screen. Instead, "skills" are split across class identity, perks, mastery ranks, spells, and gear properties.
++
++Perks:
++
++- 12 total implemented perks, four per class family, defined in [`src/data/content.js`](../../../src/data/content.js).
++- Fighters: `Brace`, `Cleave`, `Shield Mastery`, `Blooded`
++- Rogues: `Backstab`, `Evasion`, `Trap Sense`, `Quick Hands`
++- Wizards: `Spell Efficiency`, `Element Focus`, `Overcast Control`, `Warding`
++
++How perks work:
++
++- Perk offers are rolled only from the player's class family in [`src/features/builds.js`](../../../src/features/builds.js).
++- The perk modal appears before spell study on level-up in [`src/game.js`](../../../src/game.js).
++- Implemented perk hooks currently affect waiting, splash damage, armor, evade, search bonus, mana cost, spell damage, overcast loss, and mana pool size.
++
++Mastery:
++
++- Each class has a four-rank mastery ladder in [`src/data/content.js`](../../../src/data/content.js).
++- Ranks alternate between `objective` and `extract` triggers.
++- Rewards are persistent and can grant items, rumor tokens, or permanent starting spells.
++- The bank screen surfaces current mastery summary, ladder state, and next reward through [`src/game.js`](../../../src/game.js).
++
++Commendations and contracts:
++
++- Commendations are achievement-like persistent badges with unlock logic tied to run behavior such as clean extracts, greed-heavy extracts, route-heavy extracts, elite-heavy runs, curses, and class loyalty in [`src/features/meta-progression.js`](../../../src/features/meta-progression.js).
++- Contracts are opt-in next-run modifiers that change starting loadout, route reveal, elite pressure, greed payout, or pacing pressure in [`src/data/content.js`](../../../src/data/content.js) and [`src/game.js`](../../../src/game.js).
++
++## Current build-shaping mechanics
++
++The strongest existing pillar is still build assembly, and the code supports that claim.
++
++Main build shapers:
++
++1. Race plus class create the starting stat shape and loadout.
++2. Starter items already bias the run toward steel, scouting, or mana economy.
++3. Equipment changes attack, armor, guard, ward, resistances, search bonus, carry burden, and overcast relief through core item stats in [`src/core/entities.js`](../../../src/core/entities.js).
++4. Spellbooks are a second spell-acquisition channel outside level-up.
++5. Perks add class-family-specific modifiers.
++6. Relics add run-local build hooks.
++7. Boons add burst rewards such as recovery, mana refill, gold, rumor tokens, or elite bounty setup.
++8. Contracts reshape the next run's incentives and opening conditions.
++9. Town unlocks change available shop tiers and future encounter or reward pools in [`src/features/town-meta.js`](../../../src/features/town-meta.js).
++
++Objective rewards are intentionally varied rather than uniform. The current objective table mixes relic, boon, and rumor outcomes across `recover_relic`, `purge_nest`, `rescue_captive`, `seal_shrine`, `secure_supplies`, `recover_waystone`, `secure_ledger`, `purify_well`, `break_beacon`, and `light_watchfire` in [`src/data/content.js`](../../../src/data/content.js).
++
++Milestone bosses also feed progression. Depth 3 grants a perk reward, depth 5 grants a relic reward, and depth 7 grants no explicit reward because it gates the Runestone end-state in [`src/data/content.js`](../../../src/data/content.js).
++
++## How progression currently works across a run
++
++1. The player drafts a character in creation: race, class, name, and six allocatable points.
++2. Starting gear and starting spells establish the first build identity.
++3. Entering town adds service-based growth: armory for gear, guild for spellbooks and magical tools, temple for restoration and rune access, sage for identification, bank for persistence planning.
++4. Descending into the dungeon moves progression into run-local form: XP, pickups, spellbooks, objective rewards, greed rooms, and emergent curses or Constitution strain.
++5. Level-ups interrupt the run with two sequential decisions: perk first, then spell study.
++6. Floor objectives resolve into relic, boon, or rumor payouts depending on objective type.
++7. Extracting to town can advance mastery, unlock contracts, unlock commendations, and update the bank's recommendation layer.
++8. Funding town projects permanently expands future shop tiers and some encounter or reward pools.
++
++In short, the run is not just "gain XP and level up." It is a layered feedback loop where the current run and next run constantly talk to each other.
++
++```mermaid
++flowchart LR
++  A["Creation Draft"] --> B["Town Prep"]
++  B --> C["Dungeon Run"]
++  C --> D["XP and Level Gates"]
++  C --> E["Gear, Spellbooks, Objective Rewards"]
++  D --> F["Perk Choice"]
++  D --> G["Spell Study"]
++  E --> H["Relics, Boons, Rumors"]
++  C --> I["Extract or Death"]
++  I --> J["Mastery, Commendations, Contracts"]
++  I --> K["Run Archive and Bank Review"]
++  J --> B
++  K --> B
++```
++
++## Strengths of the current design
++
++- The system already has multiple legitimate build axes. Players can shape a run through stats, items, spells, perks, relics, boons, contracts, and town improvements rather than through one narrow upgrade path.
++- Class identity is clear at the start. Fighter, Rogue, and Wizard are materially different in base stats, start kits, and spell access.
++- Level-up pacing is more interesting than flat stat growth because every level generates both a perk and a spell decision.
++- The persistent layer is meaningful. Mastery, commendations, contracts, and town unlocks create long-term motivation without replacing the run-level roguelike loop.
++- Objective rewards vary enough to keep floor progression from feeling uniform.
++- The bank is doing real systems work. It is not just storage; it is the game's persistence review, unlock planning, and next-run recommendation surface.
++
++## Weaknesses or unclear areas
++
++- The progression stack is distributed across many surfaces. Creation, bank, shops, pack, magic, level-up modals, objective rewards, and return summaries all own part of the progression story.
++- Some layers are more visible than others. Perk and spell study are obvious, but mastery, commendations, and town unlock consequences are easier to miss unless the player reads the bank carefully.
++- The system uses several currencies or persistence concepts at once: gold, banked gold, rumor tokens, contracts, mastery, commendations, and unlocks. That creates richness, but also cognitive overhead.
++- Stat growth is mechanically important but visually understated. The player levels up, all four stats can grow randomly, and derived stats recalc, yet the UI emphasis is on the perk and spell decision rather than on the stat delta itself.
++- Objective reward variety is strong in code, but some reward consequences are surfaced only through logs or later-state effects rather than through a persistent build summary.
++
++## Gaps or underused systems
++
++Several defined systems or rewards are present in data but look under-implemented or lightly surfaced in the current baseline.
++
++- `Quick Hands` is defined in [`src/data/content.js`](../../../src/data/content.js) but has no clear gameplay hook elsewhere in `src/`.
++- `Greedy Purse` and `Warding Lens` appear in relic definitions, but unlike `Survivor's Talisman`, `Anchoring Pin`, and `Hunter's Map`, they do not show obvious rule hooks in the current code search.
++- `templeFavor` is initialized in run currency state, but no current spending or gain loop is obvious in the baseline code pass.
++- The persistent layer is rich, but the run-to-run archive and recommendation logic are much more developed than the in-run summary of what has already been assembled.
++- Because spellbooks directly teach spells and level-up also teaches spells, the game has two strong spell acquisition channels, but it does not currently present a single synthesized "spell progression" overview screen.
++
++These gaps matter because they create a difference between "defined progression content" and "felt progression impact."
++
++## Open questions
++
++- Should the game continue to present progression as many overlapping layers, or does one layer deserve to become the primary build narrative?
++- Are random `+0` or `+1` stat rolls on all four stats producing the intended feeling of growth, or are they too backgrounded compared with perks and spells?
++- Does the current bank screen carry too many persistence jobs at once: archive, contracts, mastery, unlock funding, rumor buying, and next-run recommendation?
++- Should spell progression remain split between level-up study and spellbook ingestion, or is there a need for stronger synthesis or differentiation?
++- Are underwired data entries such as `Quick Hands`, `Greedy Purse`, `Warding Lens`, and `templeFavor` intentionally reserved for future work or currently incomplete?
++- Do objective reward types create enough distinct build outcomes in practice, or do boon and rumor objectives still feel secondary next to relic objectives?
+diff --git a/artifacts/progression-series/step-00-baseline-progression-atlas/screenshot-manifest.md b/artifacts/progression-series/step-00-baseline-progression-atlas/screenshot-manifest.md
+new file mode 100644
+index 0000000..b2567bd
+--- /dev/null
++++ b/artifacts/progression-series/step-00-baseline-progression-atlas/screenshot-manifest.md
+@@ -0,0 +1,38 @@
++# Screenshot Manifest
++
++| Filename | Viewport | Screen name | How reached | Why captured | Before/after status |
++| --- | --- | --- | --- | --- | --- |
++| mobile-01-creation.png | mobile | Character creation | Opened New Game and restaged the live creation modal to an elf wizard draft. | Shows class, race, and stat-allocation differentiation. | before |
++| mobile-02-town-overview.png | mobile | Town overview | Began a run from the creation screen. | Shows the town HUD before opening progression services. | before |
++| mobile-03-bank-progression.png | mobile | Bank progression review | Opened the live Bank modal with representative mastery and contract state. | Documents contracts, mastery, commendations, rumors, and town unlocks. | before |
++| mobile-04-armory.png | mobile | Armory | Opened the live town service modal from town. | Shows equipment progression and gear comparison. | before |
++| mobile-05-guild.png | mobile | Wizard's Guild | Opened the live town service modal from town. | Shows spellbook, wand, and mana-oriented build shaping. | before |
++| mobile-06-temple.png | mobile | Temple | Opened the live town service modal from town. | Shows restoration and overcast recovery. | before |
++| mobile-07-sage.png | mobile | Sage's Tower | Opened the live town service modal from town. | Shows identification as a build-shaping knowledge service. | before |
++| mobile-08-dungeon-overview.png | mobile | Dungeon overview | Descended to depth 1 and revealed the floor for documentation. | Provides the run context where progression interrupts play. | before |
++| mobile-09-pack-gear.png | mobile | Pack gear comparison | Added a representative armor upgrade and opened the pack hub on that item. | Documents gear-based build shaping. | before |
++| mobile-10-pack-spellbook.png | mobile | Pack spellbook interaction | Selected a staged spellbook in the live pack hub. | Shows one route for learning spells outside level-up. | before |
++| mobile-11-magic-hub.png | mobile | Magic hub | Added representative known spells and opened the magic hub. | Documents spell management separate from acquisition. | before |
++| mobile-12-level-up-perk.png | mobile | Level up perk choice | Granted enough XP in the live run to trigger level-up. | Documents the perk-choice half of the level-up interrupt. | before |
++| mobile-13-spell-study.png | mobile | Spell study | Advanced the same live level-up flow from perk choice into spell study. | Shows the spell-acquisition branch of level progression. | before |
++| mobile-14-relic-choice.png | mobile | Relic choice | Staged the live reward-choice modal with current relic options. | Documents objective-driven run shaping through relic rewards. | before |
++| mobile-15-boon-choice.png | mobile | Boon choice | Staged the live reward-choice modal with current boon options. | Documents the alternate reward branch that can redirect a run. | before |
++| desktop-01-creation.png | desktop | Character creation | Opened New Game and restaged the live creation modal to an elf wizard draft. | Shows class, race, and stat-allocation differentiation. | before |
++| desktop-02-town-overview.png | desktop | Town overview | Began a run from the creation screen. | Shows the town HUD before opening progression services. | before |
++| desktop-03-bank-progression.png | desktop | Bank progression review | Opened the live Bank modal with representative mastery and contract state. | Documents contracts, mastery, commendations, rumors, and town unlocks. | before |
++| desktop-04-armory.png | desktop | Armory | Opened the live town service modal from town. | Shows equipment progression and gear comparison. | before |
++| desktop-05-guild.png | desktop | Wizard's Guild | Opened the live town service modal from town. | Shows spellbook, wand, and mana-oriented build shaping. | before |
++| desktop-06-temple.png | desktop | Temple | Opened the live town service modal from town. | Shows restoration and overcast recovery. | before |
++| desktop-07-sage.png | desktop | Sage's Tower | Opened the live town service modal from town. | Shows identification as a build-shaping knowledge service. | before |
++| desktop-08-dungeon-overview.png | desktop | Dungeon overview | Descended to depth 1 and revealed the floor for documentation. | Provides the run context where progression interrupts play. | before |
++| desktop-09-pack-gear.png | desktop | Pack gear comparison | Added a representative armor upgrade and opened the pack hub on that item. | Documents gear-based build shaping. | before |
++| desktop-10-pack-spellbook.png | desktop | Pack spellbook interaction | Selected a staged spellbook in the live pack hub. | Shows one route for learning spells outside level-up. | before |
++| desktop-11-magic-hub.png | desktop | Magic hub | Added representative known spells and opened the magic hub. | Documents spell management separate from acquisition. | before |
++| desktop-12-level-up-perk.png | desktop | Level up perk choice | Granted enough XP in the live run to trigger level-up. | Documents the perk-choice half of the level-up interrupt. | before |
++| desktop-13-spell-study.png | desktop | Spell study | Advanced the same live level-up flow from perk choice into spell study. | Shows the spell-acquisition branch of level progression. | before |
++| desktop-14-relic-choice.png | desktop | Relic choice | Staged the live reward-choice modal with current relic options. | Documents objective-driven run shaping through relic rewards. | before |
++| desktop-15-boon-choice.png | desktop | Boon choice | Staged the live reward-choice modal with current boon options. | Documents the alternate reward branch that can redirect a run. | before |
++| mobile-progression-atlas-board.png | mobile | Mobile progression atlas board | Generated from the before-side captures with the step-local board renderer. | Creates an annotated after-side atlas rather than a redesign. | after |
++| desktop-progression-atlas-board.png | desktop | Desktop progression atlas board | Generated from the before-side captures with the step-local board renderer. | Creates an annotated after-side atlas rather than a redesign. | after |
++| progression-system-map-board.png | board | Progression system map board | Generated from code-backed atlas findings. | Turns the baseline into a readable relationship diagram. | after |
++| build-path-board.png | board | Build-path summary board | Generated from the current class-family progression summary. | Adds publication-ready build-path summaries to the atlas. | after |
+diff --git a/artifacts/progression-series/step-00-baseline-progression-atlas/teaching-notes.md b/artifacts/progression-series/step-00-baseline-progression-atlas/teaching-notes.md
+new file mode 100644
+index 0000000..09e6107
+--- /dev/null
++++ b/artifacts/progression-series/step-00-baseline-progression-atlas/teaching-notes.md
+@@ -0,0 +1,17 @@
++# Teaching Notes
++
++Establishing a baseline before redesign is an advanced prompting practice because it keeps later design work anchored to reality instead of to taste. Without a baseline, redesign prompts often optimize against vague memory, isolated complaints, or the model's default instincts rather than against the actual shipped system.
++
++This step demonstrates three specific reasons the baseline matters:
++
++1. The current game already has a lot of progression depth. If you skip the baseline, it is easy to falsely treat the game as "just XP plus loot" and miss mastery, contracts, commendations, town unlocks, spellbooks, objective reward types, and bank-layer planning.
++2. Some systems are stronger in code than in presentation. A redesign prompt that sees only screenshots might undervalue the bank layer or mastery logic; a prompt that sees only code might miss which systems are actually legible to players.
++3. The baseline exposes mismatches between defined content and active mechanics. In this codebase, some progression entries look fully imagined in data but lightly wired in rules, which is exactly the kind of fact that should shape redesign priorities later.
++
++Why this is a strong artifact pattern:
++
++- Code review establishes what is implemented.
++- Playwright evidence establishes what is observable.
++- After-side atlas boards establish how to communicate the current system quickly to humans.
++
++That combination produces better redesign inputs than either a pure code memo or a pure screenshot dump.

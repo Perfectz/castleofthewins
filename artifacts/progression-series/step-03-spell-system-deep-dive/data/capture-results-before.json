@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-04-09T02:22:43.441Z",
+  "mode": "before",
+  "screenshots": [
+    {
+      "filename": "mobile-01-spell-study.png",
+      "path": "screenshots/before/mobile-01-spell-study.png",
+      "viewport": "mobile",
+      "screen": "Spell Study",
+      "howReached": "Started a rogue run, descended once, and staged a level-4 spell-study draft.",
+      "whyCaptured": "Shows spell acquisition pacing, taxonomy, and how much mechanical meaning the draft cards carry."
+    },
+    {
+      "filename": "mobile-02-magic-book.png",
+      "path": "screenshots/before/mobile-02-magic-book.png",
+      "viewport": "mobile",
+      "screen": "Magic Book",
+      "howReached": "Opened the live magic hub with a utility-heavy mixed spellbook and Light selected.",
+      "whyCaptured": "Shows how clearly the spell system communicates role, targeting, and long-term usefulness."
+    },
+    {
+      "filename": "mobile-03-field-tray.png",
+      "path": "screenshots/before/mobile-03-field-tray.png",
+      "viewport": "mobile",
+      "screen": "Field Tray",
+      "howReached": "Opened the live spell tray with Light selected.",
+      "whyCaptured": "Shows the in-run casting summary and whether field-facing spell language supports fast tactical use."
+    },
+    {
+      "filename": "desktop-01-spell-study.png",
+      "path": "screenshots/before/desktop-01-spell-study.png",
+      "viewport": "desktop",
+      "screen": "Spell Study",
+      "howReached": "Started a rogue run, descended once, and staged a level-4 spell-study draft.",
+      "whyCaptured": "Shows spell acquisition pacing, taxonomy, and how much mechanical meaning the draft cards carry."
+    },
+    {
+      "filename": "desktop-02-magic-book.png",
+      "path": "screenshots/before/desktop-02-magic-book.png",
+      "viewport": "desktop",
+      "screen": "Magic Book",
+      "howReached": "Opened the live magic hub with a utility-heavy mixed spellbook and Light selected.",
+      "whyCaptured": "Shows how clearly the spell system communicates role, targeting, and long-term usefulness."
+    },
+    {
+      "filename": "desktop-03-field-tray.png",
+      "path": "screenshots/before/desktop-03-field-tray.png",
+      "viewport": "desktop",
+      "screen": "Field Tray",
+      "howReached": "Opened the live spell tray with Light selected.",
+      "whyCaptured": "Shows the in-run casting summary and whether field-facing spell language supports fast tactical use."
+    }
+  ],
+  "stagingNotes": [
+    "Spell Study is staged on a level-4 rogue so the draft includes a mix of newly unlocked and previously skipped utility and control spells.",
+    "Magic Book and Field Tray are staged with a utility-heavy mixed book so spell descriptions, role labels, and targeting language are visible in one frame.",
+    "The same script is run before and after the spell-focused improvements."
+  ]
+}

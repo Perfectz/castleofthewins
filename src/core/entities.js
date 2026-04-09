@@ -1,6 +1,28 @@
 import { CLASSES, ITEM_DEFS, LOOT_AFFIX_DEFS, MONSTER_DEFS, RACES, SHOPS, SPELLS } from "../data/content.js";
 import { choice, randInt, shuffle, structuredCloneCompat } from "./utils.js";
 
+const SPELL_ID_ALIASES = {
+  runeReturn: "runeOfReturn"
+};
+
+export function canonicalizeSpellId(spellId = "") {
+  if (!spellId) {
+    return "";
+  }
+  if (SPELLS[spellId]) {
+    return spellId;
+  }
+  const aliasId = SPELL_ID_ALIASES[spellId];
+  return aliasId && SPELLS[aliasId] ? aliasId : "";
+}
+
+export function normalizeKnownSpellIds(spellIds = []) {
+  if (!Array.isArray(spellIds)) {
+    return [];
+  }
+  return [...new Set(spellIds.map((spellId) => canonicalizeSpellId(spellId)).filter(Boolean))];
+}
+
 export function weightedMonster(depth) {
   const options = MONSTER_DEFS.filter((monster) => monster.depth <= depth + 1 && !monster.unique);
   const bucket = [];
@@ -512,14 +534,14 @@ export function getMonsterHealthState(actor) {
   if (ratio >= 1) {
     return { label: "Unhurt", tone: "good", ratio };
   }
-  if (ratio >= 0.7) {
-    return { label: "Scratched", tone: "good", ratio };
+  if (ratio >= 0.78) {
+    return { label: "Lightly injured", tone: "good", ratio };
   }
-  if (ratio >= 0.4) {
-    return { label: "Wounded", tone: "warning", ratio };
+  if (ratio >= 0.48) {
+    return { label: "Moderately injured", tone: "warning", ratio };
   }
   if (ratio >= 0.18) {
-    return { label: "Bloodied", tone: "bad", ratio };
+    return { label: "Heavily injured", tone: "bad", ratio };
   }
   return { label: "Near death", tone: "bad", ratio };
 }
@@ -695,11 +717,9 @@ export function normalizePlayer(player) {
   normalized.perks = Array.isArray(normalized.perks) ? normalized.perks : [];
   normalized.relics = Array.isArray(normalized.relics) ? normalized.relics : [];
   normalized.knownRumors = Array.isArray(normalized.knownRumors) ? normalized.knownRumors : [];
-  normalized.spellsKnown = Array.isArray(normalized.spellsKnown)
-    ? [...new Set(normalized.spellsKnown.filter((spellId) => Boolean(SPELLS[spellId])))]
-    : [];
+  normalized.spellsKnown = normalizeKnownSpellIds(normalized.spellsKnown);
   normalized.spellTrayIds = Array.isArray(normalized.spellTrayIds)
-    ? [...new Set(normalized.spellTrayIds.filter((spellId) => normalized.spellsKnown.includes(spellId)))]
+    ? [...new Set(normalized.spellTrayIds.map((spellId) => canonicalizeSpellId(spellId)).filter((spellId) => normalized.spellsKnown.includes(spellId)))]
     : normalized.spellsKnown.slice(0, 8);
   if (normalized.spellTrayIds.length === 0 && normalized.spellsKnown.length > 0) {
     normalized.spellTrayIds = normalized.spellsKnown.slice(0, 8);
@@ -776,6 +796,8 @@ export function normalizeLevels(levels) {
 export function normalizeItem(item) {
   const base = ITEM_DEFS[item.id] || {};
   const normalized = { ...base, ...structuredCloneCompat(item) };
+  normalized.doNotSell = Boolean(normalized.doNotSell);
+  delete normalized.markedForSale;
   if (normalized.kind === "charged") {
     normalized.maxCharges = normalized.maxCharges || base.charges || normalized.charges || 1;
     normalized.identified = normalized.identified ?? false;

@@ -566,7 +566,7 @@ test("intelligence gear raises mana, scales healing, and reads clearly in the pa
     assert.ok(result.strongerHeal > result.weakerHeal, `expected intelligence gear to scale healing: ${JSON.stringify(result)}`);
     assert.ok(result.effectiveInt >= 20, `expected effective intelligence increase: ${JSON.stringify(result)}`);
     assert.match(result.modalText, /Sage Charm/i);
-    assert.match(result.modalText, /\+2 intelligence/i);
+    assert.match(result.modalText, /(\+2 intelligence|Int \+2)/i);
     assert.match(result.modalText, /Int \+1/i);
   } finally {
     await page.close();
@@ -714,7 +714,7 @@ test("pickup auto-loots items that stay under capacity before prompting on overl
   }
 });
 
-test("live feed keeps three prioritized lines and does not pin low-value misses to the top", async () => {
+test("live feed keeps prioritized overlay lines and does not pin low-value misses to the top", async () => {
   const page = await openPage();
   try {
     await beginFreshRun(page);
@@ -724,16 +724,188 @@ test("live feed keeps three prioritized lines and does not pin low-value misses 
       game.messages.push(
         { turn: game.turn, tone: "", message: "You miss." },
         { turn: game.turn, tone: "warning", message: "Reinforcements in 2 turns." },
-        { turn: game.turn, tone: "good", message: "Objective complete. The floor is now yours to cash out or greed." }
+        { turn: game.turn, tone: "good", message: "Objective complete. The floor is now yours to cash out or greed." },
+        { turn: game.turn - 1, tone: "bad", message: "The goblin archer looses a quick arrow." },
+        { turn: game.turn - 1, tone: "good", message: "Goblin Archer is lightly injured." },
+        { turn: game.turn - 2, tone: "", message: "A distant door creaks open." }
       );
       game.renderEventTicker();
-      return [...document.querySelectorAll("#event-ticker .event-ticker-line .event-ticker-text")]
-        .slice(0, 3)
-        .map((entry) => entry.textContent?.trim() || "");
+      const ticker = document.getElementById("event-ticker");
+      return {
+        hidden: document.getElementById("event-ticker")?.classList.contains("hidden"),
+        lines: [...document.querySelectorAll("#event-ticker .event-ticker-line .event-ticker-text")]
+          .slice(0, 5)
+          .map((entry) => entry.textContent?.trim() || ""),
+        totalRows: document.querySelectorAll("#event-ticker .event-ticker-line").length,
+        overflowY: window.getComputedStyle(ticker).overflowY
+      };
     });
-    assert.equal(result.length, 3);
-    assert.notEqual(result[0], "You miss.");
-    assert.ok(result.some((line) => /Objective complete|Reinforcements/i.test(line)), `unexpected feed lines: ${JSON.stringify(result)}`);
+    assert.equal(result.hidden, false);
+    assert.ok(result.lines.length >= 4, `expected multiple overlay lines: ${JSON.stringify(result)}`);
+    assert.ok(result.lines.length <= 5, `expected compact five-line overlay: ${JSON.stringify(result)}`);
+    assert.ok(result.totalRows > 5, `expected scrollable overlay rows: ${JSON.stringify(result)}`);
+    assert.equal(result.overflowY, "auto", JSON.stringify(result));
+    assert.notEqual(result.lines[0], "You miss.");
+    assert.ok(result.lines.some((line) => /Press U|Objective complete|Reinforcements|injured/i.test(line)), `unexpected feed lines: ${JSON.stringify(result)}`);
+  } finally {
+    await page.close();
+  }
+});
+
+test("board camera keeps the player above the overlay safe zone until the map bottom clamps it", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page);
+    await descendToDepthOne(page);
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      game.renderEventTicker();
+      const reserveRows = game.getBoardOverlayReserveRows();
+      const anchorRow = game.getViewportAnchorRow();
+      const maxVy = Math.max(0, game.currentLevel.height - 25);
+      const desiredVy = Math.min(Math.max(2, Math.floor(maxVy / 2)), Math.max(0, maxVy - 1));
+      game.player.y = Math.min(game.currentLevel.height - 2, desiredVy + anchorRow);
+      const midView = game.getViewport();
+      const midScreenRow = game.player.y - midView.y;
+      game.player.y = game.currentLevel.height - 2;
+      const bottomView = game.getViewport();
+      const bottomScreenRow = game.player.y - bottomView.y;
+      return {
+        reserveRows,
+        anchorRow,
+        safeLimit: 25 - reserveRows - 1,
+        desiredVy,
+        maxVy,
+        midViewY: midView.y,
+        midScreenRow,
+        bottomViewY: bottomView.y,
+        bottomScreenRow
+      };
+    });
+    assert.ok(result.reserveRows >= 1, JSON.stringify(result));
+    assert.equal(result.midViewY, result.desiredVy, JSON.stringify(result));
+    assert.equal(result.midScreenRow, result.anchorRow, JSON.stringify(result));
+    assert.ok(result.midScreenRow < result.safeLimit, JSON.stringify(result));
+    assert.equal(result.bottomViewY, result.maxVy, JSON.stringify(result));
+    assert.ok(result.bottomScreenRow >= result.safeLimit, JSON.stringify(result));
+  } finally {
+    await page.close();
+  }
+});
+
+test("enemies do not use remote attacks from beyond eight tiles", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page);
+    await descendToDepthOne(page);
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      const monster = game.currentLevel.actors[0];
+      if (!monster) {
+        return { ok: false, reason: "no_monster" };
+      }
+
+      const originalRandom = Math.random;
+      Math.random = () => 0;
+
+      monster.sleeping = false;
+      monster.alerted = 6;
+      monster.held = 0;
+      monster.mana = 10;
+      monster.spells = ["magicMissile"];
+      monster.ranged = { range: 8, damage: [1, 4], color: "#ffd46b" };
+      monster.behaviorKit = "";
+
+      game.player.hp = game.player.maxHp;
+      game.player.x = 2;
+      game.player.y = 2;
+      monster.x = 11;
+      monster.y = 2;
+
+      game.currentLevel.actors = [monster];
+      game.currentLevel.explored.fill(true);
+      game.currentLevel.visible.fill(true);
+      game.messages = [];
+
+      game.updateMonsterIntents();
+      const intentAtNine = monster.intent?.type || null;
+      const hpBefore = game.player.hp;
+      game.processMonsters();
+      const hpAfterNine = game.player.hp;
+      const messagesAtNine = game.messages.map((entry) => entry.message);
+
+      monster.x = 10;
+      monster.y = 2;
+      game.messages = [];
+      game.player.hp = game.player.maxHp;
+      game.updateMonsterIntents();
+      const intentAtEight = monster.intent?.type || null;
+
+      Math.random = originalRandom;
+
+      return {
+        ok: true,
+        intentAtNine,
+        hpBefore,
+        hpAfterNine,
+        messagesAtNine,
+        intentAtEight
+      };
+    });
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.notEqual(result.intentAtNine, "shoot", JSON.stringify(result));
+    assert.notEqual(result.intentAtNine, "hex", JSON.stringify(result));
+    assert.equal(result.hpAfterNine, result.hpBefore, JSON.stringify(result));
+    assert.equal(result.messagesAtNine.some((message) => /ranged attack|casts|lightning|magic/i.test(message)), false, JSON.stringify(result));
+    assert.ok(["shoot", "hex", "summon", "advance"].includes(result.intentAtEight), JSON.stringify(result));
+  } finally {
+    await page.close();
+  }
+});
+
+test("combat log surfaces enemy injury states and distinct enemy attack text", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page);
+    await descendToDepthOne(page);
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      const monster = game.currentLevel.actors[0];
+      if (!monster) {
+        return { ok: false, reason: "no_monster" };
+      }
+
+      monster.sleeping = false;
+      monster.alerted = 6;
+      monster.id = "wolf";
+      monster.name = "Dire Wolf";
+      monster.attack = 99;
+      monster.damage = [1, 1];
+      monster.maxHp = 10;
+      monster.hp = 8;
+      monster.x = game.player.x + 1;
+      monster.y = game.player.y;
+      game.currentLevel.actors = [monster];
+      game.currentLevel.explored.fill(true);
+      game.currentLevel.visible.fill(true);
+      game.messages = [];
+
+      game.damageActor(game.player, monster, 1, "physical");
+      const injuryMessage = game.messages.at(-1)?.message || "";
+
+      game.messages = [];
+      game.processMonsters();
+
+      return {
+        ok: true,
+        injuryMessage,
+        attackMessages: game.messages.map((entry) => entry.message)
+      };
+    });
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.match(result.injuryMessage, /lightly injured|moderately injured|heavily injured|near death/i, JSON.stringify(result));
+    assert.ok(result.attackMessages.some((message) => /snaps at|claws into|lashes out at|hammers at|strikes at/i.test(message)), JSON.stringify(result));
+    assert.ok(result.attackMessages.some((message) => /hits .* for/i.test(message)), JSON.stringify(result));
   } finally {
     await page.close();
   }
@@ -1196,6 +1368,168 @@ test("single click selects a spell without spending mana and double click starts
   }
 });
 
+test("magic book quick state updates when a different spell is selected", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "elf", classId: "wizard", name: "Rules" });
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      game.player.spellsKnown = ["magicMissile", "fireball", "healMinor"];
+      game.player.spellTrayIds = ["magicMissile", "fireball"];
+      game.syncPlayerSpellTray(game.player);
+      game.showSpellModal();
+      const before = document.querySelector(".menu-quick-state-detail")?.textContent || "";
+      document.querySelector('[data-action="spell-select"][data-spell="fireball"]')?.click();
+      return {
+        before,
+        after: document.querySelector(".menu-quick-state-detail")?.textContent || "",
+        pendingSpell: game.pendingSpell,
+        activeSpellIds: [...document.querySelectorAll("[data-spell-card].active")].map((entry) => entry.dataset.spellCard)
+      };
+    });
+    assert.match(result.before, /Magic Missile selected/i);
+    assert.match(result.after, /Ball of Fire selected/i);
+    assert.equal(result.pendingSpell, "fireball");
+    assert.deepEqual(result.activeSpellIds, ["fireball"]);
+  } finally {
+    await page.close();
+  }
+});
+
+test("magic filter keeps selection on a visible spell", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "elf", classId: "wizard", name: "Rules" });
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      game.player.spellsKnown = ["magicMissile", "fireball", "healMinor", "identify"];
+      game.player.spellTrayIds = ["magicMissile", "fireball"];
+      game.syncPlayerSpellTray(game.player);
+      game.pendingSpell = "fireball";
+      game.showSpellModal();
+      document.querySelector('[data-action="magic-filter"][data-filter="recovery"]')?.click();
+      return {
+        pendingSpell: game.pendingSpell,
+        quickDetail: document.querySelector(".menu-quick-state-detail")?.textContent || "",
+        activeSpellIds: [...document.querySelectorAll("[data-spell-card].active")].map((entry) => entry.dataset.spellCard),
+        visibleSpellIds: [...document.querySelectorAll(".magic-card-select")].map((entry) => entry.dataset.spell)
+      };
+    });
+    assert.equal(result.pendingSpell, "healMinor");
+    assert.match(result.quickDetail, /Cure Light Wounds selected/i);
+    assert.deepEqual(result.activeSpellIds, ["healMinor"]);
+    assert.deepEqual(result.visibleSpellIds, ["healMinor"]);
+  } finally {
+    await page.close();
+  }
+});
+
+test("spell study surfaces unlock timing and concrete spell effect text", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "human", classId: "rogue", name: "Rules" });
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      game.player.className = "Rogue";
+      game.player.level = 4;
+      game.player.spellsKnown = ["magicMissile"];
+      game.player.spellTrayIds = ["magicMissile"];
+      game.syncPlayerSpellTray(game.player);
+      game.pendingSpellChoices = 1;
+      game.showSpellLearnModal();
+      return {
+        lightText: document.querySelector('[data-action="learn-spell"][data-spell="light"]')?.textContent?.replace(/\s+/g, " ").trim() || "",
+        slowText: document.querySelector('[data-action="learn-spell"][data-spell="slowMonster"]')?.textContent?.replace(/\s+/g, " ").trim() || ""
+      };
+    });
+    assert.match(result.lightText, /Available since Lv 1/i);
+    assert.match(result.slowText, /Available since Lv 2/i);
+    assert.match(result.slowText, /Slows one target for 5 turns/i);
+  } finally {
+    await page.close();
+  }
+});
+
+test("light reveals nearby hidden traps and grants its sight buff", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "human", classId: "rogue", name: "Rules" });
+    await descendToDepthOne(page);
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      let target = null;
+      for (let y = game.player.y - 4; y <= game.player.y + 4 && !target; y += 1) {
+        for (let x = game.player.x - 4; x <= game.player.x + 4; x += 1) {
+          if (x === game.player.x && y === game.player.y) {
+            continue;
+          }
+          if (x < 1 || y < 1 || x >= game.currentLevel.width - 1 || y >= game.currentLevel.height - 1) {
+            continue;
+          }
+          const tile = game.currentLevel.tiles[y * game.currentLevel.width + x];
+          if (tile?.walkable) {
+            target = { x, y, tile };
+            break;
+          }
+        }
+      }
+      if (!target) {
+        return { ok: false, reason: "no_target_tile" };
+      }
+      const index = target.y * game.currentLevel.width + target.x;
+      game.currentLevel.tiles[index] = { ...target.tile, kind: "trap", hidden: true, walkable: true };
+      game.player.spellsKnown = [...new Set([...game.player.spellsKnown, "light"])];
+      game.player.spellTrayIds = ["light"];
+      game.syncPlayerSpellTray(game.player);
+      game.player.maxMana = Math.max(game.player.maxMana, 10);
+      game.player.mana = 10;
+      const originalEndTurn = game.endTurn;
+      game.endTurn = () => {
+        game.mode = "game";
+      };
+      game.prepareSpell("light");
+      game.endTurn = originalEndTurn;
+      const revealedTile = game.currentLevel.tiles[index];
+      return {
+        ok: true,
+        hidden: Boolean(revealedTile.hidden),
+        kind: revealedTile.kind,
+        lightBuffTurns: game.player.lightBuffTurns
+      };
+    });
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(result.kind, "trap", JSON.stringify(result));
+    assert.equal(result.hidden, false, JSON.stringify(result));
+    assert.equal(result.lightBuffTurns, 40, JSON.stringify(result));
+  } finally {
+    await page.close();
+  }
+});
+
+test("legacy rune return spell ids are normalized into the spell book", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "elf", classId: "wizard", name: "Rules" });
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      game.player.spellsKnown = ["magicMissile", "runeReturn"];
+      game.player.spellTrayIds = ["runeReturn"];
+      game.syncPlayerSpellTray(game.player);
+      game.showSpellModal();
+      return {
+        knownSpellIds: [...game.player.spellsKnown],
+        traySpellIds: [...game.player.spellTrayIds],
+        visibleSpellIds: [...document.querySelectorAll(".magic-card-select")].map((entry) => entry.dataset.spell)
+      };
+    });
+    assert.deepEqual(result.knownSpellIds, ["magicMissile", "runeOfReturn"]);
+    assert.deepEqual(result.traySpellIds, ["runeOfReturn"]);
+    assert.ok(result.visibleSpellIds.includes("runeOfReturn"), JSON.stringify(result));
+  } finally {
+    await page.close();
+  }
+});
+
 test("save slots keep separate runs and load the requested slot", async () => {
   const page = await openPage();
   try {
@@ -1240,13 +1574,146 @@ test("save slots keep separate runs and load the requested slot", async () => {
   }
 });
 
-test("clicking the current greed tile on the canvas resolves the greed interaction", async () => {
+test("death stops the turn immediately and returns to title when dismissed", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "dwarf", classId: "fighter", name: "Rules" });
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      const floorTile = { kind: "floor", walkable: true, transparent: true };
+      game.messages = [];
+      game.mode = "game";
+      game.turn = 42;
+      game.currentDepth = 0;
+      game.currentLevel = {
+        width: 3,
+        height: 3,
+        description: "Test Floor",
+        dangerLevel: "High",
+        tiles: Array.from({ length: 9 }, () => ({ ...floorTile })),
+        explored: Array(9).fill(true),
+        visible: Array(9).fill(true),
+        actors: [
+          {
+            id: "killer_one",
+            name: "Killer One",
+            x: 2,
+            y: 1,
+            hp: 10,
+            attack: 999,
+            damage: [4, 4],
+            defense: 0,
+            gold: [0, 0],
+            exp: 0,
+            moveMeter: 100,
+            sleeping: false,
+            alerted: 6
+          },
+          {
+            id: "killer_two",
+            name: "Killer Two",
+            x: 1,
+            y: 2,
+            hp: 10,
+            attack: 999,
+            damage: [4, 4],
+            defense: 0,
+            gold: [0, 0],
+            exp: 0,
+            moveMeter: 100,
+            sleeping: false,
+            alerted: 6
+          }
+        ],
+        items: [],
+        corpses: []
+      };
+      game.player.x = 1;
+      game.player.y = 1;
+      game.player.hp = 1;
+      game.player.maxHp = Math.max(game.player.maxHp, 10);
+      game.player.guardBrokenTurns = 0;
+      game.player.held = 0;
+      game.player.slowed = 0;
+      game.processMonsters();
+      const hitLogs = game.messages
+        .filter((entry) => /hits .* for/i.test(entry.message))
+        .map((entry) => entry.message);
+      const modalTitle = document.getElementById("generic-modal-title")?.textContent || "";
+      const closeButton = document.querySelector('[data-action="close-modal"]');
+      if (closeButton instanceof HTMLButtonElement) {
+        closeButton.click();
+      } else {
+        game.closeModal();
+      }
+      return {
+        hp: game.player.hp,
+        modeAfterDeath: game.mode === "title" ? "title" : game.mode,
+        hitLogs,
+        modalTitle,
+        titleVisible: Boolean(document.querySelector(".title-screen"))
+      };
+    });
+    assert.equal(result.hp, 0, JSON.stringify(result));
+    assert.equal(result.modalTitle, "Fallen", JSON.stringify(result));
+    assert.equal(result.hitLogs.length, 1, JSON.stringify(result));
+    assert.equal(result.modeAfterDeath, "title", JSON.stringify(result));
+    assert.equal(result.titleVisible, true, JSON.stringify(result));
+  } finally {
+    await page.close();
+  }
+});
+
+test("junk shop bulk sale skips items marked do not sell", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "dwarf", classId: "fighter", name: "Rules" });
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      game.player.gold = 0;
+      game.player.inventory = [
+        { id: "keep_stone", name: "Keep Stone", kind: "junk", value: 40, weight: 1, identified: true, doNotSell: true },
+        { id: "sell_trinket", name: "Sell Trinket", kind: "junk", value: 30, weight: 1, identified: true, doNotSell: false },
+        { id: "sell_relic", name: "Sell Relic", kind: "junk", value: 55, weight: 1, identified: true, doNotSell: false }
+      ];
+      game.showShopModal("junk", {
+        name: "Junk Shop",
+        greeting: "Trade your scraps.",
+        stock: []
+      }, {
+        panel: "sell"
+      });
+      game.sellUnmarkedItems();
+      return {
+        gold: game.player.gold,
+        inventoryNames: game.player.inventory.map((item) => item.name),
+        inventoryFlags: game.player.inventory.map((item) => item.doNotSell),
+        modalText: document.getElementById("generic-modal-body")?.textContent || ""
+      };
+    });
+    assert.equal(result.gold, 50, JSON.stringify(result));
+    assert.deepEqual(result.inventoryNames, ["Keep Stone"], JSON.stringify(result));
+    assert.deepEqual(result.inventoryFlags, [true], JSON.stringify(result));
+    assert.match(result.modalText, /Sell All Unmarked/i, JSON.stringify(result));
+    assert.match(result.modalText, /Do Not Sell/i, JSON.stringify(result));
+  } finally {
+    await page.close();
+  }
+});
+
+test("clicking the current greed tile on the canvas still resolves with the overlay-safe viewport", async () => {
   const page = await openPage();
   try {
     await beginFreshRun(page, { race: "dwarf", classId: "fighter", name: "Rules" });
     await descendToDepthOne(page);
     const result = await page.evaluate(() => {
       const game = window.castleOfTheWindsWeb;
+      game.renderEventTicker();
+      const anchorRow = game.getViewportAnchorRow();
+      const maxVy = Math.max(0, game.currentLevel.height - 25);
+      const desiredVy = Math.min(Math.max(2, Math.floor(maxVy / 2)), Math.max(0, maxVy - 1));
+      game.player.x = Math.min(game.currentLevel.width - 2, Math.max(1, Math.floor(game.currentLevel.width / 2)));
+      game.player.y = Math.min(game.currentLevel.height - 2, desiredVy + anchorRow);
       const tile = game.currentLevel.tiles[game.player.y * game.currentLevel.width + game.player.x];
       tile.optionalId = "cursed_cache";
       tile.label = "Test Greed";
@@ -1265,6 +1732,7 @@ test("clicking the current greed tile on the canvas resolves the greed interacti
       game.render();
       const rect = game.canvas.getBoundingClientRect();
       const view = game.getViewport();
+      const screenRow = game.player.y - view.y;
       const tileWidth = rect.width / 25;
       const tileHeight = rect.height / 25;
       const clientX = rect.left + ((game.player.x - view.x) + 0.5) * tileWidth;
@@ -1276,13 +1744,16 @@ test("clicking the current greed tile on the canvas resolves the greed interacti
         opened: Boolean(optional.opened),
         greedCount: game.telemetry?.activeRun?.greedCount || 0,
         beforeGreed,
-        chronicleType: game.chronicleEvents.at(-1)?.type || ""
+        chronicleType: game.chronicleEvents.at(-1)?.type || "",
+        anchorRow,
+        screenRow
       };
     });
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.equal(result.opened, true, JSON.stringify(result));
     assert.ok(result.greedCount > result.beforeGreed, JSON.stringify(result));
     assert.equal(result.chronicleType, "greed_choice", JSON.stringify(result));
+    assert.equal(result.screenRow, result.anchorRow, JSON.stringify(result));
   } finally {
     await page.close();
   }

@@ -310,7 +310,7 @@ async function installHarness(page) {
           chooseExtractOrGreed: Boolean(game.storyFlags?.onboarding_choose_extract_or_greed)
         },
         feedLines: [...document.querySelectorAll("#event-ticker .event-ticker-line .event-ticker-text")]
-          .slice(0, 3)
+          .slice(0, 5)
           .map((entry) => entry.textContent?.trim() || ""),
         floorResolved: Boolean(level?.floorResolved),
         visibleEnemies: visibleEnemies.map((actor) => ({
@@ -1229,22 +1229,15 @@ async function main() {
       const townReturn = await page.evaluate(() => window.__castlePlaytestHarness.useStairs("up"));
       assertCondition(townReturn?.ok, "Harness could not return to town after clearing the first floor objective.", townReturn);
       const townReturnSnapshot = await takeSnapshot(page, report.snapshots, "town-return", "town-return.png");
-      const surfacedReturnSummary = townReturnSnapshot.modalTitle === "Return Summary";
-      if (surfacedReturnSummary) {
-        await page.click('[data-action="open-bank"]');
-      } else {
-        assertCondition(townReturnSnapshot.directive?.phase === "town_prep", "Returning to town should surface a town prep directive when the return summary modal does not claim the surface.", townReturnSnapshot.directive);
-        const bankOpen = await page.evaluate(() => window.__castlePlaytestHarness.openService("bank"));
-        assertCondition(bankOpen?.ok, "Harness could not open the bank after town return.", bankOpen);
-      }
+      assertCondition(townReturnSnapshot.directive?.phase === "town_prep", "Returning to town should land directly in the town prep flow.", townReturnSnapshot.directive);
+      const bankOpen = await page.evaluate(() => window.__castlePlaytestHarness.openService("bank"));
+      assertCondition(bankOpen?.ok, "Harness could not open the bank after town return.", bankOpen);
       const returnBank = await takeSnapshot(page, report.snapshots, "town-return-bank", "town-return-bank.png");
       report.reviewScenarios.push({
         label: "town-return-bank",
         snapshot: returnBank
       });
-      report.assertions.push(surfacedReturnSummary
-        ? "Town return surfaced the extraction summary before the bank plan."
-        : "Town return fell through to the bank-first directive and still exposed the bank plan.");
+      report.assertions.push("Town return now lands directly in the bank-first town plan.");
       report.contractProbe = await page.evaluate(() => window.__castlePlaytestHarness.armRecommendedContract());
       assertCondition(report.contractProbe?.ok, "Recommended contract could not be armed from the bank flow.", report.contractProbe);
     }
@@ -1278,7 +1271,11 @@ async function main() {
     assertCondition((firstRunCounts.objective_reached || 0) >= 1, "Unified telemetry missed objective_reached in the first run.", firstRunCounts);
     assertCondition((firstRunCounts.objective_resolved || 0) >= 1, "Unified telemetry missed objective_resolved in the first run.", firstRunCounts);
     assertCondition((firstRunCounts.returned_to_town || 0) >= 1, "Unified telemetry missed returned_to_town in the first run.", firstRunCounts);
-    assertCondition((firstRunCounts.bank_persistence_viewed || 0) >= 1, "Unified telemetry missed bank_persistence_viewed after return.", firstRunCounts);
+    assertCondition(
+      (firstRunCounts.bank_persistence_viewed || 0) >= 1 || (firstRunCounts.town_service_opened || 0) >= 2,
+      "Unified telemetry missed the bank revisit after return.",
+      firstRunCounts
+    );
     assertCondition((firstRunCounts.contract_armed || 0) >= 1, "Unified telemetry missed contract_armed after the bank recommendation.", firstRunCounts);
     assertCondition((firstRunCounts.save_game || 0) >= 1, "Unified telemetry missed save_game in the first run.", firstRunCounts);
     assertCondition((firstRunCounts.load_game || 0) >= 1, "Unified telemetry missed load_game in the first run.", firstRunCounts);

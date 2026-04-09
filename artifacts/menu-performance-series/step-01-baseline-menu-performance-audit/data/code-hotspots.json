@@ -1,0 +1,62 @@
+[
+  {
+    "file": "src/game.js",
+    "lineHint": 5628,
+    "hotspot": "applyControllerNavigationMetadata() scans and annotates many UI zones with querySelectorAll on each modal or UI refresh.",
+    "impact": "high"
+  },
+  {
+    "file": "src/game.js",
+    "lineHint": 9408,
+    "hotspot": "showSimpleModal() clears modalRoot, injects new markup, replays focus logic, and reapplies controller navigation metadata.",
+    "impact": "high"
+  },
+  {
+    "file": "src/game.js",
+    "lineHint": 10688,
+    "hotspot": "showHubModal() rebuilds the full hub shell and delegates to showSimpleModal() for pack, magic, and journal transitions.",
+    "impact": "high"
+  },
+  {
+    "file": "src/game.js",
+    "lineHint": 11268,
+    "hotspot": "showUtilityMenu() synchronously fills several summary panels and save slot details before the modal becomes visible.",
+    "impact": "medium"
+  },
+  {
+    "file": "src/game.js",
+    "lineHint": 11434,
+    "hotspot": "render() recalculates multiple HUD surfaces and reapplies navigation metadata even when work is indirectly tied to menu transitions.",
+    "impact": "medium"
+  },
+  {
+    "file": "src/game.js",
+    "lineHint": 2041,
+    "hotspot": "pack-filter and journal-section handlers route back through showHubModal(), causing full modal refresh for local content changes.",
+    "impact": "high"
+  },
+  {
+    "file": "src/game.js",
+    "lineHint": 1231,
+    "hotspot": "refreshMagicHub() also routes to showHubModal(), so magic filter and spell-management updates rebuild the shell.",
+    "impact": "medium"
+  },
+  {
+    "file": "src/features/creation.js",
+    "lineHint": 321,
+    "hotspot": "showCreationModal() rebuilds the complete creation surface and follows with refreshChrome() and navigation metadata setup.",
+    "impact": "medium"
+  },
+  {
+    "file": "src/features/advisor.js",
+    "lineHint": 348,
+    "hotspot": "getAdvisorModel() derives large HUD strings and action recommendations, contributing to broad render cost during gameplay transitions.",
+    "impact": "medium"
+  },
+  {
+    "file": "src/game.js",
+    "lineHint": 1693,
+    "hotspot": "refreshPackInspectorPreview() replaces the inspector subtree on hover/focus changes; lower priority for phone, but still churn-heavy.",
+    "impact": "low"
+  }
+]

@@ -1,0 +1,53 @@
+This repository already had unrelated changes in flight, so this patch file is a focused excerpt for the step-07 perceived-performance work only.
+
+diff --git a/src/game.js b/src/game.js
+--- a/src/game.js
++++ b/src/game.js
+@@
++  getMenuQuickStateMarkup(options = {}) {
++    // Compact “you are here / what changed” strip for dense menus.
++  }
++  getPackQuickStateMarkup(model, inventoryModel) { ... }
++  getMagicQuickStateMarkup(selectedSpellId, filterDefs, orderedGroups) { ... }
++  getJournalQuickStateMarkup(activeSection) { ... }
++  getShopQuickStateMarkup(shopId, shop) { ... }
+@@
+-            <div class="panel-title">Pack Contents</div>
++            <div class="panel-title">Pack Contents</div>
++            ${this.getPackQuickStateMarkup(model, inventoryModel)}
+@@
+-          <div class="text-block magic-intro">...</div>
++          <div class="text-block magic-intro">...</div>
++          ${this.getMagicQuickStateMarkup(selectedSpellId, filterDefs, orderedGroups)}
+@@
+-        <div class="pack-filter-row journal-section-row" data-journal-section-host>
++        <div class="pack-filter-row journal-section-row" data-journal-section-host>
+           ${sectionButtons}
+         </div>
++        ${this.getJournalQuickStateMarkup(activeSection)}
+@@
+-      <div data-shop-panel-tabs-host>${panelTabs}</div>
++      <div data-shop-panel-tabs-host>${panelTabs}</div>
++      ${this.getShopQuickStateMarkup(shopId, shop)}
+
+diff --git a/styles.css b/styles.css
+--- a/styles.css
++++ b/styles.css
+@@
++/* Step 07: perceived slowness cleanup */
++.menu-quick-state { ... }
++.menu-quick-state-eyebrow { ... }
++.menu-quick-state-title { ... }
++.menu-quick-state-detail { ... }
++#modal-root .modal-interaction-feedback { ... }
++#modal-root .modal-interaction-feedback.good { ... }
++#modal-root .modal-interaction-feedback.warning { ... }
++#modal-root .modal-interaction-feedback.bad { ... }
++ .mobile-app.modal-open .top-band,
++ .mobile-app.modal-open .bottom-band,
++ .mobile-app.modal-open .play-layout,
++ .mobile-app.modal-open .board-frame,
++ .mobile-app.modal-open .utility-bar,
++ .mobile-app.modal-open .top-shell {
++   /* Lighter blur and dimming so the modal feels quicker and less heavy. */
++ }

@@ -1,0 +1,15 @@
+diff --git a/styles.css b/styles.css
+--- a/styles.css
++++ b/styles.css
+@@
+ .mobile-app.modal-open .top-band,
+ .mobile-app.modal-open .bottom-band,
+ .mobile-app.modal-open .play-layout,
+ .mobile-app.modal-open .board-frame,
+ .mobile-app.modal-open .utility-bar,
+ .mobile-app.modal-open .top-shell {
+-  filter: blur(1.2px) saturate(0.92) brightness(0.9);
+-  opacity: 0.64;
++  filter: saturate(0.96) brightness(0.92);
++  opacity: 0.72;
+ }

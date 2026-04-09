@@ -1,0 +1,64 @@
+diff --git a/src/data/content.js b/src/data/content.js
+--- a/src/data/content.js
++++ b/src/data/content.js
+@@
+-    description: "Consumables, pickups, and opportunistic looting are safer under pressure.",
++    description: "Gold, consumables, spellbooks, and other light pickups ignore burden checks and stop adding greed pressure after the objective is clear.",
+@@
+-    description: "Extra gold drops, but danger rises faster after the objective is done."
++    description: "Post-objective greed payouts grant 25% more gold, but each greed action adds +1 extra pressure."
+diff --git a/src/features/director.js b/src/features/director.js
+--- a/src/features/director.js
++++ b/src/features/director.js
+@@
+-  const amount = game.currentLevel?.floorResolved ? 2 : 1;
++  const greedyPurseBonus = game.currentLevel?.floorResolved && game.player?.relics?.includes("greedy_purse") ? 1 : 0;
++  const amount = (game.currentLevel?.floorResolved ? 2 : 1) + greedyPurseBonus;
+diff --git a/src/features/objectives.js b/src/features/objectives.js
+--- a/src/features/objectives.js
++++ b/src/features/objectives.js
+@@
+-  const greedGoldMultiplier = game.getGreedGoldMultiplier ? game.getGreedGoldMultiplier() : 1;
++  const greedyPurseMultiplier = game.player?.relics?.includes("greedy_purse") ? 1.25 : 1;
++  const greedGoldMultiplier = (game.getGreedGoldMultiplier ? game.getGreedGoldMultiplier() : 1) * greedyPurseMultiplier;
+@@
+-      return "Runestone objective";
++      return "Storm Warden: break the final guard and carry the Runestone back to town.";
+@@
+-    return "Relic reward";
++    return `${label}: clears into a 3-relic draft with survival, control, greed, mobility, or curse-tech payoffs.`;
+@@
+-    return "Rumor reward";
++    return `${label}: pays out rumor intel and a token instead of an immediate combat upgrade.`;
+@@
+-  return "Boon choice";
++  return `${label}: clears into a 3-boon draft built from gold, healing, mana, and elite-bounty support.`;
+diff --git a/src/game.js b/src/game.js
+--- a/src/game.js
++++ b/src/game.js
+@@
++  isQuickHandsUtilityPickup(item) {
++    if (!item || !this.player?.perks?.includes("quick_hands")) {
++      return false;
++    }
++    if (item.kind === "gold" || item.kind === "consumable" || item.kind === "spellbook") {
++      return true;
++    }
++    return !item.slot && (item.weight || 0) <= 1;
++  }
+@@
++    if (this.isQuickHandsUtilityPickup(item)) {
++      return false;
++    }
+@@
+-    if (this.currentDepth > 0 && this.floorResolved) {
++    if (this.currentDepth > 0 && this.floorResolved && !this.isQuickHandsUtilityPickup(item)) {
+       this.markGreedAction("loot");
+     }
+@@
++        const quickHandsPickup = this.isQuickHandsUtilityPickup(item);
+@@
+-        if (this.currentDepth > 0 && this.floorResolved) {
++        if (this.currentDepth > 0 && this.floorResolved && !quickHandsPickup) {
+           this.markGreedAction("loot");
+         }

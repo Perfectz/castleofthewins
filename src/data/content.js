@@ -59,6 +59,7 @@ export const SPELLS = {
   magicMissile: {
     id: "magicMissile",
     name: "Magic Missile",
+    iconKey: "spark",
     school: "arcane",
     tier: 1,
     classAffinity: "wizard",
@@ -83,6 +84,7 @@ export const SPELLS = {
   healMinor: {
     id: "healMinor",
     name: "Cure Light Wounds",
+    iconKey: "cross",
     school: "restoration",
     tier: 1,
     classAffinity: "shared",
@@ -102,6 +104,7 @@ export const SPELLS = {
   frostBolt: {
     id: "frostBolt",
     name: "Frost Bolt",
+    iconKey: "snowflake",
     school: "elemental",
     tier: 2,
     classAffinity: "wizard",
@@ -130,6 +133,7 @@ export const SPELLS = {
   fireball: {
     id: "fireball",
     name: "Ball of Fire",
+    iconKey: "flame",
     school: "elemental",
     tier: 4,
     classAffinity: "wizard",
@@ -174,6 +178,7 @@ export const SPELLS = {
   phaseDoor: {
     id: "phaseDoor",
     name: "Phase Door",
+    iconKey: "door",
     school: "escape",
     tier: 2,
     classAffinity: "rogue",
@@ -196,6 +201,7 @@ export const SPELLS = {
   clairvoyance: {
     id: "clairvoyance",
     name: "Clairvoyance",
+    iconKey: "eye",
     school: "divination",
     tier: 3,
     classAffinity: "shared",
@@ -218,6 +224,7 @@ export const SPELLS = {
   identify: {
     id: "identify",
     name: "Identify",
+    iconKey: "magnifier",
     school: "divination",
     tier: 1,
     classAffinity: "shared",
@@ -234,6 +241,7 @@ export const SPELLS = {
   slowMonster: {
     id: "slowMonster",
     name: "Slow Monster",
+    iconKey: "hourglass",
     school: "control",
     tier: 1,
     classAffinity: "rogue",
@@ -252,6 +260,7 @@ export const SPELLS = {
   removeCurse: {
     id: "removeCurse",
     name: "Remove Curse",
+    iconKey: "broken-chain",
     school: "holy",
     tier: 3,
     classAffinity: "shared",
@@ -268,6 +277,7 @@ export const SPELLS = {
   runeOfReturn: {
     id: "runeOfReturn",
     name: "Rune of Return",
+    iconKey: "return-arrow",
     school: "escape",
     tier: 4,
     classAffinity: "shared",
@@ -282,6 +292,7 @@ export const SPELLS = {
   lightningBolt: {
     id: "lightningBolt",
     name: "Lightning Bolt",
+    iconKey: "lightning",
     school: "elemental",
     tier: 3,
     classAffinity: "wizard",
@@ -306,6 +317,7 @@ export const SPELLS = {
   holdMonster: {
     id: "holdMonster",
     name: "Hold Monster",
+    iconKey: "hand",
     school: "control",
     tier: 2,
     classAffinity: "rogue",
@@ -325,6 +337,7 @@ export const SPELLS = {
   cureSerious: {
     id: "cureSerious",
     name: "Cure Serious Wounds",
+    iconKey: "cross-bold",
     school: "restoration",
     tier: 2,
     classAffinity: "fighter",
@@ -344,6 +357,7 @@ export const SPELLS = {
   stoneSkin: {
     id: "stoneSkin",
     name: "Stone Skin",
+    iconKey: "stone-shield",
     school: "warding",
     tier: 3,
     classAffinity: "fighter",
@@ -360,6 +374,7 @@ export const SPELLS = {
   shield: {
     id: "shield",
     name: "Shield",
+    iconKey: "shield",
     school: "warding",
     tier: 1,
     classAffinity: "fighter",
@@ -376,6 +391,7 @@ export const SPELLS = {
   resistFire: {
     id: "resistFire",
     name: "Resist Fire",
+    iconKey: "shield-flame",
     school: "warding",
     tier: 2,
     classAffinity: "fighter",
@@ -392,6 +408,7 @@ export const SPELLS = {
   resistCold: {
     id: "resistCold",
     name: "Resist Cold",
+    iconKey: "shield-snow",
     school: "warding",
     tier: 2,
     classAffinity: "fighter",
@@ -408,6 +425,7 @@ export const SPELLS = {
   teleport: {
     id: "teleport",
     name: "Teleport",
+    iconKey: "swirl",
     school: "escape",
     tier: 3,
     classAffinity: "rogue",
@@ -430,23 +448,42 @@ export const SPELLS = {
   light: {
     id: "light",
     name: "Light",
+    iconKey: "lantern",
     school: "divination",
     tier: 1,
     classAffinity: "rogue",
     learnLevel: 1,
     cost: 2,
-    description: "Brightens your immediate surroundings and extends sight for a while.",
+    description: "Brightens your immediate surroundings and flushes out nearby hidden threats.",
     target: "self",
     cast(game, caster) {
       caster.lightBuffTurns = Math.max(caster.lightBuffTurns || 0, 40);
+      let revealed = 0;
+      const level = game.currentLevel;
+      for (let y = caster.y - 6; y <= caster.y + 6; y += 1) {
+        for (let x = caster.x - 6; x <= caster.x + 6; x += 1) {
+          if (x < 0 || y < 0 || x >= level.width || y >= level.height) {
+            continue;
+          }
+          const tile = level.tiles[y * level.width + x];
+          if ((tile.kind === "trap" && tile.hidden) || tile.kind === "secretDoor" || tile.kind === "secretWall") {
+            revealSecretTile(level, x, y);
+            revealed += 1;
+          }
+        }
+      }
+      revealNearbySecrets(level, caster.x, caster.y, 6);
       game.recalculateDerivedStats?.();
-      game.log("A steady white light gathers around you.", "good");
+      game.log(revealed > 0
+        ? `A steady white light gathers around you and exposes ${revealed} nearby hidden threat${revealed === 1 ? "" : "s"}.`
+        : "A steady white light gathers around you.", "good");
       return true;
     }
   },
   detectTraps: {
     id: "detectTraps",
     name: "Detect Traps",
+    iconKey: "warning-eye",
     school: "divination",
     tier: 2,
     classAffinity: "rogue",
@@ -1194,7 +1231,7 @@ export const PERK_DEFS = {
     id: "quick_hands",
     family: "rogue",
     name: "Quick Hands",
-    description: "Consumables, pickups, and opportunistic looting are safer under pressure.",
+    description: "Gold, consumables, spellbooks, and other light pickups ignore burden checks and stop adding greed pressure after the objective is clear.",
     weight: 3
   },
   spell_efficiency: {
@@ -1238,7 +1275,7 @@ export const RELIC_DEFS = {
     id: "greedy_purse",
     category: "greed",
     name: "Greedy Purse",
-    description: "Extra gold drops, but danger rises faster after the objective is done."
+    description: "Post-objective greed payouts grant 25% more gold, but each greed action adds +1 extra pressure."
   },
   anchoring_pin: {
     id: "anchoring_pin",

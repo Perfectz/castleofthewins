@@ -8,6 +8,7 @@
     "build:fallback": "node scripts/build-app.mjs",
     "build:pages": "node scripts/build-pages.mjs",
     "playtest:harness": "node scripts/playtest-harness.mjs",
+    "screenshot:atlas": "node scripts/capture-ui-atlas.mjs",
     "screenshot:mobile": "node scripts/capture-mobile-ui.mjs",
     "screenshot:town": "node scripts/capture-town.mjs",
     "test:rules": "npm run build && node --test tests/rules.test.mjs",

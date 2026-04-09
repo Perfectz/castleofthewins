@@ -6,6 +6,7 @@ import {
   createEmptyEquipment,
   normalizeItem,
   normalizeLevels,
+  normalizeKnownSpellIds,
   normalizePlayer,
   normalizeShopState,
   createItem,
@@ -105,6 +106,34 @@ import {
 } from "./features/inventory-ui.js";
 import { getOnboardingVariantMeta, getRouteExperimentTuning, getValidationSummary as buildValidationSummary, initializeValidationState } from "./features/validation.js";
 
+const BOARD_OVERLAY_HEIGHT_PX = {
+  mobile: 156,
+  desktop: 176
+};
+const BOARD_OVERLAY_BUFFER_ROWS = 1;
+const SPELL_ICON_SYMBOLS = {
+  spark: { symbol: "✦", label: "Spark" },
+  cross: { symbol: "✚", label: "Heal" },
+  snowflake: { symbol: "❄", label: "Frost" },
+  flame: { symbol: "✹", label: "Fire" },
+  door: { symbol: "⌂", label: "Door" },
+  eye: { symbol: "◉", label: "Sight" },
+  magnifier: { symbol: "⌕", label: "Identify" },
+  hourglass: { symbol: "⌛", label: "Slow" },
+  "broken-chain": { symbol: "⛓", label: "Unbind" },
+  "return-arrow": { symbol: "↩", label: "Return" },
+  lightning: { symbol: "ϟ", label: "Storm" },
+  hand: { symbol: "☞", label: "Hold" },
+  "cross-bold": { symbol: "✛", label: "Greater Heal" },
+  "stone-shield": { symbol: "⬟", label: "Stone Ward" },
+  shield: { symbol: "⛨", label: "Ward" },
+  "shield-flame": { symbol: "⛨", label: "Fire Ward" },
+  "shield-snow": { symbol: "⛨", label: "Cold Ward" },
+  swirl: { symbol: "⟳", label: "Teleport" },
+  lantern: { symbol: "☼", label: "Light" },
+  "warning-eye": { symbol: "◌", label: "Detect" }
+};
+
 export class Game {
   constructor() {
     this.appShell = document.querySelector(".mobile-app");
@@ -112,6 +141,7 @@ export class Game {
     this.ctx = this.canvas.getContext("2d");
     this.mapCanvas = document.getElementById("map-canvas");
     this.mapCtx = this.mapCanvas ? this.mapCanvas.getContext("2d") : null;
+    this.boardOverlays = document.querySelector(".board-overlays");
     this.mapCaption = document.getElementById("map-caption");
     this.mapDrawer = document.getElementById("map-drawer");
     this.mapPanelLabel = document.getElementById("map-panel-label");
@@ -119,20 +149,32 @@ export class Game {
     this.mapToggleButton = document.getElementById("map-toggle-button");
     this.spellTrayToggleButton = document.getElementById("spell-tray-toggle-button");
     this.spellTray = document.getElementById("spell-tray");
-    this.contextChip = document.getElementById("context-chip");
     this.modalRoot = document.getElementById("modal-root");
     this.actionBar = document.getElementById("action-bar");
     this.runStatus = document.getElementById("run-status");
     this.pressureStatus = document.getElementById("pressure-status");
+    this.topMusicButton = document.getElementById("top-music-button");
+    this.utilityMenuButton = document.getElementById("utility-menu-button");
+    this.topBand = document.querySelector(".top-band");
+    this.topBandStatus = this.topBand?.querySelector(".top-band-status") || null;
+    this.topBandActions = this.topBand?.querySelector(".top-band-actions") || null;
     this.controllerStatus = document.getElementById("controller-status");
     this.saveStamp = document.getElementById("save-stamp");
     this.quickSaveButton = document.getElementById("quick-save-button");
     this.quickLoadButton = document.getElementById("quick-load-button");
     this.touchControls = document.getElementById("touch-controls");
+    this.bottomBand = document.querySelector(".bottom-band");
+    this.statusBand = this.bottomBand?.querySelector(".status-band") || null;
     this.playerCapsule = document.getElementById("player-capsule");
     this.threatCapsule = document.getElementById("threat-capsule");
     this.advisorStrip = document.getElementById("advisor-strip");
     this.eventTicker = document.getElementById("event-ticker");
+    this.desktopOverlay = document.getElementById("desktop-overlay");
+    this.desktopVerbHost = document.getElementById("desktop-verb-host");
+    this.desktopQuickslotsHost = document.getElementById("desktop-quickslots-host");
+    this.desktopAuxStack = document.getElementById("desktop-aux-stack");
+    this.desktopStatusHost = document.getElementById("desktop-status-host");
+    this.desktopOverlayMapHost = document.getElementById("desktop-overlay-map-host");
     this.turn = 1;
     this.mode = "title";
     this.activeSaveSlotId = null;
@@ -159,6 +201,8 @@ export class Game {
     this.activeMagicFilter = "all";
     this.activeSpellLearnFilter = "all";
     this.activeShopPanel = "buy";
+    this.utilityMenuSecondaryExpanded = false;
+    this.fieldGuideRailCollapsed = false;
     this.activePackSelection = { type: "inventory", value: 0 };
     this.spellTrayOpen = false;
     this.targetMode = null;
@@ -192,17 +236,46 @@ export class Game {
     this.layoutMode = "mobile";
     this.lastInputSource = "pointer";
     this.controllerFocusKey = null;
+    this.modalInteractionFeedback = { message: "", tone: "" };
+    this.pendingModalFeedbackHandle = 0;
+    this.pendingModalFeedbackMode = "";
+    this.pendingDesktopOverlayCollapseHandle = 0;
+    this.pendingDesktopOverlayCollapseMode = "";
+    this.uiInteractionAckHandles = new WeakMap();
+    this.uiNavigationCache = {
+      root: null,
+      focusables: [],
+      focusKeyMap: new Map()
+    };
     this.reducedMotionQuery = typeof window !== "undefined" && window.matchMedia
       ? window.matchMedia("(prefers-reduced-motion: reduce)")
       : null;
-    this.feedDrawerOpen = false;
     this.liveFeedSticky = null;
     this.movementCadence = this.createMovementCadenceState();
     document.documentElement.dataset.uiScale = this.settings.uiScale;
     this.shopState = createInitialShopState();
     this.shopBrowseState = null;
     this.lastPreviewKey = "";
+    this.lastEventTickerMarkup = "";
+    this.lastDesktopVerbMarkup = "";
+    this.lastDesktopQuickslotsMarkup = "";
+    this.runtimeFrameHandle = 0;
     this.hoveredPackSelection = null;
+    this.hoveredShopPreview = null;
+    this.pendingAutosaveHandle = 0;
+    this.pendingAutosaveMode = "";
+    this.pendingUtilitySummaryFrame = 0;
+    this.pendingHubPrewarmHandle = 0;
+    this.pendingHubPrewarmMode = "";
+    this.pendingAdventureBootstrapFrame = 0;
+    this.transitionPending = false;
+    this.desktopOverlayExpanded = true;
+    this.desktopOverlayEventsBound = false;
+    this.hubPaneDirty = {
+      pack: true,
+      magic: true,
+      journal: true
+    };
     ensureTownMetaState(this);
     ensureChronicleState(this);
     ensureMetaProgressionState(this);
@@ -211,6 +284,7 @@ export class Game {
     this.audio = new SoundBoard(this.settings);
     this.gamepadInput = new GamepadInput();
     this.bindEvents();
+    this.bindDesktopOverlayEvents();
     this.syncAdaptiveLayout(true);
     this.registerServiceWorker();
     this.startRuntimeLoop();
@@ -244,12 +318,15 @@ export class Game {
       }
     });
     this.canvas.addEventListener("click", (event) => this.handleCanvasClick(event));
-    window.addEventListener("gamepadconnected", () => this.refreshChrome());
+    window.addEventListener("gamepadconnected", () => {
+      this.refreshChrome();
+      this.startRuntimeLoop();
+    });
     window.addEventListener("gamepaddisconnected", () => this.refreshChrome());
     window.addEventListener("resize", () => this.refreshChrome());
     window.addEventListener("pagehide", () => {
       if (!this.player) {
-        return;
+      } else {
       }
       this.recordTelemetry("session_end", {
         reason: "pagehide"
@@ -259,15 +336,265 @@ export class Game {
   }
 
   startRuntimeLoop() {
+    if (this.runtimeFrameHandle) {
+      return;
+    }
     const tick = () => {
-      const gamepadHandled = this.pollGamepad();
+      this.runtimeFrameHandle = 0;
+      const gamepadHandled = this.gamepadInput.isConnected() ? this.pollGamepad() : false;
       if (!gamepadHandled) {
         this.pollHeldMovement();
       }
       this.updateEffects();
-      requestAnimationFrame(tick);
+      if (this.shouldKeepRuntimeLoopAlive()) {
+        this.startRuntimeLoop();
+      }
     };
-    requestAnimationFrame(tick);
+    this.runtimeFrameHandle = requestAnimationFrame(tick);
+  }
+
+  shouldKeepRuntimeLoopAlive() {
+    return Boolean(
+      this.getHeldMovement("keyboard")
+      || this.getHeldMovement("pointer")
+      || this.gamepadInput.isConnected()
+      || this.shouldAnimateBoard()
+    );
+  }
+
+  ensureRuntimeLoop() {
+    if (this.shouldKeepRuntimeLoopAlive()) {
+      this.startRuntimeLoop();
+    }
+  }
+
+  queueAnimationFrame(callback) {
+    if (typeof window === "undefined" || typeof window.requestAnimationFrame !== "function") {
+      callback();
+      return 0;
+    }
+    return window.requestAnimationFrame(() => callback());
+  }
+
+  queueDeferredUiTask(callback, options = {}) {
+    const { preferIdle = false, timeout = 1200 } = options;
+    if (typeof window === "undefined") {
+      callback();
+      return { mode: "", handle: 0 };
+    }
+    if (preferIdle && typeof window.requestIdleCallback === "function") {
+      return {
+        mode: "idle",
+        handle: window.requestIdleCallback(() => callback(), { timeout })
+      };
+    }
+    return {
+      mode: "timeout",
+      handle: window.setTimeout(() => callback(), 0)
+    };
+  }
+
+  clearDeferredUiTask(handle, mode = "") {
+    if (!handle || typeof window === "undefined") {
+      return;
+    }
+    if (mode === "idle" && typeof window.cancelIdleCallback === "function") {
+      window.cancelIdleCallback(handle);
+      return;
+    }
+    if (mode === "timeout") {
+      window.clearTimeout(handle);
+      return;
+    }
+    if (mode === "frame" && typeof window.cancelAnimationFrame === "function") {
+      window.cancelAnimationFrame(handle);
+    }
+  }
+
+  cancelPendingHubPanePrewarm() {
+    this.clearDeferredUiTask(this.pendingHubPrewarmHandle, this.pendingHubPrewarmMode);
+    this.pendingHubPrewarmHandle = 0;
+    this.pendingHubPrewarmMode = "";
+  }
+
+  bindDesktopOverlayEvents() {
+    if (this.desktopOverlayEventsBound || !(this.desktopOverlay instanceof HTMLElement)) {
+      return;
+    }
+    this.desktopOverlayEventsBound = true;
+    this.desktopOverlay.addEventListener("pointerenter", () => {
+      this.cancelScheduledDesktopOverlayCollapse();
+      this.setDesktopOverlayExpanded(true);
+    });
+    this.desktopOverlay.addEventListener("pointerleave", () => {
+      this.scheduleDesktopOverlayCollapse(900);
+    });
+    this.desktopOverlay.addEventListener("focusin", () => {
+      this.cancelScheduledDesktopOverlayCollapse();
+      this.setDesktopOverlayExpanded(true);
+    });
+    this.desktopOverlay.addEventListener("focusout", () => {
+      this.queueAnimationFrame(() => {
+        if (!this.desktopOverlay?.contains(document.activeElement)) {
+          this.scheduleDesktopOverlayCollapse(900);
+        }
+      });
+    });
+  }
+
+  cancelScheduledDesktopOverlayCollapse() {
+    this.clearDeferredUiTask(this.pendingDesktopOverlayCollapseHandle, this.pendingDesktopOverlayCollapseMode);
+    this.pendingDesktopOverlayCollapseHandle = 0;
+    this.pendingDesktopOverlayCollapseMode = "";
+  }
+
+  setDesktopOverlayExpanded(expanded) {
+    this.desktopOverlayExpanded = Boolean(expanded);
+    if (this.desktopOverlay instanceof HTMLElement) {
+      this.desktopOverlay.classList.toggle("is-expanded", this.desktopOverlayExpanded);
+      this.desktopOverlay.classList.toggle("is-collapsed", !this.desktopOverlayExpanded);
+    }
+    if (this.appShell instanceof HTMLElement) {
+      this.appShell.dataset.desktopOverlay = this.desktopOverlayExpanded ? "expanded" : "collapsed";
+    }
+  }
+
+  scheduleDesktopOverlayCollapse(delayMs = 2200) {
+    if (this.layoutMode !== "desktop" || !(this.desktopOverlay instanceof HTMLElement)) {
+      return;
+    }
+    this.cancelScheduledDesktopOverlayCollapse();
+    const handle = typeof window !== "undefined"
+      ? window.setTimeout(() => {
+      this.pendingDesktopOverlayCollapseHandle = 0;
+      this.pendingDesktopOverlayCollapseMode = "";
+      if (
+        this.layoutMode !== "desktop"
+        || this.mode === "modal"
+        || this.desktopOverlay.matches(":hover")
+        || this.desktopOverlay.contains(document.activeElement)
+      ) {
+        return;
+      }
+      this.setDesktopOverlayExpanded(false);
+      }, delayMs)
+      : 0;
+    this.pendingDesktopOverlayCollapseHandle = handle;
+    this.pendingDesktopOverlayCollapseMode = "timeout";
+  }
+
+  noteDesktopOverlayActivity(delayMs = 2200) {
+    void delayMs;
+    if (this.layoutMode === "desktop" && this.desktopOverlay instanceof HTMLElement) {
+      this.setDesktopOverlayExpanded(true);
+    }
+  }
+
+  moveUiNode(node, parent, options = {}) {
+    if (!(node instanceof HTMLElement) || !(parent instanceof HTMLElement) || node.parentElement === parent) {
+      return;
+    }
+    if (options.prepend) {
+      parent.prepend(node);
+      return;
+    }
+    if (options.before instanceof HTMLElement && options.before.parentElement === parent) {
+      parent.insertBefore(node, options.before);
+      return;
+    }
+    parent.appendChild(node);
+  }
+
+  getMapPanelElement() {
+    return this.mapCanvas?.closest("#map-panel") || null;
+  }
+
+  mountDesktopOverlayShell() {
+    const hasDesktopRun = Boolean(
+      this.layoutMode === "desktop"
+      && this.player
+      && this.currentLevel
+      && this.desktopOverlay instanceof HTMLElement
+      && this.desktopStatusHost instanceof HTMLElement
+      && this.desktopOverlayMapHost instanceof HTMLElement
+    );
+    this.desktopOverlay?.classList.toggle("hidden", !hasDesktopRun);
+    this.desktopAuxStack?.classList.toggle("hidden", !hasDesktopRun);
+    if (!hasDesktopRun) {
+      return;
+    }
+    this.moveUiNode(this.playerCapsule, this.desktopStatusHost);
+    this.moveUiNode(this.getMapPanelElement(), this.desktopOverlayMapHost);
+  }
+
+  restoreStandardShell() {
+    this.desktopOverlay?.classList.add("hidden");
+    this.desktopAuxStack?.classList.add("hidden");
+    this.moveUiNode(this.getMapPanelElement(), this.statusBand, { prepend: true });
+    this.moveUiNode(this.playerCapsule, this.statusBand);
+  }
+
+  syncDesktopOverlayPlacement() {
+    const desktop = this.layoutMode === "desktop";
+    if (
+      !(this.desktopOverlay instanceof HTMLElement)
+      || !(this.desktopVerbHost instanceof HTMLElement)
+      || !(this.desktopQuickslotsHost instanceof HTMLElement)
+      || !(this.desktopStatusHost instanceof HTMLElement)
+      || !(this.desktopOverlayMapHost instanceof HTMLElement)
+      || !(this.desktopAuxStack instanceof HTMLElement)
+      || !(this.statusBand instanceof HTMLElement)
+    ) {
+      return;
+    }
+    if (desktop) {
+      this.mountDesktopOverlayShell();
+      return;
+    }
+    this.restoreStandardShell();
+    this.setDesktopOverlayExpanded(true);
+  }
+
+  resetHubPaneDirtyState() {
+    this.hubPaneDirty = {
+      pack: true,
+      magic: true,
+      journal: true
+    };
+  }
+
+  markHubPaneDirty(tab = "") {
+    if (tab && Object.prototype.hasOwnProperty.call(this.hubPaneDirty, tab)) {
+      this.hubPaneDirty[tab] = true;
+      return;
+    }
+    this.resetHubPaneDirtyState();
+  }
+
+  cancelScheduledAutosave() {
+    this.clearDeferredUiTask(this.pendingAutosaveHandle, this.pendingAutosaveMode);
+    this.pendingAutosaveHandle = 0;
+    this.pendingAutosaveMode = "";
+  }
+
+  scheduleAutosave() {
+    if (!this.player) {
+      return;
+    }
+    this.cancelScheduledAutosave();
+    const scheduled = this.queueDeferredUiTask(() => {
+      this.pendingAutosaveHandle = 0;
+      this.pendingAutosaveMode = "";
+      if (!this.player) {
+        return;
+      }
+      this.saveGame({ silent: true, skipUiRefresh: true });
+    }, {
+      preferIdle: true,
+      timeout: 1800
+    });
+    this.pendingAutosaveHandle = scheduled.handle;
+    this.pendingAutosaveMode = scheduled.mode;
   }
 
   registerServiceWorker() {
@@ -343,6 +670,7 @@ export class Game {
     } else if (source === "pointer") {
       this.movementCadence.heldPointer = held;
     }
+    this.startRuntimeLoop();
     return held;
   }
 
@@ -405,6 +733,16 @@ export class Game {
   }
 
   handlePointerDown(event) {
+    const actionableTarget = event.target instanceof Element
+      ? event.target.closest("button, [data-action], [data-race], [data-class]")
+      : null;
+    if (
+      actionableTarget instanceof HTMLElement
+      && this.modalRoot?.contains(actionableTarget)
+      && !actionableTarget.matches(":disabled, [aria-disabled='true']")
+    ) {
+      this.flashUiInteractionTarget(actionableTarget);
+    }
     const moveButton = event.target.closest("[data-move]");
     if (!moveButton || !this.canPlayerAct()) {
       return;
@@ -579,7 +917,7 @@ export class Game {
   }
 
   canPlayerAct() {
-    return Boolean(this.player && this.mode === "game" && !this.isPlayerDead());
+    return Boolean(this.player && this.mode === "game" && !this.transitionPending && !this.isPlayerDead());
   }
 
   getBurdenUiState(weight = getCarryWeight(this.player), capacity = getCarryCapacity(this.player)) {
@@ -877,6 +1215,13 @@ export class Game {
         note: "Go deeper"
       };
     }
+    if (recommendedActionId === "search") {
+      return {
+        action: "search",
+        label: "Search",
+        note: directive?.routeCueText || directive?.supportText || "Reveal more of the route"
+      };
+    }
     if (tile && (
       tile.objectiveId
       || tile.optionalId
@@ -908,6 +1253,165 @@ export class Game {
     };
   }
 
+  getDesktopVerbEntries() {
+    const activeRun = Boolean(this.player && this.currentLevel && this.mode !== "title" && this.mode !== "creation");
+    const fallbackSlots = [
+      { key: "primary", prompt: "A", label: "Act", note: "No active run", action: "", tone: "primary" },
+      { key: "secondary", prompt: "X", label: "Survey", note: "No active run", action: "", tone: "secondary" },
+      { key: "back", prompt: "B", label: "Back", note: "No active run", action: "", tone: "secondary" },
+      { key: "pack", prompt: "Y", label: "Pack", note: "No active run", action: "", tone: "utility" }
+    ];
+    const sourceSlots = activeRun ? this.getActionDockModel().slice(0, 4) : fallbackSlots;
+    return sourceSlots.map((slot, index) => {
+      const key = slot.key || ["primary", "secondary", "back", "pack"][index] || `slot-${index}`;
+      let action = slot.action || "";
+      let tab = slot.tab || "";
+      let note = slot.note || "";
+      if (action === "open-spell-tray") {
+        action = "open-hub";
+        tab = "magic";
+        note = "Open spell desk";
+      } else if (action === "map-focus") {
+        action = "toggle-map";
+        note = this.mapDrawerOpen ? "Hide survey" : "Show survey";
+      } else if (key === "back") {
+        action = "controller-back";
+        note = this.mode === "target"
+          ? "Cancel targeting"
+          : this.mode === "modal"
+            ? "Close menus"
+            : this.mapDrawerOpen
+              ? "Hide survey"
+              : "Cancel targeting or close menus";
+      }
+      if (action === "pickup") {
+        note = note || "Claim the item";
+      }
+      return {
+        ...slot,
+        action,
+        tab,
+        note,
+        focusKey: `desktop:verb:${key}`,
+        disabled: !activeRun || !action,
+        active: action === "toggle-map" && this.mapDrawerOpen
+      };
+    });
+  }
+
+  getDesktopVerbMarkup() {
+    return this.getDesktopVerbEntries().map((entry) => {
+      const classes = [
+        "desktop-verb-button",
+        entry.active ? "active" : "",
+        entry.tone === "primary" ? "desktop-context-verb" : ""
+      ].filter(Boolean).join(" ");
+      const serviceAttribute = entry.service ? ` data-service="${escapeHtml(entry.service)}"` : "";
+      const tabAttribute = entry.tab ? ` data-tab="${escapeHtml(entry.tab)}"` : "";
+      return `
+        <button class="${classes}" data-action="${escapeHtml(entry.action || "")}" data-focus-key="${escapeHtml(entry.focusKey)}" type="button"${serviceAttribute}${tabAttribute}${entry.disabled ? " disabled" : ""}>
+          <span class="desktop-verb-head">
+            <span class="desktop-verb-prompt">${escapeHtml(entry.prompt || "")}</span>
+            <span class="desktop-verb-label">${escapeHtml(entry.label)}</span>
+          </span>
+        </button>
+      `;
+    }).join("");
+  }
+
+  getSpellIconMeta(spellOrId) {
+    const spell = typeof spellOrId === "string" ? SPELLS[spellOrId] : spellOrId;
+    const fallback = { symbol: "✦", label: "Spell" };
+    if (!spell) {
+      return { iconKey: "spark", ...fallback };
+    }
+    const iconKey = spell.iconKey || "spark";
+    const iconMeta = SPELL_ICON_SYMBOLS[iconKey] || fallback;
+    return {
+      iconKey,
+      symbol: iconMeta.symbol,
+      label: iconMeta.label
+    };
+  }
+
+  getDesktopQuickslotMarkup() {
+    if (!this.player) {
+      return "";
+    }
+    const limit = this.getSpellTrayLimit();
+    const pinnedSpellIds = this.getPinnedSpellIds().slice(0, limit);
+    const selectedSpellId = this.targetMode?.spellId || this.pendingSpell || pinnedSpellIds[0] || "";
+    const slots = pinnedSpellIds.map((spellId, index) => {
+      const spell = SPELLS[spellId];
+      if (!spell) {
+        return "";
+      }
+      const iconMeta = this.getSpellIconMeta(spell);
+      const manaCost = getSpellCost(this, spell);
+      const overcast = this.player.mana < manaCost;
+      return `
+        <button class="desktop-quickslot${selectedSpellId === spellId ? " active" : ""}${overcast ? " warning" : ""}" data-action="spell-cast" data-spell="${spellId}" data-focus-key="desktop:spell:${spellId}" type="button" aria-label="Cast ${escapeHtml(spell.name)}" title="${escapeHtml(`${spell.name} · ${manaCost} mana`)}">
+          <span class="desktop-quickslot-symbol" aria-hidden="true" title="${escapeHtml(iconMeta.label)}">${escapeHtml(iconMeta.symbol)}</span>
+          <span class="desktop-quickslot-cost">${manaCost}</span>
+        </button>
+      `;
+    }).join("");
+    const emptyCount = Math.max(0, limit - pinnedSpellIds.length);
+    const emptySlots = Array.from({ length: emptyCount }, (_, index) => `
+      <div class="desktop-quickslot desktop-quickslot-empty" aria-hidden="true">
+        <span class="desktop-quickslot-symbol" aria-hidden="true"></span>
+      </div>
+    `).join("");
+    const bookButton = `
+      <button class="desktop-quickslot desktop-quickslot-open" data-action="open-hub" data-tab="magic" data-focus-key="desktop:spell:book" type="button">
+        <span class="desktop-quickslot-name">Magic</span>
+      </button>
+    `;
+    return `${slots}${emptySlots}${bookButton}`;
+  }
+
+  renderDesktopShell() {
+    if (
+      !(this.desktopOverlay instanceof HTMLElement)
+      || !(this.desktopVerbHost instanceof HTMLElement)
+      || !(this.desktopQuickslotsHost instanceof HTMLElement)
+      || !(this.desktopStatusHost instanceof HTMLElement)
+      || !(this.desktopOverlayMapHost instanceof HTMLElement)
+      || !(this.desktopAuxStack instanceof HTMLElement)
+    ) {
+      return;
+    }
+    const activeRun = Boolean(this.layoutMode === "desktop" && this.player && this.currentLevel);
+    this.desktopOverlay.classList.toggle("hidden", !activeRun);
+    this.desktopAuxStack.classList.toggle("hidden", !activeRun);
+    if (!activeRun) {
+      this.desktopVerbHost.innerHTML = "";
+      this.desktopQuickslotsHost.innerHTML = "";
+      this.lastDesktopVerbMarkup = "";
+      this.lastDesktopQuickslotsMarkup = "";
+      this.desktopOverlayMapHost.classList.add("hidden");
+      this.desktopStatusHost.classList.add("hidden");
+      return;
+    }
+    const menuButtons = Array.from(this.desktopOverlay.querySelectorAll(".desktop-shell-menu-row button"));
+    menuButtons.forEach((button) => {
+      button.disabled = !this.player;
+    });
+    const verbMarkup = this.getDesktopVerbMarkup();
+    if (this.lastDesktopVerbMarkup !== verbMarkup) {
+      this.desktopVerbHost.innerHTML = verbMarkup;
+      this.lastDesktopVerbMarkup = verbMarkup;
+    }
+    const quickslotMarkup = this.getDesktopQuickslotMarkup();
+    if (this.lastDesktopQuickslotsMarkup !== quickslotMarkup) {
+      this.desktopQuickslotsHost.innerHTML = quickslotMarkup;
+      this.lastDesktopQuickslotsMarkup = quickslotMarkup;
+    }
+    this.desktopStatusHost.classList.remove("hidden");
+    const showMapPanel = this.mapDrawerOpen && Boolean(this.player);
+    this.desktopOverlayMapHost.classList.toggle("hidden", !showMapPanel);
+  }
+
   handleControllerBackAction() {
     this.resetMovementCadence({ clearHeld: false });
     if (this.mode === "target") {
@@ -930,11 +1434,6 @@ export class Game {
     if (this.mapDrawerOpen && this.layoutMode !== "desktop") {
       this.mapDrawerOpen = false;
       this.refreshChrome();
-      return true;
-    }
-    if (this.feedDrawerOpen) {
-      this.feedDrawerOpen = false;
-      this.render();
       return true;
     }
     return false;
@@ -1042,6 +1541,9 @@ export class Game {
     if (!item || item.kind === "gold" || !this.player) {
       return false;
     }
+    if (this.isQuickHandsUtilityPickup(item)) {
+      return false;
+    }
     const capacity = getCarryCapacity(this.player);
     const beforeWeight = getCarryWeight(this.player);
     const itemWeight = item.weight || 0;
@@ -1050,6 +1552,16 @@ export class Game {
       return true;
     }
     return beforeWeight > capacity && itemWeight >= 5;
+  }
+
+  isQuickHandsUtilityPickup(item) {
+    if (!item || !this.player?.perks?.includes("quick_hands")) {
+      return false;
+    }
+    if (item.kind === "gold" || item.kind === "consumable" || item.kind === "spellbook") {
+      return true;
+    }
+    return !item.slot && (item.weight || 0) <= 1;
   }
 
   setModalVisibility(isOpen) {
@@ -1078,12 +1590,10 @@ export class Game {
     if (!player) {
       return [];
     }
-    player.spellsKnown = Array.isArray(player.spellsKnown)
-      ? [...new Set(player.spellsKnown.filter((spellId) => Boolean(SPELLS[spellId])))]
-      : [];
+    player.spellsKnown = normalizeKnownSpellIds(player.spellsKnown);
     const hasSavedTray = Array.isArray(player.spellTrayIds);
     const tray = hasSavedTray
-      ? [...new Set(player.spellTrayIds.filter((spellId) => player.spellsKnown.includes(spellId)))]
+      ? normalizeKnownSpellIds(player.spellTrayIds).filter((spellId) => player.spellsKnown.includes(spellId))
       : [];
     if ((!hasSavedTray || tray.length === 0) && player.spellsKnown.length > 0) {
       tray.push(...player.spellsKnown.slice(0, this.getSpellTrayLimit()));
@@ -1127,14 +1637,53 @@ export class Game {
     ];
   }
 
-  getSpellFilterDefsForEntries(entries = []) {
+  getSpellFilterDefsForEntries(entries = [], pinnedSpellIds = this.getPinnedSpellIds()) {
     const keys = new Set(entries.map((entry) => getSpellCategoryKey(entry)).filter(Boolean));
-    return [
-      { key: "all", label: "All" },
+    const filters = [{ key: "all", label: "All" }];
+    if ((pinnedSpellIds || []).length > 0) {
+      filters.push({ key: "tray", label: "Spell Tray" });
+    }
+    filters.push(
       ...getSpellCategoryDefs()
         .filter((entry) => keys.has(entry.key))
         .map((entry) => ({ key: entry.key, label: entry.label }))
-    ];
+    );
+    return filters;
+  }
+
+  getMagicSpellListState(filter = this.activeMagicFilter, spellIds = this.player?.spellsKnown || []) {
+    const sortedSpellIds = this.getSortedKnownSpellIds(spellIds);
+    const pinnedSpellIds = this.getPinnedSpellIds();
+    const filterDefs = this.getSpellFilterDefsForEntries(
+      sortedSpellIds.map((spellId) => SPELLS[spellId]).filter(Boolean),
+      pinnedSpellIds
+    );
+    const activeFilter = filterDefs.some((entry) => entry.key === filter) ? filter : "all";
+    const visibleSpellIds = sortedSpellIds.filter((spellId) => {
+      if (activeFilter === "all") {
+        return true;
+      }
+      if (activeFilter === "tray") {
+        return pinnedSpellIds.includes(spellId);
+      }
+      return getSpellCategoryKey(SPELLS[spellId]) === activeFilter;
+    });
+    return {
+      sortedSpellIds,
+      pinnedSpellIds,
+      filterDefs,
+      activeFilter,
+      visibleSpellIds
+    };
+  }
+
+  getMagicSelectedSpellId(state = this.getMagicSpellListState()) {
+    const preferredSpellId = this.targetMode?.spellId || this.pendingSpell || "";
+    if (preferredSpellId && state.visibleSpellIds.includes(preferredSpellId)) {
+      return preferredSpellId;
+    }
+    const pinnedSpellId = this.getPinnedSpellIds().find((spellId) => state.visibleSpellIds.includes(spellId));
+    return pinnedSpellId || state.visibleSpellIds[0] || state.sortedSpellIds[0] || preferredSpellId || "";
   }
 
   getSpellFilterChipsMarkup(currentFilter = "all", actionName = "magic-filter", focusKeyGetter = (key) => key, rowClass = "magic-filter-row", filterDefs = this.getSpellFilterDefs()) {
@@ -1200,9 +1749,10 @@ export class Game {
 
   refreshMagicHub(focusTarget = null) {
     if (this.mode === "modal" && this.activeHubTab === "magic") {
-      this.showHubModal("magic", {
+      this.refreshMagicHubContent(focusTarget || this.getSpellBookFocusKey(this.pendingSpell || this.player?.spellsKnown?.[0] || ""), {
         preserveScroll: true,
-        focusTarget: focusTarget || this.getSpellBookFocusKey(this.pendingSpell || this.player?.spellsKnown?.[0] || "")
+        fallbackFocus: true,
+        sections: ["summary", "list"]
       });
       return;
     }
@@ -1210,11 +1760,59 @@ export class Game {
     this.render();
   }
 
+  getMagicCardStatusText(spellId, selectedSpellId = this.targetMode?.spellId || this.pendingSpell || this.getPinnedSpellIds()[0] || this.player?.spellsKnown?.[0] || "") {
+    const pinnedSpellIds = this.getPinnedSpellIds();
+    const pinnedIndex = pinnedSpellIds.indexOf(spellId);
+    const pinLabel = pinnedIndex >= 0 ? `Tray Slot ${pinnedIndex + 1}` : "Book Only";
+    return selectedSpellId === spellId ? `${pinLabel} | Selected` : pinLabel;
+  }
+
+  syncMagicSelectedSpellState(previousSpellId, nextSpellId, options = {}) {
+    const {
+      preserveScroll = true,
+      focusTarget = null,
+      fallbackFocus = true
+    } = options;
+    const currentSurfaceKey = this.modalSurfaceKey;
+    if (this.mode !== "modal" || this.activeHubTab !== "magic" || !String(currentSurfaceKey || "").startsWith("hub:")) {
+      return false;
+    }
+    const paneHost = this.getHubPaneHost("magic");
+    if (!(paneHost instanceof HTMLElement)) {
+      return false;
+    }
+    const spellIds = [...new Set([previousSpellId, nextSpellId].filter((spellId) => typeof spellId === "string" && spellId.length > 0))];
+    if (spellIds.length === 0) {
+      return false;
+    }
+    const previousState = preserveScroll ? this.captureModalRefreshState(currentSurfaceKey) : null;
+    let changed = false;
+    spellIds.forEach((spellId) => {
+      const card = paneHost.querySelector(`[data-spell-card="${spellId}"]`);
+      const status = paneHost.querySelector(`[data-spell-status="${spellId}"]`);
+      if (card instanceof HTMLElement) {
+        card.classList.toggle("active", spellId === nextSpellId);
+        changed = true;
+      }
+      if (status instanceof HTMLElement) {
+        status.textContent = this.getMagicCardStatusText(spellId, nextSpellId);
+        changed = true;
+      }
+    });
+    if (!changed) {
+      return false;
+    }
+    this.applyControllerNavigationMetadata();
+    this.restoreModalRefreshState(previousState, focusTarget, fallbackFocus);
+    return true;
+  }
+
   selectSpell(spellId, options = {}) {
     if (!this.player || !SPELLS[spellId] || !this.player.spellsKnown.includes(spellId)) {
       return false;
     }
     const { openTray = false, focusTarget = null } = options;
+    const previousSpellId = this.targetMode?.spellId || this.pendingSpell || this.getPinnedSpellIds()[0] || this.player?.spellsKnown?.[0] || "";
     if (this.mode === "target" && this.targetMode?.type === "spell" && this.targetMode.spellId !== spellId) {
       this.cancelTargetMode({ silent: true, keepTrayOpen: true });
     }
@@ -1227,6 +1825,28 @@ export class Game {
         this.refreshChrome();
       }
       return true;
+    }
+    if (this.mode === "modal" && this.activeHubTab === "magic" && !openTray) {
+      this.pendingSpell = spellId;
+      if (this.syncMagicSelectedSpellState(previousSpellId, spellId, {
+        preserveScroll: true,
+        focusTarget: focusTarget || this.getSpellBookFocusKey(spellId),
+        fallbackFocus: true
+      })) {
+        this.refreshMagicHubContent(focusTarget || this.getSpellBookFocusKey(spellId), {
+          preserveScroll: true,
+          fallbackFocus: true,
+          sections: ["summary"]
+        });
+        return true;
+      }
+      if (this.refreshMagicHubContent(focusTarget || this.getSpellBookFocusKey(spellId), {
+        preserveScroll: true,
+        fallbackFocus: true,
+        sections: ["summary", "list"]
+      })) {
+        return true;
+      }
     }
     this.refreshMagicHub(focusTarget);
     return true;
@@ -1325,6 +1945,7 @@ export class Game {
       created: nowTime(),
       until: nowTime() + duration
     };
+    this.startRuntimeLoop();
   }
 
   flashTile(x, y, color, duration = 180, extra = {}) {
@@ -1400,6 +2021,85 @@ export class Game {
       return "utility";
     }
     return spell.school || "spell";
+  }
+
+  getSpellMechanicalReadout(spell) {
+    if (!spell) {
+      return "";
+    }
+    switch (spell.id) {
+      case "magicMissile":
+        return "Deals 2d4 + INT/3 arcane damage.";
+      case "healMinor":
+        return "Heals 2d5 + INT/4 HP, minimum 4.";
+      case "frostBolt":
+        return "Deals 2d6 + INT/2 cold damage with a 35% chance to slow for 2 turns.";
+      case "fireball":
+        return "Deals 3d6 + INT/2 fire damage in a 3x3 blast.";
+      case "phaseDoor":
+        return "Blinks to a safe tile inside the current fight.";
+      case "clairvoyance":
+        return "Reveals 40 patches of the floor and nearby secrets.";
+      case "identify":
+        return "Identifies your inventory and equipped gear.";
+      case "slowMonster":
+        return "Slows one target for 5 turns.";
+      case "removeCurse":
+        return "Removes curses from equipped gear and inventory.";
+      case "runeOfReturn":
+        return "Returns to town, or from town back to your deepest explored floor.";
+      case "lightningBolt":
+        return "Deals 3d5 + INT/2 magic damage to one target.";
+      case "holdMonster":
+        return "Holds one target for 2 turns, then slows it for 4 turns.";
+      case "cureSerious":
+        return "Heals 4d5 + INT/3 HP, minimum 8.";
+      case "stoneSkin":
+        return "Grants +4 armor for 18 turns.";
+      case "shield":
+        return "Grants +2 ward for 16 turns.";
+      case "resistFire":
+        return "Grants +2 fire resist for 30 turns.";
+      case "resistCold":
+        return "Grants +2 cold resist for 30 turns.";
+      case "teleport":
+        return "Teleports to a safer tile elsewhere on the current floor.";
+      case "light":
+        return "Grants +2 sight for 40 turns and reveals hidden threats within 6 tiles.";
+      case "detectTraps":
+        return "Reveals traps and secret doors in a 21x21 area around you.";
+      default:
+        return "";
+    }
+  }
+
+  getSpellCardCopy(spell) {
+    if (!spell) {
+      return "";
+    }
+    const readout = this.getSpellMechanicalReadout(spell);
+    if (!readout || readout === spell.description) {
+      return spell.description || "";
+    }
+    return `${spell.description} ${readout}`;
+  }
+
+  getSpellUnlockTimingText(spell) {
+    const learnLevel = spell?.learnLevel || 1;
+    return learnLevel === this.player?.level
+      ? `New at Lv ${learnLevel}`
+      : `Available since Lv ${learnLevel}`;
+  }
+
+  getSpellUiTargetingLabel(spell) {
+    switch (this.getSpellTargetingMode(spell)) {
+      case "self":
+        return "Self";
+      case "blast":
+        return `Blast ${((spell?.blastRadius || 0) * 2) + 1}x${((spell?.blastRadius || 0) * 2) + 1}`;
+      default:
+        return `Single target | Range ${spell?.range || 1}`;
+    }
   }
 
   getSpellTargetingLabel(spell) {
@@ -1594,12 +2294,18 @@ export class Game {
         return;
       }
       event.preventDefault();
+      if (event.detail === 0) {
+        this.flashUiInteractionTarget(action);
+      }
       this.handleAction(action.dataset.action, action);
       return;
     }
 
     const raceChoice = event.target.closest("[data-race]");
     if (raceChoice) {
+      if (event.detail === 0) {
+        this.flashUiInteractionTarget(raceChoice);
+      }
       this.captureCreationDraft();
       this.selectedRace = raceChoice.dataset.race;
       this.showCreationModal({
@@ -1611,6 +2317,9 @@ export class Game {
 
     const classChoice = event.target.closest("[data-class]");
     if (classChoice) {
+      if (event.detail === 0) {
+        this.flashUiInteractionTarget(classChoice);
+      }
       this.captureCreationDraft();
       this.selectedClass = classChoice.dataset.class;
       this.showCreationModal({
@@ -1651,11 +2360,13 @@ export class Game {
   handlePreviewPointer(event) {
     this.lastPreviewKey = event.target.closest("[data-preview-key]")?.dataset?.previewKey || this.lastPreviewKey;
     this.syncPackHoverPreview(event.target, { allowKeyboard: false });
+    this.syncShopHoverPreview(event.target, { allowKeyboard: false });
   }
 
   handlePreviewFocus(event) {
     this.lastPreviewKey = event.target.closest("[data-preview-key]")?.dataset?.previewKey || this.lastPreviewKey;
     this.syncPackHoverPreview(event.target, { allowKeyboard: true });
+    this.syncShopHoverPreview(event.target, { allowKeyboard: true });
   }
 
   canUsePackHoverPreview({ allowKeyboard = false } = {}) {
@@ -1700,12 +2411,7 @@ export class Game {
     if (!currentInspector) {
       return;
     }
-    const model = this.getPackSelectionModel();
-    const inventoryModel = buildInventoryPresentationModel(this, {
-      filter: this.activePackFilter,
-      selectedIndex: model.selection.type === "inventory" ? model.selection.value : -1,
-      shopId: this.getCurrentPackShopContext()
-    });
+    const { model, inventoryModel } = this.buildPackHubViewModel();
     const wrapper = document.createElement("div");
     wrapper.innerHTML = this.getPackInspectorMarkup(model, inventoryModel).trim();
     const nextInspector = wrapper.firstElementChild;
@@ -1752,6 +2458,199 @@ export class Game {
     }
   }
 
+  canUseShopHoverPreview({ allowKeyboard = false } = {}) {
+    if (this.mode !== "modal" || !String(this.modalSurfaceKey || "").startsWith("shop:") || this.layoutMode !== "desktop") {
+      return false;
+    }
+    const finePointer = typeof window !== "undefined" && window.matchMedia
+      ? window.matchMedia("(pointer:fine)").matches
+      : false;
+    if (!finePointer) {
+      return false;
+    }
+    return allowKeyboard ? this.lastInputSource === "keyboard" : this.lastInputSource === "pointer";
+  }
+
+  getShopHoverPreviewFromTarget(target) {
+    if (!(target instanceof HTMLElement)) {
+      return null;
+    }
+    const previewNode = target.closest("[data-shop-preview-kind]");
+    if (!previewNode) {
+      return null;
+    }
+    const kind = previewNode.dataset.shopPreviewKind || "";
+    if (kind === "buy") {
+      const value = previewNode.dataset.shopPreviewValue || "";
+      return value ? { kind, value } : null;
+    }
+    const index = Number(previewNode.dataset.shopPreviewValue);
+    return Number.isFinite(index) ? { kind: "sell", value: index } : null;
+  }
+
+  isSameShopHoverPreview(left, right) {
+    return Boolean(left && right && left.kind === right.kind && left.value === right.value);
+  }
+
+  getShopHoverPreviewModelFor(preview) {
+    const shopId = this.pendingShop?.id || "";
+    if (!preview || !shopId) {
+      return null;
+    }
+    if (preview.kind === "buy") {
+      const item = createTownItem(preview.value);
+      if (!item) {
+        return null;
+      }
+      return {
+        preview,
+        item,
+        semanticEntry: buildInventoryItemSemantics(this, item, -1, { shopId }),
+        price: getShopBuyPrice(this, item, shopId),
+        comparison: this.getPackComparisonModel(item)
+      };
+    }
+    const index = Number(preview.value);
+    const item = this.player?.inventory?.[index] || null;
+    if (!item) {
+      return null;
+    }
+    return {
+      preview: { kind: "sell", value: index },
+      item,
+      semanticEntry: buildInventoryItemSemantics(this, item, index, { shopId }),
+      price: getShopSellPrice(this, item, shopId),
+      comparison: this.getPackComparisonModel(item)
+    };
+  }
+
+  getShopHoverPreviewMarkup(previewModel) {
+    if (!previewModel?.item) {
+      return "";
+    }
+    const { item, semanticEntry, price, comparison, preview } = previewModel;
+    const targetComparison = comparison?.comparisons?.find((entry) => entry.slot === comparison.targetSlot)
+      || comparison?.comparisons?.[0]
+      || null;
+    const slotLabel = item.slot ? this.getPackSlotDefinition(item.slot).label : "";
+    const comparisonTitle = !item.slot
+      ? ""
+      : comparison?.blockedByCurse
+        ? `Compare vs ${slotLabel}`
+        : comparison?.fitsEmptySlot
+          ? `Fits ${this.getPackSlotDefinition(comparison.targetSlot).label}`
+            : targetComparison?.equipped
+              ? `Compare vs ${getItemName(targetComparison.equipped, true)}`
+              : `Compare ${slotLabel}`;
+    const primaryDelta = (targetComparison?.deltas || []).find((delta) => delta.label !== "Weight")
+      || targetComparison?.deltas?.[0]
+      || null;
+    const leadChip = !item.slot
+      ? ""
+      : comparison?.blockedByCurse
+        ? `<span class="pack-inline-chip tone-bad">Slot locked by curse</span>`
+        : comparison?.fitsEmptySlot
+          ? `<span class="pack-inline-chip tone-good">Open ${escapeHtml(this.getPackSlotDefinition(comparison.targetSlot).label)}</span>`
+          : primaryDelta
+            ? `<span class="pack-inline-chip tone-${escapeHtml(primaryDelta.tone || "neutral")}">${escapeHtml(primaryDelta.text)}</span>`
+            : `<span class="pack-inline-chip tone-neutral">No practical change</span>`;
+    const comparisonRows = !item.slot
+      ? ""
+      : `
+        <div class="pack-comparison-card shop-hover-comparison-card">
+          <div class="pack-comparison-title">${escapeHtml(comparisonTitle)}</div>
+          <div class="pack-comparison-list">
+            ${comparison?.blockedByCurse
+              ? `<div class="pack-comparison-row value-bad">All ${escapeHtml(slotLabel.toLowerCase())} slots are locked by curses.</div>`
+              : comparison?.fitsEmptySlot
+                ? `<div class="pack-comparison-row value-good">No swap needed. ${escapeHtml(this.getPackSlotDefinition(comparison.targetSlot).label)} is open.</div>`
+                : ""}
+            ${targetComparison?.deltas?.length
+              ? targetComparison.deltas.slice(0, 4).map((delta) => `<div class="pack-comparison-row value-${delta.tone}">${escapeHtml(delta.text)}</div>`).join("")
+              : !comparison?.fitsEmptySlot && !comparison?.blockedByCurse
+                ? `<div class="pack-comparison-row muted">No practical change.</div>`
+                : ""}
+          </div>
+          <div class="pack-inspector-note ${comparison?.encumbrancePreview?.tone || "muted"}">${escapeHtml(comparison?.encumbrancePreview?.text || this.describeBurdenPreview(0).text)}</div>
+        </div>
+      `;
+    const summary = item.slot
+      ? this.getPackHoverPreviewSummary({
+          selection: { type: "inventory", value: -1 },
+          item,
+          comparison
+        }, semanticEntry)
+      : semanticEntry?.reason || describeItem(item);
+    return `
+      <div class="pack-hover-preview shop-hover-preview">
+        <div class="pack-hover-preview-head">
+          <div>
+            <div class="pack-hover-preview-kicker">${preview.kind === "buy" ? "Hover Compare" : "Sell Compare"}</div>
+            <div class="pack-hover-preview-title">${escapeHtml(getItemName(item, true))}</div>
+            ${leadChip ? `<div class="shop-hover-preview-hero">${leadChip}</div>` : ""}
+          </div>
+          <div class="pack-hover-preview-note">${escapeHtml(`${price} gp ${preview.kind === "buy" ? "to buy" : "to sell"}`)}</div>
+        </div>
+        <div class="pack-item-badges">${this.getItemBadgeMarkup(item, semanticEntry, { selection: { type: "inventory", value: -1 }, item, comparison, weightDelta: comparison?.weightDelta || 0 })}</div>
+        <div class="pack-hover-preview-copy">${escapeHtml(summary)}</div>
+        ${comparisonRows}
+      </div>
+    `;
+  }
+
+  refreshShopHoverPreview() {
+    if (this.mode !== "modal" || !String(this.modalSurfaceKey || "").startsWith("shop:")) {
+      return;
+    }
+    const host = this.modalRoot.querySelector("[data-shop-hover-preview-host]");
+    if (!(host instanceof HTMLElement)) {
+      return;
+    }
+    const previewModel = this.getShopHoverPreviewModelFor(this.hoveredShopPreview);
+    host.innerHTML = this.getShopHoverPreviewMarkup(previewModel);
+  }
+
+  setHoveredShopPreview(preview) {
+    if (!preview) {
+      this.clearHoveredShopPreview();
+      return;
+    }
+    const normalized = preview.kind === "buy"
+      ? { kind: "buy", value: String(preview.value || "") }
+      : { kind: "sell", value: Math.max(0, Number(preview.value) || 0) };
+    if (this.isSameShopHoverPreview(this.hoveredShopPreview, normalized)) {
+      return;
+    }
+    this.hoveredShopPreview = normalized;
+    this.refreshShopHoverPreview();
+  }
+
+  clearHoveredShopPreview() {
+    if (!this.hoveredShopPreview) {
+      return;
+    }
+    this.hoveredShopPreview = null;
+    this.refreshShopHoverPreview();
+  }
+
+  syncShopHoverPreview(target, { allowKeyboard = false } = {}) {
+    if (!this.canUseShopHoverPreview({ allowKeyboard })) {
+      this.clearHoveredShopPreview();
+      return;
+    }
+    if (target instanceof HTMLElement && target.closest("[data-shop-hover-preview-host]")) {
+      return;
+    }
+    const preview = this.getShopHoverPreviewFromTarget(target);
+    if (preview) {
+      this.setHoveredShopPreview(preview);
+      return;
+    }
+    if (target instanceof HTMLElement && target.closest(".town-workspace")) {
+      this.clearHoveredShopPreview();
+    }
+  }
+
   handleCanvasClick(event) {
     if (!this.player || this.isPlayerDead() || (this.mode !== "game" && this.mode !== "target")) {
       return;
@@ -1788,7 +2687,7 @@ export class Game {
   }
 
   handleAction(actionName, element) {
-    if (this.isPlayerDead() && !["new-game", "load-game"].includes(actionName)) {
+    if (this.isPlayerDead() && !["new-game", "load-game", "close-modal"].includes(actionName)) {
       return;
     }
     this.resetMovementCadence({ clearHeld: false });
@@ -1863,11 +2762,17 @@ export class Game {
         break;
       }
       case "journal-section":
-        this.showHubModal("journal", {
+        this.activeJournalSection = this.getResolvedJournalSection(element?.dataset?.section || "current");
+        if (!this.refreshJournalHubSection(this.getJournalSectionFocusKey(this.activeJournalSection), {
           preserveScroll: true,
-          focusTarget: this.getJournalSectionFocusKey(element?.dataset?.section || "current"),
-          journalSection: element?.dataset?.section || "current"
-        });
+          fallbackFocus: true
+        })) {
+          this.showHubModal("journal", {
+            preserveScroll: true,
+            focusTarget: this.getJournalSectionFocusKey(this.activeJournalSection),
+            journalSection: this.activeJournalSection
+          });
+        }
         break;
       case "open-spell-tray":
         this.openSpellTray();
@@ -1921,6 +2826,17 @@ export class Game {
       case "open-utility-menu":
         this.showUtilityMenu();
         break;
+      case "controller-back":
+        this.handleControllerBackAction();
+        break;
+      case "toggle-utility-more":
+        if (this.modalSurfaceKey === "utility-menu") {
+          this.setUtilityMenuSecondaryExpanded(!this.utilityMenuSecondaryExpanded, {
+            focusTarget: this.utilityMenuSecondaryExpanded ? "utility:more-toggle" : "utility:map",
+            fallbackFocus: true
+          });
+        }
+        break;
       case "open-town-service":
         this.openTownService(element.dataset.service);
         break;
@@ -1931,16 +2847,18 @@ export class Game {
         this.focusMap();
         break;
       case "toggle-map":
-        if (this.mapDrawer) {
+        if (this.layoutMode === "desktop") {
+          this.mapDrawerOpen = !this.mapDrawerOpen;
+          this.refreshChrome();
+          if (this.mapDrawerOpen) {
+            this.queueAnimationFrame(() => this.focusMap());
+          }
+        } else if (this.mapDrawer) {
           this.mapDrawerOpen = !this.mapDrawerOpen;
           this.refreshChrome();
         } else {
           this.focusMap();
         }
-        break;
-      case "toggle-feed-log":
-        this.feedDrawerOpen = !this.feedDrawerOpen;
-        this.render();
         break;
       case "begin-adventure":
         this.beginAdventure();
@@ -1984,21 +2902,21 @@ export class Game {
       case "item-drop":
         this.dropInventoryItem(element.dataset.index);
         break;
-      case "toggle-sale-mark":
-        this.toggleInventorySaleMark(
+      case "toggle-do-not-sell":
+        this.toggleInventoryDoNotSell(
           element.dataset.index,
           element instanceof HTMLInputElement && element.type === "checkbox" ? element.checked : null
         );
         break;
       case "inspect-pack-item":
-        this.showHubModal("pack", {
+        this.refreshPackHub({
           selection: { type: "inventory", value: Number(element.dataset.index) },
           preserveScroll: true,
           focusTarget: this.getPackItemFocusKey(Number(element.dataset.index))
         });
         break;
       case "inspect-slot":
-        this.showHubModal("pack", {
+        this.refreshPackHub({
           selection: { type: "slot", value: element.dataset.slot },
           preserveScroll: true,
           focusTarget: this.getPackSlotFocusKey(element.dataset.slot)
@@ -2019,14 +2937,22 @@ export class Game {
             this.setPackSelection({ type: "inventory", value: inventoryModel.firstVisibleIndex });
           }
         }
-        this.showHubModal("pack", {
+        this.refreshPackHub({
           preserveScroll: true,
           focusTarget: this.getPackFilterFocusKey(this.activePackFilter)
         });
         break;
       case "magic-filter":
         this.activeMagicFilter = element.dataset.filter || "all";
-        this.refreshMagicHub(this.getMagicFilterFocusKey(this.activeMagicFilter));
+        this.pendingSpell = this.getMagicSelectedSpellId(this.getMagicSpellListState(this.activeMagicFilter));
+        this.modalRoot?.querySelectorAll('.magic-filter-row [data-action="magic-filter"][data-filter]').forEach((button) => {
+          button.classList.toggle("active", button.dataset.filter === this.activeMagicFilter);
+        });
+        this.refreshMagicHubContent(this.getMagicFilterFocusKey(this.activeMagicFilter), {
+          preserveScroll: true,
+          fallbackFocus: true,
+          sections: ["summary", "list"]
+        });
         break;
       case "spell-learn-filter":
         this.activeSpellLearnFilter = element.dataset.filter || "all";
@@ -2083,15 +3009,14 @@ export class Game {
       case "shop-panel":
         this.activeShopPanel = element.dataset.panel === "sell" ? "sell" : "buy";
         if (this.pendingShop) {
-          this.showShopModal(this.pendingShop.id, this.pendingShop, {
+          this.updateShopModalPanel(this.getShopPanelFocusKey(this.activeShopPanel), {
             preserveScroll: true,
-            focusTarget: this.getShopPanelFocusKey(this.activeShopPanel),
-            panel: this.activeShopPanel
+            fallbackFocus: true
           });
         }
         break;
-      case "shop-sell-marked":
-        this.sellMarkedItems();
+      case "shop-sell-unmarked":
+        this.sellUnmarkedItems();
         break;
       case "bank-deposit":
         this.handleBank("deposit");
@@ -2360,7 +3285,11 @@ export class Game {
   }
 
   beginAdventure() {
+    if (this.transitionPending || this.pendingAdventureBootstrapFrame) {
+      return;
+    }
     this.resetMovementCadence();
+    this.cancelScheduledAutosave();
     this.activeSaveSlotId = null;
     const race = getRace(this.selectedRace);
     const role = getClass(this.selectedClass);
@@ -2452,7 +3381,6 @@ export class Game {
     this.pendingRewardChoice = null;
     this.pendingRewardQueue = [];
     this.pendingTurnResolution = null;
-    this.feedDrawerOpen = false;
     this.liveFeedSticky = null;
     this.storyFlags.postReturnBankPrompt = false;
     this.resetReadState();
@@ -2461,27 +3389,23 @@ export class Game {
     ensureTownMetaState(this);
     ensureChronicleState(this);
     ensureMetaProgressionState(this);
-    this.generateWorld();
-    this.applyRunContractWorldModifiers(activeContract);
+    this.generateWorld(1);
+    this.applyRunContractPlayerModifiers(activeContract);
     this.syncTownCycle(true);
     this.recalculateDerivedStats();
     this.player.hp = this.player.maxHp;
     this.player.mana = this.player.maxMana;
     this.mode = "game";
+    this.transitionPending = true;
+    this.liveFeedSticky = {
+      message: `${heroName} is entering the valley below the keep.`,
+      tone: "warning",
+      turn: this.turn,
+      priority: 2,
+      expiresAt: this.turn + 1
+    };
     this.closeModal();
     this.syncAdaptiveLayout(true);
-    this.log(`${heroName} enters the valley beneath the ruined keep.`, "good");
-    this.log("Recover the Runestone of the Winds from the lower halls and return to town.", "warning");
-    this.log(`${onboardingMeta.firstTownPrimary} ${onboardingMeta.firstTownSupport}`, "warning");
-    if (activeContract) {
-      this.log(`Contract active: ${activeContract.name}. ${activeContract.summary}`, "warning");
-    }
-    if (masteryRewards.length > 0) {
-      this.log(`Class mastery loadout: ${masteryRewards.join(", ")}.`, "good");
-    }
-    if (commendationRewards.length > 0) {
-      this.log(`Commendation prep: ${commendationRewards.join(", ")}.`, "good");
-    }
     startTelemetryRun(this);
     this.recordTelemetry("creation_confirmed", {
       heroName,
@@ -2492,8 +3416,27 @@ export class Game {
     });
     this.recordChronicleEvent("floor_enter", { label: "The valley town below the keep" });
     this.updateFov();
-    this.saveGame({ silent: true });
+    this.updateMonsterIntents();
+    this.refreshChrome();
     this.render();
+    this.pendingAdventureBootstrapFrame = this.queueAnimationFrame(() => {
+      this.pendingAdventureBootstrapFrame = 0;
+      this.log(`${heroName} enters the valley beneath the ruined keep.`, "good");
+      this.log("Recover the Runestone of the Winds from the lower halls and return to town.", "warning");
+      this.log(`${onboardingMeta.firstTownPrimary} ${onboardingMeta.firstTownSupport}`, "warning");
+      if (activeContract) {
+        this.log(`Contract active: ${activeContract.name}. ${activeContract.summary}`, "warning");
+      }
+      if (masteryRewards.length > 0) {
+        this.log(`Class mastery loadout: ${masteryRewards.join(", ")}.`, "good");
+      }
+      if (commendationRewards.length > 0) {
+        this.log(`Commendation prep: ${commendationRewards.join(", ")}.`, "good");
+      }
+      this.transitionPending = false;
+      this.render();
+      this.scheduleAutosave();
+    });
   }
 
   autoEquipStarterGear() {
@@ -2509,16 +3452,29 @@ export class Game {
     this.recalculateDerivedStats();
   }
 
-  generateWorld() {
-    this.levels = [];
-    this.levels.push(this.generateTownLevel());
-    for (let depth = 1; depth <= DUNGEON_DEPTH; depth += 1) {
-      this.levels.push(this.generateDungeonLevel(depth));
-    }
+  generateWorld(preloadDepth = 1) {
+    this.levels = [this.generateTownLevel()];
+    this.ensureWorldDepth(preloadDepth);
     this.currentDepth = 0;
     this.currentLevel = this.levels[0];
     this.resetReadState();
     this.placePlayerAt(this.currentLevel.start.x, this.currentLevel.start.y);
+  }
+
+  ensureWorldDepth(targetDepth = 1) {
+    if (!Array.isArray(this.levels) || this.levels.length === 0) {
+      this.levels = [this.generateTownLevel()];
+    }
+    const desiredDepth = clamp(Math.floor(Number(targetDepth) || 0), 0, DUNGEON_DEPTH);
+    for (let depth = Math.max(1, this.levels.length); depth <= desiredDepth; depth += 1) {
+      this.levels[depth] = this.generateDungeonLevel(depth);
+      this.applyRunContractWorldModifiers(this.getActiveContract(true), {
+        includePlayer: false,
+        startDepth: depth,
+        endDepth: depth
+      });
+    }
+    return this.levels[desiredDepth] || null;
   }
 
   generateTownLevel() {
@@ -4264,6 +5220,11 @@ export class Game {
     }
     const lines = [];
     const visible = this.getSortedVisibleEnemies();
+    visible.slice(0, Math.max(1, limit)).forEach((monster) => {
+      const health = getMonsterHealthState(monster);
+      const intent = monster.intent ? this.getMonsterIntentLabel(monster).toLowerCase() : this.getMonsterRoleLabel(monster).toLowerCase();
+      lines.push(`${monster.name}: ${health.label.toLowerCase()} | ${intent}.`);
+    });
     const visibleElite = visible.find((monster) => monster.elite);
     const visibleRaiser = visible.find((monster) => monster.behaviorKit === "corpse_raiser");
     const roomEvent = this.currentLevel.roomEvents?.find((event) => event.status !== "cleared") || null;
@@ -5113,7 +6074,10 @@ export class Game {
   }
 
   focusMap() {
-    if (this.mapDrawer) {
+    if (this.layoutMode === "desktop") {
+      this.mapDrawerOpen = true;
+      this.refreshChrome();
+    } else if (this.mapDrawer) {
       this.mapDrawerOpen = true;
       this.refreshChrome();
     }
@@ -5126,11 +6090,9 @@ export class Game {
   pollGamepad() {
     const intent = this.gamepadInput.poll(this.mode, this.getMovementRepeatInterval());
     if (!intent) {
-      this.refreshChrome();
       return false;
     }
     this.setInputSource("gamepad");
-    this.refreshChrome();
     if (intent.type === "move") {
       this.handleMovementIntent(intent.dx, intent.dy);
       return true;
@@ -5167,6 +6129,7 @@ export class Game {
       } else if (this.mode === "modal" || this.mode === "creation" || this.mode === "title" || this.mode === "levelup") {
         const target = this.getActiveUiActionableElement() || this.focusFirstUiElement();
         if (target && typeof target.click === "function") {
+          this.flashUiInteractionTarget(target);
           target.click();
         } else if (this.mode === "creation") {
           this.beginAdventure();
@@ -5205,8 +6168,8 @@ export class Game {
     );
   }
 
-  getUiNavigableElements(root = this.getUiNavigationRoot()) {
-    const selector = [
+  getUiNavigableSelector() {
+    return [
       "button:not([disabled])",
       "input:not([disabled])",
       "select:not([disabled])",
@@ -5215,8 +6178,21 @@ export class Game {
       "[data-move]:not([disabled])",
       "[tabindex]:not([tabindex='-1'])"
     ].join(", ");
+  }
+
+  resetUiNavigationCache() {
+    this.uiNavigationCache.root = null;
+    this.uiNavigationCache.focusables = [];
+    this.uiNavigationCache.focusKeyMap = new Map();
+  }
+
+  rebuildUiNavigationCache(root = this.getUiNavigationRoot()) {
+    if (!root?.querySelectorAll) {
+      this.resetUiNavigationCache();
+      return this.uiNavigationCache;
+    }
     const seen = new Set();
-    return Array.from(root.querySelectorAll(selector))
+    const focusables = Array.from(root.querySelectorAll(this.getUiNavigableSelector()))
       .filter((element) => {
         if (!this.isNavigableElement(element) || seen.has(element)) {
           return false;
@@ -5224,6 +6200,30 @@ export class Game {
         seen.add(element);
         return true;
       });
+    const focusKeyMap = new Map();
+    focusables.forEach((element) => {
+      const focusKey = element.dataset?.focusKey || "";
+      if (focusKey && !focusKeyMap.has(focusKey)) {
+        focusKeyMap.set(focusKey, element);
+      }
+    });
+    this.uiNavigationCache = {
+      root,
+      focusables,
+      focusKeyMap
+    };
+    return this.uiNavigationCache;
+  }
+
+  getUiNavigationCache(root = this.getUiNavigationRoot()) {
+    if (this.uiNavigationCache.root === root && Array.isArray(this.uiNavigationCache.focusables)) {
+      return this.uiNavigationCache;
+    }
+    return this.rebuildUiNavigationCache(root);
+  }
+
+  getUiNavigableElements(root = this.getUiNavigationRoot()) {
+    return this.getUiNavigationCache(root).focusables;
   }
 
   getUiNavMeta(element) {
@@ -5384,8 +6384,9 @@ export class Game {
       this.controllerFocusKey = element.dataset.focusKey;
     }
     element.focus({ preventScroll: true });
-    if (this.modalRoot && this.modalRoot.contains(element) && typeof element.scrollIntoView === "function") {
-      element.scrollIntoView({ block: "nearest", inline: "nearest" });
+    if (this.modalRoot && this.modalRoot.contains(element)) {
+      const scrollHost = this.getScrollHostForElement(element);
+      this.ensureElementVisibleInScrollHost(element, scrollHost);
     }
   }
 
@@ -5397,11 +6398,13 @@ export class Game {
     const active = document.activeElement;
     if (!this.isNavigableElement(active) || !focusables.includes(active)) {
       this.focusUiElement(focusables[0]);
+      this.flashUiInteractionTarget(focusables[0], { durationMs: 80 });
       return;
     }
     const next = this.findDirectionalUiTarget(active, dx, dy);
     if (next) {
       this.focusUiElement(next);
+      this.flashUiInteractionTarget(next, { durationMs: 80 });
     }
   }
 
@@ -5437,6 +6440,154 @@ export class Game {
     return modal.querySelector(".modal-body") || modal;
   }
 
+  getUiInteractionAckElement(element) {
+    if (!(element instanceof HTMLElement)) {
+      return null;
+    }
+    return element.closest(
+      ".magic-card, .pack-item-row, .paper-slot, .hub-tab, .hub-filter-chip, .action-button, .menu-button, .tiny-button, .spell-learn-card, .choice-card, .dock-slot, .utility-menu-button, .spell-tray-card"
+    ) || element;
+  }
+
+  flashUiInteractionTarget(element, options = {}) {
+    const target = this.getUiInteractionAckElement(element);
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const durationMs = Math.max(60, Number(options.durationMs) || 90);
+    const previousAnimation = this.uiInteractionAckHandles.get(target);
+    if (previousAnimation && typeof previousAnimation.cancel === "function") {
+      previousAnimation.cancel();
+    }
+    if (typeof target.animate !== "function") {
+      return;
+    }
+    const animation = target.animate([
+      { filter: "brightness(1) saturate(1)", transform: "translateY(0)" },
+      { filter: "brightness(1.08) saturate(1.06)", transform: "translateY(-1px)" },
+      { filter: "brightness(1) saturate(1)", transform: "translateY(0)" }
+    ], {
+      duration: durationMs,
+      easing: "ease-out"
+    });
+    this.uiInteractionAckHandles.set(target, animation);
+    const clearAnimation = () => {
+      if (this.uiInteractionAckHandles.get(target) === animation) {
+        this.uiInteractionAckHandles.delete(target);
+      }
+    };
+    animation.addEventListener("finish", clearAnimation, { once: true });
+    animation.addEventListener("cancel", clearAnimation, { once: true });
+  }
+
+  cancelModalInteractionFeedback() {
+    this.clearDeferredUiTask(this.pendingModalFeedbackHandle, this.pendingModalFeedbackMode);
+    this.pendingModalFeedbackHandle = 0;
+    this.pendingModalFeedbackMode = "";
+  }
+
+  ensureModalInteractionFeedbackHost() {
+    const modal = this.getModalElement();
+    if (!(modal instanceof HTMLElement)) {
+      return null;
+    }
+    let host = modal.querySelector("[data-modal-interaction-feedback]");
+    if (host instanceof HTMLElement) {
+      return host;
+    }
+    host = document.createElement("div");
+    host.className = "modal-interaction-feedback";
+    host.hidden = true;
+    host.setAttribute("data-modal-interaction-feedback", "true");
+    host.setAttribute("role", "status");
+    host.setAttribute("aria-live", "polite");
+    const title = modal.querySelector(".modal-title");
+    if (title?.nextSibling) {
+      title.parentNode.insertBefore(host, title.nextSibling);
+    } else if (title?.parentNode) {
+      title.parentNode.appendChild(host);
+    } else {
+      modal.prepend(host);
+    }
+    return host;
+  }
+
+  syncModalInteractionFeedbackHost() {
+    const host = this.ensureModalInteractionFeedbackHost();
+    if (!(host instanceof HTMLElement)) {
+      return null;
+    }
+    const { message, tone } = this.modalInteractionFeedback || { message: "", tone: "" };
+    const hasMessage = typeof message === "string" && message.length > 0;
+    host.hidden = !hasMessage;
+    host.textContent = hasMessage ? message : "";
+    host.className = `modal-interaction-feedback${hasMessage ? " visible" : ""}${tone ? ` ${tone}` : ""}`;
+    if (tone) {
+      host.dataset.tone = tone;
+    } else {
+      delete host.dataset.tone;
+    }
+    return host;
+  }
+
+  clearModalInteractionFeedback() {
+    this.cancelModalInteractionFeedback();
+    this.modalInteractionFeedback = { message: "", tone: "" };
+    this.syncModalInteractionFeedbackHost();
+  }
+
+  showModalInteractionFeedback(message, tone = "info", options = {}) {
+    const text = typeof message === "string" ? message.trim() : "";
+    if (!text) {
+      this.clearModalInteractionFeedback();
+      return;
+    }
+    const persistMs = Math.max(0, Number(options.persistMs) || 1200);
+    this.cancelModalInteractionFeedback();
+    this.modalInteractionFeedback = {
+      message: text,
+      tone: tone || "info"
+    };
+    this.syncModalInteractionFeedbackHost();
+    if (persistMs <= 0 || typeof window === "undefined") {
+      return;
+    }
+    this.pendingModalFeedbackHandle = window.setTimeout(() => {
+      this.pendingModalFeedbackHandle = 0;
+      this.pendingModalFeedbackMode = "";
+      this.modalInteractionFeedback = { message: "", tone: "" };
+      this.syncModalInteractionFeedbackHost();
+    }, persistMs);
+    this.pendingModalFeedbackMode = "timeout";
+  }
+
+  getScrollHostForElement(element) {
+    if (!(element instanceof HTMLElement)) {
+      return this.getModalScrollHost();
+    }
+    return element.closest(".pack-list-panel, .message-log, .journal-log, .modal-body, .modal, .modal-root")
+      || this.getModalScrollHost();
+  }
+
+  ensureElementVisibleInScrollHost(element, scrollHost, padding = 10) {
+    if (!(element instanceof HTMLElement) || !(scrollHost instanceof HTMLElement)) {
+      return false;
+    }
+    const elementRect = element.getBoundingClientRect();
+    const hostRect = scrollHost.getBoundingClientRect();
+    const topBound = hostRect.top + padding;
+    const bottomBound = hostRect.bottom - padding;
+    if (elementRect.top < topBound) {
+      scrollHost.scrollTop += elementRect.top - topBound;
+      return true;
+    }
+    if (elementRect.bottom > bottomBound) {
+      scrollHost.scrollTop += elementRect.bottom - bottomBound;
+      return true;
+    }
+    return false;
+  }
+
   getFocusKeyCandidates(focusTarget) {
     const raw = Array.isArray(focusTarget) ? focusTarget : [focusTarget];
     return [...new Set(raw.filter((key) => typeof key === "string" && key.length > 0))];
@@ -5460,8 +6611,20 @@ export class Game {
       return null;
     }
     const root = this.getUiNavigationRoot();
+    const cache = this.getUiNavigationCache(root);
+    const cached = cache.focusKeyMap.get(focusKey);
+    if (this.isNavigableElement(cached)) {
+      return cached;
+    }
+    if (cached) {
+      this.rebuildUiNavigationCache(root);
+      const refreshed = this.uiNavigationCache.focusKeyMap.get(focusKey);
+      if (this.isNavigableElement(refreshed)) {
+        return refreshed;
+      }
+    }
     return Array.from(root.querySelectorAll("[data-focus-key]"))
-      .find((element) => element.dataset.focusKey === focusKey && element.offsetParent !== null && !element.disabled) || null;
+      .find((element) => element.dataset.focusKey === focusKey && this.isNavigableElement(element)) || null;
   }
 
   getElementOffsetInModal(element, modal = this.getModalScrollHost()) {
@@ -5552,13 +6715,6 @@ export class Game {
     }
   }
 
-  getScrollHostForElement(element) {
-    if (!(element instanceof HTMLElement)) {
-      return null;
-    }
-    return element.closest(".pack-list-panel, .message-log, .journal-log, .modal-body, .modal, .modal-root");
-  }
-
   handleUiScrollIntent(delta) {
     const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const host = this.getScrollHostForElement(active) || this.getModalScrollHost() || this.modalRoot;
@@ -5596,9 +6752,39 @@ export class Game {
       });
   }
 
-  applyControllerNavigationMetadata() {
-    const root = this.getUiNavigationRoot();
-    if (!root) {
+  applyShellNavigationMetadata(root) {
+    if (this.layoutMode === "desktop") {
+      const menuButtons = Array.from(this.desktopOverlay?.querySelectorAll(".desktop-shell-menu-row button") || []);
+      const verbButtons = Array.from(this.desktopVerbHost?.querySelectorAll("button") || []);
+      const quickslotButtons = Array.from(this.desktopQuickslotsHost?.querySelectorAll("button") || []);
+      this.assignNavMetadata(menuButtons, "desktop-menu", 4);
+      this.assignNavMetadata(verbButtons, "desktop-verbs", 4);
+      this.assignNavMetadata(quickslotButtons, "desktop-quickslots", Math.max(1, quickslotButtons.length));
+      if (menuButtons[0] && verbButtons[0]) {
+        menuButtons.forEach((element) => {
+          element.dataset.navDown = verbButtons[0].dataset.focusKey;
+        });
+        verbButtons.forEach((element) => {
+          element.dataset.navUp = menuButtons[0].dataset.focusKey;
+        });
+      }
+      if (verbButtons[verbButtons.length - 1] && quickslotButtons[0]) {
+        verbButtons[verbButtons.length - 1].dataset.navRight = quickslotButtons[0].dataset.focusKey;
+        quickslotButtons[0].dataset.navLeft = verbButtons[verbButtons.length - 1].dataset.focusKey;
+      }
+      if (this.mapCanvas && !this.desktopOverlayMapHost?.classList.contains("hidden")) {
+        this.mapCanvas.tabIndex = 0;
+        this.mapCanvas.dataset.focusKey = this.mapCanvas.dataset.focusKey || "map:canvas";
+        this.mapCanvas.dataset.navZone = "desktop-map";
+        this.mapCanvas.dataset.navRow = "0";
+        this.mapCanvas.dataset.navCol = "0";
+        if (quickslotButtons[0]) {
+          this.mapCanvas.dataset.navUp = quickslotButtons[0].dataset.focusKey;
+          quickslotButtons.forEach((element) => {
+            element.dataset.navDown = this.mapCanvas.dataset.focusKey;
+          });
+        }
+      }
       return;
     }
     this.assignNavMetadata(
@@ -5607,10 +6793,11 @@ export class Game {
         this.quickLoadButton,
         this.mapToggleButton,
         this.spellTrayToggleButton,
-        document.getElementById("utility-menu-button")
+        this.topMusicButton,
+        this.utilityMenuButton
       ].filter(Boolean),
       "top-band",
-      5
+      6
     );
     if (this.mapCanvas) {
       this.mapCanvas.tabIndex = 0;
@@ -5620,112 +6807,74 @@ export class Game {
       this.mapCanvas.dataset.navCol = "0";
     }
     this.assignNavMetadata(Array.from(this.actionBar?.querySelectorAll("button") || []), "action-bar", 4);
-    this.assignNavMetadata(Array.from(root.querySelectorAll("#spell-tray button")), "spell-tray", this.layoutMode === "desktop" ? 1 : 2);
+    this.assignNavMetadata(Array.from(root?.querySelectorAll("#spell-tray button") || []), "spell-tray", this.layoutMode === "desktop" ? 1 : 2);
     this.assignNavMetadata(Array.from(this.touchControls?.querySelectorAll("button") || []), "touch-pad", 3);
-    this.assignNavMetadata(Array.from(root.querySelectorAll(".title-actions button")), "title-actions", 3);
-    this.assignNavMetadata(Array.from(root.querySelectorAll("[data-role='title-music-toggle']")), "title-music", 1);
-    const creationName = root.querySelector("#hero-name");
-    const creationActions = Array.from(root.querySelectorAll("[data-focus-key='creation:back'], [data-focus-key='creation:begin']"));
-    if (creationName) {
-      this.ensureFocusKey(creationName, "creation:name");
-      creationName.dataset.navZone = "name";
-      creationName.dataset.navRow = "0";
-      creationName.dataset.navCol = "0";
-    }
-    const raceChoices = Array.from(root.querySelectorAll("#race-choice [data-race]"));
-    const classChoices = Array.from(root.querySelectorAll("#class-choice [data-class]"));
-    this.assignNavMetadata(raceChoices, "race-grid", 1);
-    this.assignNavMetadata(classChoices, "class-grid", 1);
-    const resetButton = root.querySelector("[data-action='creation-reset-stats']");
-    if (resetButton) {
-      this.ensureFocusKey(resetButton, "creation:reset-stats");
-      resetButton.dataset.navZone = "stats";
-      resetButton.dataset.navRow = "0";
-      resetButton.dataset.navCol = "2";
-    }
-    const statButtons = Array.from(root.querySelectorAll(".creation-stat-button"));
-    this.assignNavMetadata(statButtons, "stats", 2, 1);
-    this.assignNavMetadata(creationActions, "creation-actions", 2);
-    if (creationName && raceChoices[0]) {
-      creationName.dataset.navDown = raceChoices[0].dataset.focusKey;
-    }
-    raceChoices.forEach((element, index) => {
-      if (creationName) {
-        element.dataset.navUp = creationName.dataset.focusKey;
-      }
-      const nextClass = classChoices[Math.min(index, classChoices.length - 1)];
-      if (nextClass) {
-        element.dataset.navDown = nextClass.dataset.focusKey;
-      }
-    });
-    classChoices.forEach((element, index) => {
-      const priorRace = raceChoices[Math.min(index, raceChoices.length - 1)];
-      if (priorRace) {
-        element.dataset.navUp = priorRace.dataset.focusKey;
-      }
-      if (statButtons[0]) {
-        element.dataset.navDown = statButtons[0].dataset.focusKey;
-      }
-    });
-    statButtons.forEach((element) => {
-      if (classChoices[0]) {
-        element.dataset.navUp = classChoices[0].dataset.focusKey;
-      }
-    });
-    const lastStatButton = statButtons[statButtons.length - 1];
-    if (lastStatButton && creationActions[0]) {
-      lastStatButton.dataset.navDown = creationActions[0].dataset.focusKey;
-    }
-    creationActions.forEach((element) => {
-      if (statButtons[statButtons.length - 1]) {
-        element.dataset.navUp = statButtons[statButtons.length - 1].dataset.focusKey;
-      }
-    });
+  }
+
+  assignModalActionNavigation(root, columns = 3) {
+    this.assignNavMetadata(Array.from(root.querySelectorAll(".modal-actions button")), "modal-actions", columns);
+  }
+
+  applyHubNavigationMetadata(root) {
     this.assignNavMetadata(Array.from(root.querySelectorAll(".hub-tabs .hub-tab")), "hub-tabs", 3);
-    this.assignNavMetadata(Array.from(root.querySelectorAll(".pack-paperdoll .paper-slot")), "equipment", 2);
-    const packFilters = Array.from(root.querySelectorAll(".pack-filter-row .hub-filter-chip"));
-    const magicFilters = Array.from(root.querySelectorAll(".magic-filter-row .hub-filter-chip"));
-    const spellLearnFilters = Array.from(root.querySelectorAll(".spell-learn-filter-row .hub-filter-chip"));
-    const shopPanels = Array.from(root.querySelectorAll(".shop-panel-row .hub-filter-chip"));
+    this.assignModalActionNavigation(root);
+    if (this.activeHubTab === "pack") {
+      this.assignNavMetadata(Array.from(root.querySelectorAll(".pack-paperdoll .paper-slot")), "equipment", 2);
+      const packFilters = Array.from(root.querySelectorAll(".pack-filter-row .hub-filter-chip"));
+      const packItems = Array.from(root.querySelectorAll(".pack-group-list .pack-item-row"));
+      this.assignNavMetadata(packFilters, "inventory-filters", 4);
+      this.assignNavMetadata(packItems, "inventory-list", 1);
+      if (packItems[0] && packFilters[0]) {
+        packFilters.forEach((element) => {
+          element.dataset.navDown = packItems[0].dataset.focusKey;
+        });
+        packItems.forEach((element) => {
+          element.dataset.navUp = packFilters[0].dataset.focusKey;
+        });
+      }
+      this.assignNavMetadata(
+        Array.from(root.querySelectorAll(".pack-inspector-panel .pack-ready-chip, .pack-inspector-panel .menu-button, .pack-inspector-panel .tiny-button, .pack-inspector-panel [data-action='toggle-do-not-sell']")),
+        "inspector-actions",
+        2
+      );
+      return;
+    }
+    if (this.activeHubTab === "magic") {
+      const magicFilters = Array.from(root.querySelectorAll(".magic-filter-row .hub-filter-chip"));
+      const magicFeatureButtons = Array.from(root.querySelectorAll(".magic-feature-actions .menu-button"));
+      const magicGridButtons = Array.from(root.querySelectorAll(".magic-grid button"));
+      this.assignNavMetadata(magicFilters, "magic-filters", 4);
+      this.assignNavMetadata(magicFeatureButtons, "magic-feature", 2);
+      this.assignNavMetadata(magicGridButtons, "spell-grid", 2);
+      if (magicFeatureButtons[0]) {
+        magicFilters.forEach((element) => {
+          element.dataset.navDown = magicFeatureButtons[0].dataset.focusKey;
+        });
+        magicFeatureButtons.forEach((element) => {
+          if (magicFilters[0]) {
+            element.dataset.navUp = magicFilters[0].dataset.focusKey;
+          }
+          if (magicGridButtons[0]) {
+            element.dataset.navDown = magicGridButtons[0].dataset.focusKey;
+          }
+        });
+      } else if (magicGridButtons[0]) {
+        magicFilters.forEach((element) => {
+          element.dataset.navDown = magicGridButtons[0].dataset.focusKey;
+        });
+      }
+      if (magicGridButtons[0]) {
+        magicGridButtons.forEach((element) => {
+          element.dataset.navUp = magicFeatureButtons[0]?.dataset.focusKey || magicFilters[0]?.dataset.focusKey || "";
+        });
+      }
+      return;
+    }
     const journalSections = Array.from(root.querySelectorAll(".journal-section-row .hub-filter-chip"));
-    const packItems = Array.from(root.querySelectorAll(".pack-group-list .pack-item-row"));
-    this.assignNavMetadata(packFilters, "inventory-filters", 4);
-    this.assignNavMetadata(magicFilters, "magic-filters", 4);
-    this.assignNavMetadata(spellLearnFilters, "spell-learn-filters", 4);
-    this.assignNavMetadata(shopPanels, "shop-panels", 2);
-    this.assignNavMetadata(journalSections, "journal-sections", 4);
-    this.assignNavMetadata(packItems, "inventory-list", 1);
-    if (packItems[0]) {
-      packFilters.forEach((element) => {
-        element.dataset.navDown = packItems[0].dataset.focusKey;
-      });
-      packItems.forEach((element) => {
-        element.dataset.navUp = packFilters[0].dataset.focusKey;
-      });
-    }
-    this.assignNavMetadata(Array.from(root.querySelectorAll(".pack-inspector-panel .pack-ready-chip, .pack-inspector-panel .menu-button, .pack-inspector-panel .tiny-button, .pack-inspector-panel [data-action='toggle-sale-mark']")), "inspector-actions", 2);
-    this.assignNavMetadata(Array.from(root.querySelectorAll(".magic-grid button")), "spell-grid", 2);
-    const magicGridButtons = Array.from(root.querySelectorAll(".magic-grid button"));
-    if (magicGridButtons[0]) {
-      magicFilters.forEach((element) => {
-        element.dataset.navDown = magicGridButtons[0].dataset.focusKey;
-      });
-    }
-    this.assignNavMetadata(Array.from(root.querySelectorAll(".spell-learn-grid .spell-learn-card")), "spell-learn-grid", 2);
-    const spellLearnCards = Array.from(root.querySelectorAll(".spell-learn-grid .spell-learn-card"));
-    if (spellLearnCards[0]) {
-      spellLearnFilters.forEach((element) => {
-        element.dataset.navDown = spellLearnCards[0].dataset.focusKey;
-      });
-      spellLearnCards.forEach((element) => {
-        if (spellLearnFilters[0]) {
-          element.dataset.navUp = spellLearnFilters[0].dataset.focusKey;
-        }
-      });
-    }
-    this.assignNavMetadata(Array.from(root.querySelectorAll(".journal-log")), "journal-log", 1);
-    this.assignNavMetadata(Array.from(root.querySelectorAll(".utility-row .menu-button")), "journal-actions", 4);
     const journalLogs = Array.from(root.querySelectorAll(".journal-log"));
+    this.assignNavMetadata(journalSections, "journal-sections", 4);
+    this.assignNavMetadata(journalLogs, "journal-log", 1);
+    this.assignNavMetadata(Array.from(root.querySelectorAll(".utility-row .menu-button")), "journal-actions", 4);
     if (journalLogs[0]) {
       journalSections.forEach((element) => {
         element.dataset.navDown = journalLogs[0].dataset.focusKey || "journal-log";
@@ -5736,11 +6885,16 @@ export class Game {
         element.dataset.navUp = journalSections[0].dataset.focusKey;
       });
     }
-    this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='shop-buy']")), "shop-buy", 1);
-    const shopSellControls = Array.from(root.querySelectorAll("[data-action='shop-sell'], [data-action='toggle-sale-mark'][data-shop-sell-row='true']"));
-    this.assignNavMetadata(shopSellControls, "shop-sell", 1);
+  }
+
+  applyShopNavigationMetadata(root) {
+    const shopPanels = Array.from(root.querySelectorAll(".shop-panel-row .hub-filter-chip"));
     const shopBuyButtons = Array.from(root.querySelectorAll("[data-action='shop-buy']"));
-    const shopSellButtons = shopSellControls;
+    const shopSellButtons = Array.from(root.querySelectorAll("[data-action='shop-sell'], [data-action='toggle-do-not-sell'][data-shop-sell-row='true']"));
+    this.assignNavMetadata(shopPanels, "shop-panels", 2);
+    this.assignNavMetadata(shopBuyButtons, "shop-buy", 1);
+    this.assignNavMetadata(shopSellButtons, "shop-sell", 1);
+    this.assignModalActionNavigation(root);
     if (shopBuyButtons[0]) {
       shopPanels.forEach((element) => {
         if (element.dataset.panel === "buy") {
@@ -5755,13 +6909,156 @@ export class Game {
         }
       });
     }
-    this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='service-use']")), "services", 1);
+  }
+
+  applyUtilityMenuNavigationMetadata(root) {
+    this.assignNavMetadata(Array.from(root.querySelectorAll(".utility-menu-group-primary .action-button")), "utility-primary", 2);
+    this.assignNavMetadata(Array.from(root.querySelectorAll(".utility-menu-secondary-links .action-button")), "utility-secondary", 3);
+    this.assignModalActionNavigation(root, 1);
+  }
+
+  applySettingsNavigationMetadata(root) {
     this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='setting-toggle']")), "settings", 1);
+    this.assignModalActionNavigation(root);
+  }
+
+  applyServiceNavigationMetadata(root) {
+    this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='service-use']")), "services", 1);
+    this.assignModalActionNavigation(root);
+  }
+
+  applyBankNavigationMetadata(root) {
     this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='bank-deposit'], [data-action='bank-withdraw'], [data-action='town-rumor'], [data-action='town-unlock']")), "bank-actions", 4);
     this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='contract-toggle']")), "contracts", 1);
-    this.assignNavMetadata(Array.from(root.querySelectorAll(".spell-learn-card")), "reward-grid", 2);
-    this.assignNavMetadata(Array.from(root.querySelectorAll(".modal-actions button")), "modal-actions", 3);
-    this.assignNavMetadata(Array.from(root.querySelectorAll(".utility-menu-actions .action-button")), "utility-menu", 2);
+    this.assignModalActionNavigation(root);
+  }
+
+  applyModalNavigationMetadata(root) {
+    if (!root) {
+      return;
+    }
+    this.assignNavMetadata(Array.from(root.querySelectorAll(".title-actions button")), "title-actions", 3);
+    this.assignNavMetadata(Array.from(root.querySelectorAll("[data-role='title-music-toggle']")), "title-music", 1);
+    if (root.querySelector(".title-screen")) {
+      return;
+    }
+    const creationName = root.querySelector("#hero-name");
+    if (creationName) {
+      const creationActions = Array.from(root.querySelectorAll("[data-focus-key='creation:back'], [data-focus-key='creation:begin'], [data-focus-key='creation:contract:recommended']"));
+      this.ensureFocusKey(creationName, "creation:name");
+      creationName.dataset.navZone = "name";
+      creationName.dataset.navRow = "0";
+      creationName.dataset.navCol = "0";
+      const raceChoices = Array.from(root.querySelectorAll("#race-choice [data-race]"));
+      const classChoices = Array.from(root.querySelectorAll("#class-choice [data-class]"));
+      this.assignNavMetadata(raceChoices, "race-grid", 1);
+      this.assignNavMetadata(classChoices, "class-grid", 1);
+      const resetButton = root.querySelector("[data-action='creation-reset-stats']");
+      if (resetButton) {
+        this.ensureFocusKey(resetButton, "creation:reset-stats");
+        resetButton.dataset.navZone = "stats";
+        resetButton.dataset.navRow = "0";
+        resetButton.dataset.navCol = "2";
+      }
+      const statButtons = Array.from(root.querySelectorAll(".creation-stat-button"));
+      this.assignNavMetadata(statButtons, "stats", 2, 1);
+      this.assignNavMetadata(creationActions, "creation-actions", 2);
+      if (raceChoices[0]) {
+        creationName.dataset.navDown = raceChoices[0].dataset.focusKey;
+      }
+      raceChoices.forEach((element, index) => {
+        element.dataset.navUp = creationName.dataset.focusKey;
+        const nextClass = classChoices[Math.min(index, classChoices.length - 1)];
+        if (nextClass) {
+          element.dataset.navDown = nextClass.dataset.focusKey;
+        }
+      });
+      classChoices.forEach((element, index) => {
+        const priorRace = raceChoices[Math.min(index, raceChoices.length - 1)];
+        if (priorRace) {
+          element.dataset.navUp = priorRace.dataset.focusKey;
+        }
+        if (statButtons[0]) {
+          element.dataset.navDown = statButtons[0].dataset.focusKey;
+        }
+      });
+      statButtons.forEach((element) => {
+        if (classChoices[0]) {
+          element.dataset.navUp = classChoices[0].dataset.focusKey;
+        }
+      });
+      const lastStatButton = statButtons[statButtons.length - 1];
+      if (lastStatButton && creationActions[0]) {
+        lastStatButton.dataset.navDown = creationActions[0].dataset.focusKey;
+      }
+      creationActions.forEach((element) => {
+        if (lastStatButton) {
+          element.dataset.navUp = lastStatButton.dataset.focusKey;
+        }
+      });
+      return;
+    }
+    const surfaceKey = String(this.modalSurfaceKey || "");
+    if (surfaceKey === "utility-menu") {
+      this.applyUtilityMenuNavigationMetadata(root);
+      return;
+    }
+    if (surfaceKey.startsWith("hub:")) {
+      this.applyHubNavigationMetadata(root);
+      return;
+    }
+    if (surfaceKey.startsWith("shop:")) {
+      this.applyShopNavigationMetadata(root);
+      return;
+    }
+    if (surfaceKey === "settings") {
+      this.applySettingsNavigationMetadata(root);
+      return;
+    }
+    if (surfaceKey === "bank") {
+      this.applyBankNavigationMetadata(root);
+      return;
+    }
+    if (surfaceKey === "sage" || surfaceKey === "temple") {
+      this.applyServiceNavigationMetadata(root);
+      return;
+    }
+    if (this.mode === "levelup") {
+      const spellLearnFilters = Array.from(root.querySelectorAll(".spell-learn-filter-row .hub-filter-chip"));
+      const spellLearnCards = Array.from(root.querySelectorAll(".spell-learn-grid .spell-learn-card"));
+      this.assignNavMetadata(spellLearnFilters, "spell-learn-filters", 4);
+      this.assignNavMetadata(spellLearnCards, "spell-learn-grid", 2);
+      if (spellLearnCards[0]) {
+        spellLearnFilters.forEach((element) => {
+          element.dataset.navDown = spellLearnCards[0].dataset.focusKey;
+        });
+        spellLearnCards.forEach((element) => {
+          if (spellLearnFilters[0]) {
+            element.dataset.navUp = spellLearnFilters[0].dataset.focusKey;
+          }
+        });
+      }
+      this.assignModalActionNavigation(root);
+      return;
+    }
+    this.assignModalActionNavigation(root);
+    this.assignNavMetadata(Array.from(root.querySelectorAll("[data-action='service-use']")), "services", 1);
+  }
+
+  applyControllerNavigationMetadata() {
+    const modalVisible = this.modalRoot && !this.modalRoot.classList.contains("hidden");
+    if (modalVisible) {
+      this.applyModalNavigationMetadata(this.modalRoot);
+      this.rebuildUiNavigationCache(this.modalRoot);
+      return;
+    }
+    const root = this.appShell || document;
+    if (!root) {
+      this.resetUiNavigationCache();
+      return;
+    }
+    this.applyShellNavigationMetadata(root);
+    this.rebuildUiNavigationCache(root);
   }
 
   updateEffects() {
@@ -5798,6 +7095,7 @@ export class Game {
     if (this.visualEffects.length > 48) {
       this.visualEffects.splice(0, this.visualEffects.length - 48);
     }
+    this.startRuntimeLoop();
     if (this.mode === "game" || this.mode === "target") {
       this.renderBoard();
     }
@@ -5813,34 +7111,42 @@ export class Game {
     } = options;
     this.mode = "modal";
     this.showSimpleModal("Device Settings", `
-      <div class="section-block text-block">Travel settings are stored on this device.</div>
-      <div class="shop-row">
-        <div><strong>Touch Controls</strong><div class="muted">Show the on-screen movement pad when not hidden.</div></div>
-        <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="touchControlsEnabled" type="button">${this.settings.touchControlsEnabled ? "On" : "Off"}</button></div>
-      </div>
-      <div class="shop-row">
-        <div><strong>Hide Touch When Controller Connected</strong><div class="muted">Cleaner screen for paired joypads.</div></div>
-        <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="controllerHintsEnabled" type="button">${this.settings.controllerHintsEnabled ? "On" : "Off"}</button></div>
-      </div>
-      <div class="shop-row">
-        <div><strong>Sound Effects</strong><div class="muted">Combat, movement, and UI feedback.</div></div>
-        <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="soundEnabled" type="button">${this.settings.soundEnabled ? "On" : "Off"}</button></div>
-      </div>
-      <div class="shop-row">
-        <div><strong>Music</strong><div class="muted">Optional soundtrack with title, town, and dungeon themes.</div></div>
-        <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="musicEnabled" type="button">${this.settings.musicEnabled ? "On" : "Off"}</button></div>
-      </div>
-      <div class="shop-row">
-        <div><strong>Effect Intensity</strong><div class="muted">Choose how animated combat and board effects should feel.</div></div>
-        <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="effectIntensity" type="button">${this.settings.effectIntensity}</button></div>
-      </div>
-      <div class="shop-row">
-        <div><strong>Reduced Motion</strong><div class="muted">Prefer simpler flashes over animated travel and pulsing effects.</div></div>
-        <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="reducedMotionEnabled" type="button">${this.settings.reducedMotionEnabled ? "On" : "Off"}</button></div>
-      </div>
-      <div class="shop-row">
-        <div><strong>UI Scale</strong><div class="muted">Alternate between compact and large mobile spacing.</div></div>
-        <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="uiScale" type="button">${this.settings.uiScale}</button></div>
+      <div class="workspace-stack settings-sheet">
+        <section class="workspace-hero compact">
+          <div class="workspace-eyebrow">Device Settings</div>
+          <div class="workspace-title">Tune the menu and input feel for this device.</div>
+          <div class="workspace-detail">Touch, motion, sound, and spacing changes apply instantly and stay in browser storage.</div>
+        </section>
+        <section class="settings-stack">
+          <div class="settings-row">
+            <div><strong>Touch Controls</strong><div class="muted">Show the on-screen movement pad when not hidden.</div></div>
+            <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="touchControlsEnabled" type="button">${this.settings.touchControlsEnabled ? "On" : "Off"}</button></div>
+          </div>
+          <div class="settings-row">
+            <div><strong>Hide Touch When Controller Connected</strong><div class="muted">Cleaner screen for paired joypads.</div></div>
+            <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="controllerHintsEnabled" type="button">${this.settings.controllerHintsEnabled ? "On" : "Off"}</button></div>
+          </div>
+          <div class="settings-row">
+            <div><strong>Sound Effects</strong><div class="muted">Combat, movement, and UI feedback.</div></div>
+            <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="soundEnabled" type="button">${this.settings.soundEnabled ? "On" : "Off"}</button></div>
+          </div>
+          <div class="settings-row">
+            <div><strong>Music</strong><div class="muted">Optional soundtrack with title, town, and dungeon themes.</div></div>
+            <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="musicEnabled" type="button">${this.settings.musicEnabled ? "On" : "Off"}</button></div>
+          </div>
+          <div class="settings-row">
+            <div><strong>Effect Intensity</strong><div class="muted">Choose how animated combat and board effects should feel.</div></div>
+            <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="effectIntensity" type="button">${this.settings.effectIntensity}</button></div>
+          </div>
+          <div class="settings-row">
+            <div><strong>Reduced Motion</strong><div class="muted">Prefer simpler flashes over animated travel and pulsing effects.</div></div>
+            <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="reducedMotionEnabled" type="button">${this.settings.reducedMotionEnabled ? "On" : "Off"}</button></div>
+          </div>
+          <div class="settings-row">
+            <div><strong>UI Scale</strong><div class="muted">Alternate between compact and large mobile spacing.</div></div>
+            <div class="actions"><button class="tiny-button" data-action="setting-toggle" data-setting="uiScale" type="button">${this.settings.uiScale}</button></div>
+          </div>
+        </section>
       </div>
     `, {
       surfaceKey: "settings",
@@ -5951,13 +7257,12 @@ export class Game {
 
     this.mode = "modal";
     this.showSimpleModal("Character Sheet", `
-      <div class="character-sheet">
-        <section class="character-sheet-hero">
+      <div class="workspace-stack character-sheet character-sheet-workspace">
+        <section class="workspace-hero character-sheet-hero">
           <div>
-            <div class="field-label">Adventurer</div>
+            <div class="workspace-eyebrow">Adventurer</div>
             <div class="character-sheet-name">${escapeHtml(player.name)}</div>
-            <div class="character-sheet-subtitle">${escapeHtml(`${player.race} ${player.className}`)}</div>
-            <div class="character-sheet-subtitle">${escapeHtml(`${this.currentDepth === 0 ? "Town" : `Depth ${this.currentDepth}`} | Level ${player.level} | Turn ${this.turn}`)}</div>
+            <div class="workspace-detail">${escapeHtml(`${player.race} ${player.className} | ${this.currentDepth === 0 ? "Town" : `Depth ${this.currentDepth}`} | Level ${player.level} | Turn ${this.turn}`)}</div>
             <div class="character-sheet-subtitle">${escapeHtml(activeContract ? `Active contract: ${activeContract.name}` : "Active contract: none armed")}</div>
           </div>
           <div class="character-sheet-tags">
@@ -5995,7 +7300,7 @@ export class Game {
         </section>
 
         <section class="character-sheet-section">
-          <div class="field-label">Attributes</div>
+          <div class="panel-title">Attributes</div>
           <div class="character-sheet-card">
             ${attributeRows}
           </div>
@@ -6003,13 +7308,13 @@ export class Game {
 
         <section class="character-sheet-columns">
           <div class="character-sheet-section">
-            <div class="field-label">Combat</div>
+            <div class="panel-title">Combat</div>
             <div class="character-sheet-card">
               ${combatRows}
             </div>
           </div>
           <div class="character-sheet-section">
-            <div class="field-label">Field</div>
+            <div class="panel-title">Field</div>
             <div class="character-sheet-card">
               ${fieldRows}
             </div>
@@ -6990,7 +8295,7 @@ export class Game {
       this.log(`You pick up ${this.describeItemReadout(item)}.`, "good");
       this.audio.play("good");
     }
-    if (this.currentDepth > 0 && this.floorResolved) {
+    if (this.currentDepth > 0 && this.floorResolved && !this.isQuickHandsUtilityPickup(item)) {
       this.markGreedAction("loot");
     }
   }
@@ -7041,6 +8346,7 @@ export class Game {
 
     for (const item of items.slice()) {
       if (item.kind === "gold") {
+        const quickHandsPickup = this.isQuickHandsUtilityPickup(item);
         removeFromArray(this.currentLevel.items, item);
         const bonus = Object.values(this.player.equipment || {}).reduce((sum, equippedItem) => sum + (equippedItem?.goldBonus || 0), 0);
         const total = Math.round(item.amount * (1 + bonus));
@@ -7049,7 +8355,7 @@ export class Game {
         this.emitReadout(`+${total}g`, this.player.x, this.player.y, "#ebcf60", 420);
         this.log(`You collect ${total} gold.`, "good");
         this.audio.play("good");
-        if (this.currentDepth > 0 && this.floorResolved) {
+        if (this.currentDepth > 0 && this.floorResolved && !quickHandsPickup) {
           this.markGreedAction("loot");
         }
         continue;
@@ -7067,7 +8373,7 @@ export class Game {
 
   addItemToInventory(item) {
     if (item) {
-      item.markedForSale = Boolean(item.markedForSale);
+      item.doNotSell = Boolean(item.doNotSell);
     }
     this.player.inventory.push(item);
   }
@@ -7084,9 +8390,12 @@ export class Game {
     if (item.kind === "spellbook") {
       item.identified = true;
       if (!this.player.spellsKnown.includes(item.spell)) {
+        const trayBefore = new Set(this.getPinnedSpellIds());
         this.player.spellsKnown.push(item.spell);
         this.addSpellToTrayIfSpace(item.spell);
-        this.log(`You learn ${SPELLS[item.spell].name}.`, "good");
+        const spell = SPELLS[item.spell];
+        const trayAdded = !trayBefore.has(item.spell) && this.getPinnedSpellIds().includes(item.spell);
+        this.log(`You learn ${spell.name}. ${this.getSpellMechanicalReadout(spell) || spell.description}${trayAdded ? " Added to the tray." : ""}`, "good");
       } else {
         this.log("That spell is already known.", "warning");
       }
@@ -7356,7 +8665,6 @@ export class Game {
       return;
     }
     if (existing) {
-      existing.markedForSale = false;
       this.player.inventory.push(existing);
     }
     if (!equipTarget.targetSlot) {
@@ -7364,7 +8672,6 @@ export class Game {
     }
     this.player.equipment[equipTarget.targetSlot] = item;
     item.identified = true;
-    item.markedForSale = false;
     removeAt(this.player.inventory, Number(index));
     this.recalculateDerivedStats();
     this.log(`You equip ${getItemName(item, true)}.${item.cursed ? " It bites into you with a cursed grip." : ""}`, item.cursed ? "bad" : "good");
@@ -7385,7 +8692,6 @@ export class Game {
     }
     item.x = this.player.x;
     item.y = this.player.y;
-    item.markedForSale = false;
     this.currentLevel.items.push(item);
     removeAt(this.player.inventory, Number(index));
     this.log(`You drop ${getItemName(item, true)}.`, "warning");
@@ -7400,26 +8706,26 @@ export class Game {
     this.render();
   }
 
-  toggleInventorySaleMark(index, forcedValue = null) {
+  toggleInventoryDoNotSell(index, forcedValue = null) {
     const item = this.player.inventory[Number(index)];
     if (!item) {
       return;
     }
     if (item.kind === "quest") {
-      this.log("Quest items cannot be marked for sale.", "warning");
+      this.log("Quest items are never part of bulk sales.", "warning");
       return;
     }
-    const nextValue = typeof forcedValue === "boolean" ? forcedValue : !item.markedForSale;
-    if (item.markedForSale === nextValue) {
+    const nextValue = typeof forcedValue === "boolean" ? forcedValue : !item.doNotSell;
+    if (item.doNotSell === nextValue) {
       return;
     }
-    item.markedForSale = nextValue;
-    this.log(`${getItemName(item, true)} ${item.markedForSale ? "marked for sale" : "removed from the sale pile"}.`, item.markedForSale ? "good" : "warning");
+    item.doNotSell = nextValue;
+    this.log(`${getItemName(item, true)} ${item.doNotSell ? "marked do not sell" : "removed from the do not sell list"}.`, item.doNotSell ? "good" : "warning");
     if (this.mode === "modal" && this.activeHubTab === "pack") {
       this.showHubModal("pack", {
         selection: { type: "inventory", value: Number(index) },
         preserveScroll: true,
-        focusTarget: this.getPackActionFocusKey("mark", Number(index))
+        focusTarget: this.getPackActionFocusKey("protect", Number(index))
       });
     } else if (this.mode === "modal" && this.pendingShop) {
       this.showShopModal(this.pendingShop.id, this.pendingShop, {
@@ -7449,7 +8755,6 @@ export class Game {
       return;
     }
     this.player.equipment[slot] = null;
-    item.markedForSale = false;
     this.player.inventory.push(item);
     this.recalculateDerivedStats();
     this.log(`You stow ${getItemName(item, true)} in your pack.`, "good");
@@ -7633,16 +8938,16 @@ export class Game {
     this.render();
   }
 
-  sellMarkedItems() {
+  sellUnmarkedItems() {
     if (!this.pendingShop) {
       return;
     }
     const sellableEntries = this.player.inventory
       .map((item, index) => ({ item, index }))
-      .filter(({ item }) => item?.markedForSale)
+      .filter(({ item }) => !item?.doNotSell)
       .filter(({ item }) => this.pendingShop.id === "junk" || shopAcceptsItem(this.pendingShop.id, item));
     if (sellableEntries.length === 0) {
-      this.log("Nothing marked for sale matches this shop.", "warning");
+      this.log("Nothing eligible remains for bulk sale at this shop.", "warning");
       return;
     }
     let totalGold = 0;
@@ -7653,7 +8958,6 @@ export class Game {
         totalGold += price;
         this.player.gold += price;
         item.identified = true;
-        item.markedForSale = false;
         this.recordTelemetry("shop_sell", {
           shopId: this.pendingShop?.id || "unknown",
           itemId: item.id || item.kind || "item",
@@ -7666,10 +8970,10 @@ export class Game {
         }
         removeAt(this.player.inventory, index);
       });
-    this.log(`Sold ${sellableEntries.length} marked item${sellableEntries.length === 1 ? "" : "s"} for ${totalGold} gold.`, "good");
+    this.log(`Sold ${sellableEntries.length} unmarked item${sellableEntries.length === 1 ? "" : "s"} for ${totalGold} gold.`, "good");
     this.showShopModal(this.pendingShop.id, this.pendingShop, {
       preserveScroll: true,
-      focusTarget: "shop:sell-marked",
+      focusTarget: "shop:sell-unmarked",
       panel: "sell"
     });
     this.render();
@@ -7738,28 +9042,35 @@ export class Game {
     return "North road remains the critical path. Convert value quickly, then get back into the keep.";
   }
 
-  applyRunContractWorldModifiers(activeContract = this.getActiveContract(true)) {
-    if (!activeContract || !this.player) {
+  applyRunContractLevelModifiers(level, depth, activeContract = this.getActiveContract(true)) {
+    if (!activeContract || !level || level.kind !== "dungeon") {
+      return;
+    }
+    level.contractModifierFlags = level.contractModifierFlags || {};
+    if (level.contractModifierFlags[activeContract.id]) {
       return;
     }
     if (activeContract.id === "pressed_descent") {
-      this.levels.slice(1).forEach((level, index) => {
-        if (!level || level.kind !== "dungeon") {
-          return;
-        }
-        const pressureCut = index === 0 ? 8 : 4;
-        level.reinforcementClock = Math.max(10, (level.reinforcementClock || 18) - pressureCut);
-      });
+      const pressureCut = depth === 1 ? 8 : 4;
+      level.reinforcementClock = Math.max(10, (level.reinforcementClock || 18) - pressureCut);
+      level.contractModifierFlags[activeContract.id] = true;
       return;
     }
     if (activeContract.id === "scholar_road" || activeContract.id === "route_debt") {
-      this.levels.slice(1).forEach((level) => {
-        if (!level?.guidance) {
-          return;
-        }
-        const revealBonus = activeContract.id === "route_debt" ? 6 : 4;
-        level.guidance.searchRevealChunk = Math.max(level.guidance.searchRevealChunk || 0, (level.guidance.searchRevealChunk || 0) + revealBonus);
-      });
+      if (!level.guidance) {
+        return;
+      }
+      const revealBonus = activeContract.id === "route_debt" ? 6 : 4;
+      level.guidance.searchRevealChunk = (level.guidance.searchRevealChunk || 0) + revealBonus;
+      level.contractModifierFlags[activeContract.id] = true;
+    }
+  }
+
+  applyRunContractPlayerModifiers(activeContract = this.getActiveContract(true)) {
+    if (!activeContract || !this.player) {
+      return;
+    }
+    if (activeContract.id === "scholar_road" || activeContract.id === "route_debt") {
       if (activeContract.id === "route_debt") {
         this.grantRumorToken?.(1);
       }
@@ -7783,6 +9094,25 @@ export class Game {
       this.addItemToInventory(createTownItem("healingPotion"));
       this.addItemToInventory(createTownItem("manaPotion"));
       this.addItemToInventory(createTownItem("torchCharm"));
+    }
+  }
+
+  applyRunContractWorldModifiers(activeContract = this.getActiveContract(true), options = {}) {
+    const {
+      includePlayer = true,
+      startDepth = 1,
+      endDepth = this.levels.length - 1
+    } = options;
+    if (!activeContract) {
+      return;
+    }
+    if (includePlayer) {
+      this.applyRunContractPlayerModifiers(activeContract);
+    }
+    const firstDepth = Math.max(1, Math.floor(startDepth));
+    const lastDepth = Math.min(this.levels.length - 1, Math.max(firstDepth, Math.floor(endDepth)));
+    for (let depth = firstDepth; depth <= lastDepth; depth += 1) {
+      this.applyRunContractLevelModifiers(this.levels[depth], depth, activeContract);
     }
   }
 
@@ -8349,84 +9679,6 @@ export class Game {
     return summary;
   }
 
-  showExtractionSummaryModal(summary = this.lastRunSummary, extras = {}) {
-    if (!summary) {
-      return;
-    }
-    const persistentChanges = Array.isArray(summary.persistentChanges) ? summary.persistentChanges : [];
-    const unlockedText = extras.unlockedContracts?.length > 0
-      ? extras.unlockedContracts.join(", ")
-      : "No new contract unlock this return.";
-    const masteryText = extras.masteryUnlock
-      ? `${extras.masteryUnlock.name}. ${extras.masteryUnlock.description}`
-      : this.getClassMasterySummary(this.player?.classId);
-    const activeContract = this.getActiveContract(true);
-    const townMeta = this.getTownMetaSummary();
-    const nextRunIntent = this.getNextRunIntent(this.player?.classId);
-    const carryForward = this.getTownCarryForwardSummary();
-    const commendationText = extras.commendationUnlocks?.length > 0
-      ? extras.commendationUnlocks.map((entry) => `${entry.name} (${entry.rewardLabel})`).join(" | ")
-      : "No new commendation unlock this return.";
-    this.recordTelemetry("return_summary_opened", {
-      outcome: summary.outcome,
-      extractedDepth: summary.extractedDepth
-    });
-    this.mode = "modal";
-    this.showSimpleModal("Return Summary", `
-      <div class="section-block text-block">
-        Banked a clean return from ${escapeHtml(extras.level?.description || "the keep")} after ${summary.turns} turns.
-      </div>
-      ${persistentChanges.length > 0 ? `
-        <div class="section-block text-block">
-          <strong>Permanent change:</strong> ${escapeHtml(persistentChanges.join(" | "))}
-        </div>
-      ` : ""}
-      <div class="section-block">
-        <div class="field-label">Run Build</div>
-        <div class="text-block">
-          First objective: ${escapeHtml(summary.firstObjectiveType || "unknown")}<br>
-          Searches: ${summary.searchCount} | Greed rooms: ${summary.greedCount} | Elite kills: ${summary.eliteKills || 0} | Return value: ${summary.returnValue} gp<br><br>
-          What mattered: objective clear turn ${summary.firstObjectiveClearTurn ?? "?"}, deepest depth ${summary.deepestDepth}, active contract ${escapeHtml(activeContract?.name || "none")}
-        </div>
-      </div>
-      <div class="section-block">
-        <div class="field-label">Floor Rewards</div>
-        <div class="text-block">
-          Cleared depth ${summary.extractedDepth} with ${summary.modalOpenCounts.pack} pack checks, ${summary.modalOpenCounts.magic} magic checks, and ${summary.modalOpenCounts.journal} journal checks.<br><br>
-          Greed taken: ${summary.greedCount} | Carried or banked value: ${summary.returnValue} gp
-        </div>
-      </div>
-      <div class="section-block">
-        <div class="field-label">Town Persistence</div>
-        <div class="text-block">
-          Mastery: ${escapeHtml(masteryText)}<br><br>
-          Contracts: ${escapeHtml(unlockedText)}<br><br>
-          Commendations: ${escapeHtml(commendationText)}<br><br>
-          Active next-run contract: ${escapeHtml(this.getActiveContract(false)?.name || "No contract armed")}<br><br>
-          ${escapeHtml(carryForward)}
-        </div>
-      </div>
-      <div class="section-block">
-        <div class="field-label">Next Step</div>
-        <div class="text-block">
-          ${escapeHtml(townMeta.recommendedActionLabel)}<br><br>
-          ${escapeHtml(townMeta.recommendedAction)}<br><br>
-          ${escapeHtml(townMeta.recommendedReason)}
-        </div>
-      </div>
-      <div class="section-block">
-        <div class="field-label">Why Run Again</div>
-        <div class="text-block">${nextRunIntent.motivators.map((entry) => escapeHtml(`${entry.label} ${entry.detail}`)).join("<br><br>")}</div>
-      </div>
-      <div class="modal-actions">
-        <button class="menu-button primary" data-action="open-bank" data-focus-key="return-summary:bank" type="button">Open Bank Plan</button>
-        <button class="menu-button" data-action="close-modal" data-focus-key="return-summary:continue" type="button">Continue</button>
-      </div>
-    `, {
-      surfaceKey: "return-summary"
-    });
-  }
-
   syncTownCycle(force = false, announce = false) {
     const currentCycle = this.getTownCycleState();
     const previousCycle = this.getTownCycleState(Math.max(1, this.lastTownRefreshTurn || 1));
@@ -8874,7 +10126,7 @@ export class Game {
       return false;
     }
     this.spellTrayOpen = true;
-    this.pendingSpell = this.pendingSpell && this.player.spellsKnown.includes(this.pendingSpell)
+    this.pendingSpell = pinned.includes(this.pendingSpell)
       ? this.pendingSpell
       : pinned[0];
     this.refreshChrome();
@@ -8901,6 +10153,7 @@ export class Game {
       && this.mode !== "creation"
       && this.mode !== "modal"
       && this.mode !== "levelup"
+      && this.layoutMode !== "desktop"
       && (this.spellTrayOpen || (this.mode === "target" && this.targetMode?.type === "spell"))
     );
   }
@@ -8915,9 +10168,7 @@ export class Game {
         ? (preview.valid
           ? `Will hit ${preview.hitCount} foe${preview.hitCount === 1 ? "" : "s"}${preview.targetingMode === "blast" ? " in the blast" : ""}.`
           : preview.reason || "Move the cursor to a better cast.")
-        : activeSpell.target === "self"
-          ? `${getSpellCategoryLabel(activeSpell)} spell. Self cast resolves immediately.`
-          : `${getSpellCategoryLabel(activeSpell)} | ${this.getSpellTargetingLabel(activeSpell)} | ${activeSpell.description}`
+        : this.getSpellMechanicalReadout(activeSpell) || activeSpell.description
       : "No spell selected.";
     const focusTone = this.mode === "target" && preview && !preview.valid ? "invalid" : "valid";
     const rows = spellIds.map((spellId) => {
@@ -8925,22 +10176,13 @@ export class Game {
       if (!spell) {
         return "";
       }
+      const iconMeta = this.getSpellIconMeta(spell);
       const manaCost = getSpellCost(this, spell);
       const overcast = this.player.mana < manaCost;
       const active = activeSpellId === spellId;
-      const categoryLabel = getSpellCategoryLabel(spell);
       return `
-        <button class="spell-tray-card${active ? " active" : ""}${overcast ? " warning" : ""}" data-action="spell-select" data-double-action="spell-cast" data-surface="tray" data-spell="${spellId}" data-focus-key="spell-tray:${spellId}" type="button">
-          <span class="spell-tray-card-head">
-            <span class="spell-tray-card-title">${escapeHtml(spell.name)}</span>
-            <span class="spell-tray-card-cost">${manaCost} mana${overcast ? " / overcast" : ""}</span>
-          </span>
-          <span class="spell-tray-card-badges">
-            <span class="spell-badge accent">${escapeHtml(categoryLabel)}</span>
-            <span class="spell-badge">${escapeHtml(capitalize(spell.school || "spell"))}</span>
-            <span class="spell-badge subtle">${escapeHtml(this.getSpellTargetingLabel(spell))}</span>
-          </span>
-          <span class="spell-tray-card-copy">${escapeHtml(spell.description)}</span>
+        <button class="spell-tray-card${active ? " active" : ""}${overcast ? " warning" : ""}" data-action="spell-select" data-double-action="spell-cast" data-surface="tray" data-spell="${spellId}" data-focus-key="spell-tray:${spellId}" type="button" aria-label="${escapeHtml(`Select ${spell.name}`)}" title="${escapeHtml(`${spell.name} · ${manaCost} mana${overcast ? " · overcast" : ""}`)}">
+          <span class="spell-tray-card-symbol" aria-hidden="true">${escapeHtml(iconMeta.symbol)}</span>
         </button>
       `;
     }).join("");
@@ -8956,7 +10198,7 @@ export class Game {
         <div class="spell-tray-summary ${focusTone}">
           <div class="spell-tray-summary-head">
             <strong>${escapeHtml(activeSpell?.name || "Spell ready")}</strong>
-            <span>${escapeHtml(activeSpell ? `${getSpellCost(this, activeSpell)} mana | ${getSpellCategoryLabel(activeSpell)} | ${this.getSpellTargetingLabel(activeSpell)}` : "")}</span>
+            <span>${escapeHtml(activeSpell ? `${getSpellCost(this, activeSpell)} mana | ${getSpellCategoryLabel(activeSpell)} | ${this.getSpellUiTargetingLabel(activeSpell)}` : "")}</span>
           </div>
           <div class="spell-tray-summary-copy">${escapeHtml(focusState)}</div>
           <div class="spell-tray-summary-actions">
@@ -8987,20 +10229,6 @@ export class Game {
       this.lastSpellTrayMarkup = markup;
     }
     this.spellTray.classList.remove("hidden");
-  }
-
-  syncContextChip() {
-    if (!this.contextChip) {
-      return;
-    }
-    const prompt = this.getTileActionPrompt();
-    if (!prompt || this.mode === "title" || this.mode === "creation") {
-      this.contextChip.classList.add("hidden");
-      this.contextChip.textContent = "";
-      return;
-    }
-    this.contextChip.textContent = `${prompt.label}: ${prompt.detail}`;
-    this.contextChip.className = `context-chip tone-${prompt.tone || "good"}`;
   }
 
   showNextProgressionModal() {
@@ -9173,7 +10401,7 @@ export class Game {
   getViewport() {
     const half = Math.floor(VIEW_SIZE / 2);
     let vx = this.player ? this.player.x - half : 0;
-    let vy = this.player ? this.player.y - half : 0;
+    let vy = this.player ? this.player.y - this.getViewportAnchorRow() : 0;
     vx = clamp(vx, 0, Math.max(0, this.currentLevel.width - VIEW_SIZE));
     vy = clamp(vy, 0, Math.max(0, this.currentLevel.height - VIEW_SIZE));
     return { x: vx, y: vy };
@@ -9382,8 +10610,8 @@ export class Game {
                   <button class="spell-learn-card" data-action="learn-spell" data-spell="${spell.id}" data-focus-key="learn-spell:${spell.id}" type="button">
                     <span class="spell-learn-tier">${escapeHtml(`${group.label} | ${spell.classAffinity === "shared" ? "Shared" : capitalize(spell.classAffinity || "shared")} | Tier ${spell.tier || 1}`)}</span>
                     <span class="spell-learn-name">${escapeHtml(spell.name)}</span>
-                    <span class="spell-learn-meta">${escapeHtml(`${capitalize(spell.school || "spell")} | ${spell.target === "monster" ? `Range ${spell.range || 1}` : "Self cast"} | ${getSpellCost(this, spell)} mana`)}</span>
-                    <span class="spell-learn-copy">${escapeHtml(spell.description)}</span>
+                    <span class="spell-learn-meta">${escapeHtml(`${capitalize(spell.school || "spell")} | ${spell.target === "monster" ? `Range ${spell.range || 1}` : "Self cast"} | ${getSpellCost(this, spell)} mana | ${this.getSpellUnlockTimingText(spell)}`)}</span>
+                    <span class="spell-learn-copy">${escapeHtml(this.getSpellCardCopy(spell))}</span>
                   </button>
                 `).join("")}
               </div>
@@ -9394,6 +10622,7 @@ export class Game {
       </div>
     `;
     this.modalRoot.classList.remove("hidden");
+    this.applyModalSurfacePresentation("spell-study", this.modalRoot.querySelector(".modal"));
     this.applyControllerNavigationMetadata();
     this.focusFirstUiElement();
   }
@@ -9408,9 +10637,11 @@ export class Game {
     }
 
     this.player.spellsKnown.push(spellId);
+    const trayBefore = new Set(this.getPinnedSpellIds());
     this.addSpellToTrayIfSpace(spellId);
     this.pendingSpellChoices = Math.max(0, this.pendingSpellChoices - 1);
-    this.log(`${this.player.name} learns ${spell.name}.`, "good");
+    const trayAdded = !trayBefore.has(spellId) && this.getPinnedSpellIds().includes(spellId);
+    this.log(`${this.player.name} learns ${spell.name}. ${this.getSpellMechanicalReadout(spell) || spell.description}${trayAdded ? " Added to the tray." : ""}`, "good");
 
     if (this.pendingSpellChoices > 0 && this.getLearnableSpellOptions().length > 0) {
       this.showSpellLearnModal();
@@ -9438,6 +10669,127 @@ export class Game {
     this.render();
   }
 
+  getModalSurfaceTier(surfaceKey = "") {
+    if (!surfaceKey) {
+      return "workspace";
+    }
+    if (surfaceKey === "utility-menu" || surfaceKey === "burden-check") {
+      return "quick";
+    }
+    if (surfaceKey === "help" || surfaceKey === "hub:journal") {
+      return "reader";
+    }
+    if (
+      surfaceKey.startsWith("hub:")
+      || surfaceKey.startsWith("shop:")
+      || surfaceKey.startsWith("save-slots:")
+      || ["settings", "character-sheet", "bank", "sage", "temple", "spell-study", "title", "creation"].includes(surfaceKey)
+    ) {
+      return "workspace";
+    }
+    return "quick";
+  }
+
+  getModalFrameClass(surfaceKey = "") {
+    return `modal-surface-${this.getModalSurfaceTier(surfaceKey)}`;
+  }
+
+  applyModalSurfacePresentation(surfaceKey = "", modalElement = null) {
+    if (this.modalRoot) {
+      this.modalRoot.dataset.surfaceTier = this.getModalSurfaceTier(surfaceKey);
+      this.modalRoot.dataset.surfaceKey = surfaceKey || "";
+    }
+    if (!(modalElement instanceof HTMLElement)) {
+      return;
+    }
+    modalElement.classList.add("modal-frame");
+    modalElement.classList.remove("modal-surface-quick", "modal-surface-workspace", "modal-surface-reader");
+    modalElement.classList.add(this.getModalFrameClass(surfaceKey));
+  }
+
+  getUtilityMenuRoot(root = this.modalRoot) {
+    return root?.querySelector(".utility-menu-sheet") || null;
+  }
+
+  syncUtilityMenuExpansion(root = this.modalRoot) {
+    if (this.modalSurfaceKey !== "utility-menu") {
+      return;
+    }
+    const menuRoot = this.getUtilityMenuRoot(root);
+    if (!(menuRoot instanceof HTMLElement)) {
+      return;
+    }
+    const disclosure = menuRoot.querySelector("[data-utility-more-host]");
+    const toggle = menuRoot.querySelector('[data-action="toggle-utility-more"]');
+    menuRoot.classList.toggle("utility-menu-expanded", this.utilityMenuSecondaryExpanded);
+    if (disclosure instanceof HTMLElement) {
+      disclosure.hidden = !this.utilityMenuSecondaryExpanded;
+    }
+    if (toggle instanceof HTMLElement) {
+      toggle.setAttribute("aria-expanded", this.utilityMenuSecondaryExpanded ? "true" : "false");
+      toggle.dataset.expanded = this.utilityMenuSecondaryExpanded ? "true" : "false";
+      toggle.querySelector("[data-utility-more-label]")?.replaceChildren(
+        document.createTextNode(this.utilityMenuSecondaryExpanded ? "Hide Secondary Tools" : "More Tools")
+      );
+      toggle.querySelector("[data-utility-more-meta]")?.replaceChildren(
+        document.createTextNode(this.utilityMenuSecondaryExpanded ? "Collapse map, rules, and trace" : "Reveal map, rules, and trace")
+      );
+    }
+  }
+
+  setUtilityMenuSecondaryExpanded(expanded, options = {}) {
+    const {
+      focusTarget = null,
+      fallbackFocus = false
+    } = options;
+    this.utilityMenuSecondaryExpanded = Boolean(expanded);
+    this.syncUtilityMenuExpansion();
+    this.applyControllerNavigationMetadata();
+    const focusElement = this.resolveModalFocusTarget(
+      focusTarget || (this.utilityMenuSecondaryExpanded ? "utility:more-toggle" : "utility:more-toggle")
+    );
+    if (focusElement) {
+      this.focusUiElement(focusElement);
+    } else if (fallbackFocus) {
+      this.focusFirstUiElement();
+    }
+  }
+
+  syncFieldGuideRailState(root = this.modalRoot) {
+    const rail = root?.querySelector(".field-guide-rail");
+    const shell = root?.querySelector(".field-guide-shell");
+    const scrollHost = this.getModalScrollHost();
+    const shouldCollapse = this.layoutMode === "mobile" && scrollHost instanceof HTMLElement && scrollHost.scrollTop > 140;
+    this.fieldGuideRailCollapsed = shouldCollapse;
+    if (shell instanceof HTMLElement) {
+      shell.classList.toggle("field-guide-rail-collapsed", shouldCollapse);
+    }
+    if (rail instanceof HTMLElement) {
+      rail.dataset.collapsed = shouldCollapse ? "true" : "false";
+    }
+  }
+
+  syncModalAdaptiveUiState() {
+    if (!(this.modalRoot instanceof HTMLElement) || this.modalRoot.classList.contains("hidden")) {
+      return;
+    }
+    this.syncUtilityMenuExpansion();
+    if (this.modalSurfaceKey === "hub:journal") {
+      const scrollHost = this.getModalScrollHost();
+      if (scrollHost instanceof HTMLElement && scrollHost.dataset.fieldGuideScrollBound !== "true") {
+        scrollHost.addEventListener("scroll", () => {
+          if (this.modalSurfaceKey === "hub:journal") {
+            this.syncFieldGuideRailState();
+          }
+        }, { passive: true });
+        scrollHost.dataset.fieldGuideScrollBound = "true";
+      }
+      this.syncFieldGuideRailState();
+      return;
+    }
+    this.fieldGuideRailCollapsed = false;
+  }
+
   showSimpleModal(title, bodyHtml, options = {}) {
     const {
       surfaceKey = null,
@@ -9454,11 +10806,13 @@ export class Game {
     const fragment = template.content.cloneNode(true);
     fragment.getElementById("generic-modal-title").textContent = title;
     fragment.getElementById("generic-modal-body").innerHTML = bodyHtml;
+    this.applyModalSurfacePresentation(surfaceKey, fragment.querySelector(".modal"));
     const closeButton = fragment.querySelector('[data-action="close-modal"]');
     if (closeButton) {
       closeButton.textContent = closeLabel;
       closeButton.dataset.focusKey = closeFocusKey;
     }
+    this.clearModalInteractionFeedback();
     this.modalRoot.innerHTML = "";
     this.modalRoot.appendChild(fragment);
     this.modalRoot.classList.remove("hidden");
@@ -9467,6 +10821,9 @@ export class Game {
     this.recordTelemetry("modal_opened", {
       surface: surfaceKey || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
     });
+    this.ensureModalInteractionFeedbackHost();
+    this.syncModalInteractionFeedbackHost();
+    this.syncModalAdaptiveUiState();
     this.applyControllerNavigationMetadata();
     const nextModal = this.getModalScrollHost();
     if (nextModal && previousState) {
@@ -9810,8 +11167,8 @@ export class Game {
     if (item.cursed) {
       bits.push("Cursed");
     }
-    if (item.markedForSale) {
-      bits.push("Marked");
+    if (item.doNotSell) {
+      bits.push("No Sell");
     }
     const undeadBonus = getItemBonusVsUndead(item);
     if (undeadBonus > 0) {
@@ -9827,6 +11184,88 @@ export class Game {
       bits.push("No buyer yet");
     }
     return bits.join(" • ");
+  }
+
+  getPackCompactRowMeta(item, semanticEntry = null) {
+    const shopId = this.getCurrentPackShopContext();
+    const bits = [];
+    bits.push(item.slot ? this.getPackSlotDefinition(item.slot).label : semanticEntry?.kindLabel || item.kindLabel || classifyItem(item));
+    if (item.kind === "weapon") {
+      bits.push(`Atk ${getItemPower(item)}`);
+    } else if (item.kind === "armor") {
+      bits.push(`Arm ${getItemArmor(item)}`);
+    } else if (item.kind === "charged" && item.identified) {
+      bits.push(`${item.charges || 0}/${item.maxCharges || item.charges || 0} chg`);
+    }
+    bits.push(shopId || this.activePackFilter === "sell"
+      ? `${Math.floor(getItemValue(item))} gp`
+      : `Wt ${item.weight || 0}`);
+    return bits.filter(Boolean).slice(0, 3).join(" / ");
+  }
+
+  getPackToolbarMarkup(inventoryModel) {
+    const filterLabel = inventoryModel.filterDefs.find((entry) => entry.key === this.activePackFilter)?.label || "All";
+    const selectedLabel = inventoryModel.selectedEntry
+      ? getItemName(inventoryModel.selectedEntry.item)
+      : inventoryModel.firstVisibleIndex >= 0
+        ? "Ready to inspect"
+        : "No visible item";
+    return `
+      <div class="pack-toolbar">
+        <div class="pack-toolbar-meta">
+          <span class="pack-toolbar-chip">${escapeHtml(filterLabel)}</span>
+          <span class="pack-toolbar-detail">${inventoryModel.visibleCount} visible</span>
+          <span class="pack-toolbar-focus">${escapeHtml(this.getCompactUiCopy(selectedLabel, 28))}</span>
+        </div>
+        <div class="pack-filter-row">
+          ${inventoryModel.filterDefs.map((filterDef) => `
+            <button class="hub-filter-chip${this.activePackFilter === filterDef.key ? " active" : ""}" data-action="pack-filter" data-filter="${filterDef.key}" data-focus-key="${this.getPackFilterFocusKey(filterDef.key)}" type="button">${escapeHtml(filterDef.label)}</button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  getPackActiveRowInlineMarkup(entry) {
+    if (!entry?.item?.slot) {
+      return "";
+    }
+    const selectionModel = this.getPackSelectionModelFor({ type: "inventory", value: entry.index });
+    const comparison = selectionModel?.comparison;
+    if (!comparison) {
+      return "";
+    }
+    const rows = [];
+    const targetSlotLabel = comparison.targetSlot ? this.getPackSlotDefinition(comparison.targetSlot).label : "";
+    if (comparison.blockedByCurse) {
+      rows.push({ tone: "bad", text: "Slot locked by curse" });
+    } else if (comparison.fitsEmptySlot && targetSlotLabel) {
+      rows.push({ tone: "good", text: `Open ${targetSlotLabel}` });
+    } else if (comparison.equipped && targetSlotLabel) {
+      rows.push({ tone: "neutral", text: `Swap ${targetSlotLabel}` });
+    }
+    const targetComparison = comparison.comparisons?.find((item) => item.slot === comparison.targetSlot)
+      || comparison.comparisons?.[0]
+      || null;
+    (targetComparison?.deltas || []).slice(0, 2).forEach((delta) => {
+      rows.push({
+        tone: delta.tone || "neutral",
+        text: this.getCompactUiCopy(
+          String(delta.text || "")
+            .replace(/^Attack\b/i, "Atk")
+            .replace(/^Armor\b/i, "Arm"),
+          22
+        )
+      });
+    });
+    if (rows.length === 0) {
+      return "";
+    }
+    return `
+      <span class="pack-row-inline-compare">
+        ${rows.map((row) => `<span class="pack-inline-chip tone-${escapeHtml(row.tone)}">${escapeHtml(row.text)}</span>`).join("")}
+      </span>
+    `;
   }
 
   getPackRowTagMarkup(entry) {
@@ -10049,20 +11488,234 @@ export class Game {
     if (item.cursed && item.identified) {
       badges.push(`<span class="item-chip bad-chip">Cursed</span>`);
     }
-    if (item.markedForSale) {
-      badges.push(`<span class="item-chip">Marked</span>`);
+    if (item.doNotSell) {
+      badges.push(`<span class="item-chip">No Sell</span>`);
     }
     return badges.join("");
   }
 
   getPackFilterMarkup(inventoryModel) {
+    return this.getPackToolbarMarkup(inventoryModel);
+  }
+
+  getMenuQuickStateMarkup(options = {}) {
+    const {
+      eyebrow = "",
+      title = "",
+      detail = "",
+      tone = ""
+    } = options;
+    if (!title && !detail) {
+      return "";
+    }
     return `
-      <div class="pack-filter-row">
-        ${inventoryModel.filterDefs.map((filterDef) => `
-          <button class="hub-filter-chip${this.activePackFilter === filterDef.key ? " active" : ""}" data-action="pack-filter" data-filter="${filterDef.key}" data-focus-key="${this.getPackFilterFocusKey(filterDef.key)}" type="button">${escapeHtml(filterDef.label)}</button>
+      <div class="menu-quick-state${tone ? ` ${tone}` : ""}">
+        ${eyebrow ? `<div class="menu-quick-state-eyebrow">${escapeHtml(eyebrow)}</div>` : ""}
+        ${title ? `<div class="menu-quick-state-title">${escapeHtml(title)}</div>` : ""}
+        ${detail ? `<div class="menu-quick-state-detail">${escapeHtml(detail)}</div>` : ""}
+      </div>
+    `;
+  }
+
+  getPackQuickStateMarkup(model, inventoryModel) {
+    const filterLabel = inventoryModel.filterDefs.find((entry) => entry.key === this.activePackFilter)?.label || "All";
+    if (model.selection.type === "slot") {
+      const slotLabel = model.slotDef?.label || "Slot";
+      const slotReason = buildEquipmentSlotSummary(this, model.slotDef, model.compatibleIndexes.length).reason;
+      return this.getMenuQuickStateMarkup({
+        eyebrow: "Pack Focus",
+        title: `${slotLabel} selected · ${inventoryModel.visibleCount} visible item${inventoryModel.visibleCount === 1 ? "" : "s"}`,
+        detail: slotReason
+      });
+    }
+    const selectedEntry = inventoryModel.selectedEntry;
+    if (!selectedEntry) {
+      return this.getMenuQuickStateMarkup({
+        eyebrow: "Pack Focus",
+        title: `${filterLabel} · ${inventoryModel.visibleCount} visible item${inventoryModel.visibleCount === 1 ? "" : "s"}`,
+        detail: "Choose an item to update the inspector and action row."
+      });
+    }
+    return this.getMenuQuickStateMarkup({
+      eyebrow: "Pack Focus",
+      title: `${filterLabel} · ${inventoryModel.visibleCount} visible item${inventoryModel.visibleCount === 1 ? "" : "s"}`,
+      detail: `${getItemName(selectedEntry.item)} selected. ${selectedEntry.recommendation}: ${selectedEntry.reason}`
+    });
+  }
+
+  getMagicQuickStateMarkup(selectedSpellId, filterDefs, orderedGroups) {
+    const activeFilterLabel = filterDefs.find((entry) => entry.key === this.activeMagicFilter)?.label || "All";
+    const visibleCount = orderedGroups.reduce((sum, group) => sum + group.spellIds.length, 0);
+    const spell = SPELLS[selectedSpellId];
+    if (!spell) {
+      return this.getMenuQuickStateMarkup({
+        eyebrow: "Magic Focus",
+        title: `${activeFilterLabel} · ${visibleCount} visible spell${visibleCount === 1 ? "" : "s"}`,
+        detail: "Choose a spell to preview its cost, tray status, and quick actions."
+      });
+    }
+    const manaCost = getSpellCost(this, spell);
+    return this.getMenuQuickStateMarkup({
+      eyebrow: "Magic Focus",
+      title: `${activeFilterLabel} · ${visibleCount} visible spell${visibleCount === 1 ? "" : "s"}`,
+      detail: `${spell.name} selected. ${this.getSpellMechanicalReadout(spell) || spell.description} ${this.player.mana < manaCost ? `Casting now will overcast at ${manaCost} mana.` : `${manaCost} mana to cast right now.`}`
+    });
+  }
+
+  getJournalQuickStateMarkup(activeSection = this.getResolvedJournalSection()) {
+    const sectionMeta = {
+      current: {
+        title: "Current floor, pressure, and build",
+        detail: "Best when you need the run-now answer without leaving the guide."
+      },
+      mission: {
+        title: "Objective path and reward stakes",
+        detail: "Shows the chapter goal, route context, and what this floor is paying for."
+      },
+      guide: {
+        title: "Rules and control reference",
+        detail: "A lighter-reading section for controls, core loop, and dungeon rules."
+      },
+      chronicle: {
+        title: "Run history, town shifts, and telemetry",
+        detail: "The longest section. It is useful, but it naturally reads heavier than the others."
+      }
+    };
+    const meta = sectionMeta[activeSection] || sectionMeta.current;
+    return this.getMenuQuickStateMarkup({
+      eyebrow: "Field Guide",
+      title: meta.title,
+      detail: meta.detail
+    });
+  }
+
+  getFieldGuideHeroModel(activeSection = this.getResolvedJournalSection()) {
+    const meta = {
+      current: {
+        title: "Read the current state fast.",
+        detail: "Objective, pressure, and next move for the active floor or town stop."
+      },
+      mission: {
+        title: "Keep the mission legible.",
+        detail: "Chapter goal, route context, and why this floor matters."
+      },
+      guide: {
+        title: "Check rules without losing pace.",
+        detail: "Controls, loop reminders, and high-friction dungeon rules in one place."
+      },
+      chronicle: {
+        title: "Review the long game.",
+        detail: "Town shifts, discoveries, persistence, and the recent record of this run."
+      }
+    };
+    return meta[activeSection] || meta.current;
+  }
+
+  getFieldGuideBriefMarkup(options = {}) {
+    const {
+      label = "",
+      title = "",
+      detail = "",
+      tone = "",
+      actions = ""
+    } = options;
+    return `
+      <section class="field-guide-brief${tone ? ` ${tone}` : ""}">
+        ${label ? `<div class="field-guide-brief-label">${escapeHtml(label)}</div>` : ""}
+        ${title ? `<div class="field-guide-brief-title">${escapeHtml(title)}</div>` : ""}
+        ${detail ? `<div class="field-guide-brief-detail">${escapeHtml(detail)}</div>` : ""}
+        ${actions ? `<div class="field-guide-brief-actions">${actions}</div>` : ""}
+      </section>
+    `;
+  }
+
+  getFieldGuideFactListMarkup(rows = []) {
+    const safeRows = rows.filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== "");
+    if (safeRows.length === 0) {
+      return `<div class="field-guide-copy muted">No guide data is available yet.</div>`;
+    }
+    return `
+      <div class="field-guide-fact-list">
+        ${safeRows.map(([label, value]) => `
+          <div class="field-guide-fact-row">
+            <span class="field-guide-fact-label">${escapeHtml(String(label))}</span>
+            <span class="field-guide-fact-value">${escapeHtml(String(value))}</span>
+          </div>
         `).join("")}
       </div>
     `;
+  }
+
+  getFieldGuideBulletListMarkup(items = []) {
+    const safeItems = items.filter((item) => item && String(item).trim() !== "");
+    if (safeItems.length === 0) {
+      return `<div class="field-guide-copy muted">Nothing notable is recorded yet.</div>`;
+    }
+    return `
+      <ul class="field-guide-list">
+        ${safeItems.map((item) => `<li>${escapeHtml(String(item))}</li>`).join("")}
+      </ul>
+    `;
+  }
+
+  getDisclosureMarkup(options = {}) {
+    const {
+      title = "More",
+      summary = "",
+      body = "",
+      open = false,
+      className = ""
+    } = options;
+    if (!body) {
+      return "";
+    }
+    return `
+      <details class="ui-disclosure${className ? ` ${className}` : ""}"${open ? " open" : ""}>
+        <summary>
+          <span class="ui-disclosure-title">${escapeHtml(title)}</span>
+          ${summary ? `<span class="ui-disclosure-summary">${escapeHtml(summary)}</span>` : ""}
+        </summary>
+        <div class="ui-disclosure-body">${body}</div>
+      </details>
+    `;
+  }
+
+  getCompactUiCopy(text = "", maxLength = 120) {
+    const value = String(text || "").replace(/\s+/g, " ").trim();
+    if (!value) {
+      return "";
+    }
+    if (value.length <= maxLength) {
+      return value;
+    }
+    return `${value.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+  }
+
+  getShopQuickStateMarkup(shopId, shop) {
+    if (this.activeShopPanel === "sell") {
+      const eligibleCount = this.player.inventory.filter((item) => item && (shopId === "junk" || shopAcceptsItem(shopId, item))).length;
+      const protectedCount = this.player.inventory.filter((item) => item?.doNotSell && (shopId === "junk" || shopAcceptsItem(shopId, item))).length;
+      return this.getMenuQuickStateMarkup({
+        eyebrow: `${shop.name} · Sell`,
+        title: `${eligibleCount} item${eligibleCount === 1 ? "" : "s"} can move here`,
+        detail: protectedCount > 0
+          ? `${protectedCount} item${protectedCount === 1 ? "" : "s"} are protected by No Sell.`
+          : "Use No Sell to protect anything you are only reviewing."
+      });
+    }
+    const state = this.shopState[shopId] || { stock: [...shop.stock], buyback: [] };
+    const liveStock = [...state.stock, ...state.buyback];
+    const affordableCount = liveStock.reduce((sum, itemId) => {
+      const item = createTownItem(itemId);
+      return sum + (this.player.gold >= getShopBuyPrice(this, item, shopId) ? 1 : 0);
+    }, 0);
+    return this.getMenuQuickStateMarkup({
+      eyebrow: `${shop.name} · Buy`,
+      title: `${liveStock.length} offer${liveStock.length === 1 ? "" : "s"} on the table`,
+      detail: affordableCount > 0
+        ? `${affordableCount} item${affordableCount === 1 ? "" : "s"} are affordable with your current gold.`
+        : "You can browse now and buy once town prep or a return gives you the gold."
+    });
   }
 
   getInventoryGroupsMarkup(inventoryModel, selectedIndex) {
@@ -10084,15 +11737,18 @@ export class Game {
             </div>
             <div class="pack-group-list">
               ${section.items.map((entry) => `
-                <button class="pack-item-row${selectedIndex === entry.index || entry.isSelected ? " active" : ""}" data-action="inspect-pack-item" data-index="${entry.index}" data-focus-key="${this.getPackItemFocusKey(entry.index)}" data-pack-preview-type="inventory" data-pack-preview-value="${entry.index}" type="button">
+                <button class="pack-item-row${entry.compareTone ? ` pack-item-row-${entry.compareTone}` : ""}${selectedIndex === entry.index || entry.indexes?.includes(selectedIndex) ? " active" : ""}" data-action="inspect-pack-item" data-index="${entry.index}" data-focus-key="${this.getPackItemFocusKey(entry.index)}" data-pack-preview-type="inventory" data-pack-preview-value="${entry.index}" type="button">
                   <span class="pack-item-head">
-                    <span class="pack-item-name">${escapeHtml(getItemName(entry.item))}</span>
-                    ${entry.count > 1 ? `<span class="pack-item-stack">x${entry.count}</span>` : ""}
+                    <span class="pack-item-head-main">
+                      <span class="pack-item-name">${escapeHtml(getItemName(entry.item))}</span>
+                      <span class="pack-item-meta pack-item-meta-compact">${escapeHtml(this.getPackCompactRowMeta(entry.item, entry))}</span>
+                    </span>
+                    <span class="pack-item-head-side">
+                      ${entry.count > 1 ? `<span class="pack-item-stack">x${entry.count}</span>` : ""}
+                      <span class="pack-row-chip${entry.compareTone ? ` pack-row-chip-${entry.compareTone}` : ""}">${escapeHtml(entry.recommendation)}</span>
+                    </span>
                   </span>
-                  <span class="pack-item-meta">${escapeHtml(this.getPackItemMeta(entry.item, entry))}</span>
-                  ${this.getPackRowTagMarkup(entry)}
-                  <span class="pack-item-reason">${escapeHtml(entry.reason)}</span>
-                  <span class="pack-item-note">${escapeHtml(this.getPackItemNote(entry.item, entry))}</span>
+                  ${selectedIndex === entry.index || entry.indexes?.includes(selectedIndex) ? this.getPackActiveRowInlineMarkup(entry) : ""}
                 </button>
               `).join("")}
             </div>
@@ -10210,7 +11866,8 @@ export class Game {
         <button class="menu-button pack-action-primary is-active" data-action="item-use" data-index="${model.selection.value}" data-focus-key="${this.getPackActionFocusKey("use", model.selection.value)}" type="button">${this.getPackItemActionLabel(item)}</button>
         ${shopId && selectedEntry?.sellHereTag
           ? `<button class="menu-button" data-action="shop-sell" data-index="${model.selection.value}" data-focus-key="${this.getShopSellFocusKey(model.selection.value)}" type="button">Sell</button>`
-          : `<label class="mark-sale-toggle inspector-mark-toggle"><input type="checkbox" data-action="toggle-sale-mark" data-index="${model.selection.value}" data-focus-key="${this.getPackActionFocusKey("mark", model.selection.value)}" ${item.markedForSale ? "checked" : ""}><span>Mark For Sale</span></label>`}
+          : ""}
+        <label class="mark-sale-toggle inspector-mark-toggle"><input type="checkbox" data-action="toggle-do-not-sell" data-index="${model.selection.value}" data-focus-key="${this.getPackActionFocusKey("protect", model.selection.value)}" ${item.doNotSell ? "checked" : ""}><span>Do Not Sell</span></label>
         <button class="menu-button" data-action="item-drop" data-index="${model.selection.value}" data-focus-key="${this.getPackActionFocusKey("drop", model.selection.value)}" type="button">Drop</button>
       `
       : `
@@ -10265,6 +11922,33 @@ export class Game {
         </div>
       `
       : "";
+    const inspectorCopy = item.kind === "charged" && item.identified
+      ? `${item.charges || 0}/${item.maxCharges || item.charges || 0} charges ready.`
+      : item.kind === "spellbook" && item.identified
+        ? `Study to learn ${SPELLS[item.spell]?.name || capitalize(item.spell || "spell")}.`
+        : canIdentify(item) && !item.identified
+          ? "Identify before you commit this item to a swap or sale."
+          : "";
+    const visibleStatLines = statLines.slice(0, 4);
+    const extraStatLines = statLines.slice(4);
+    const inspectorDisclosure = this.getDisclosureMarkup({
+      title: "Deep Readout",
+      summary: model.selection.type === "slot"
+        ? `${model.compatibleIndexes.length} ready item${model.compatibleIndexes.length === 1 ? "" : "s"}`
+        : item.slot
+          ? "Comparison, burden, and fit"
+          : "Extended item detail",
+      className: "pack-inspector-disclosure",
+      open: model.selection.type === "slot" && model.compatibleIndexes.length > 0,
+      body: `
+        <div class="pack-item-badges">${this.getItemBadgeMarkup(item, detailEntry, model)}</div>
+        ${visibleStatLines.length > 0 ? `<div class="pack-stat-grid">${visibleStatLines.map((line) => `<div class="pack-stat-pill">${escapeHtml(line)}</div>`).join("")}</div>` : ""}
+        ${equippedSwap || ""}
+        ${extraStatLines.length > 0 ? `<div class="pack-stat-grid pack-stat-grid-secondary">${extraStatLines.map((line) => `<div class="pack-stat-pill">${escapeHtml(line)}</div>`).join("")}</div>` : ""}
+        ${comparisonBlock || ""}
+        ${readyRows || ""}
+      `
+    });
 
     return `
       <section class="hub-section pack-inspector-panel">
@@ -10277,16 +11961,10 @@ export class Game {
             <span class="pack-decision-chip">${escapeHtml(model.slotDef ? model.slotDef.label : selectedEntry?.kindLabel || classifyItem(item))}</span>
             <span class="pack-decision-reason">${escapeHtml(reason)}</span>
           </div>
-          <div class="pack-item-badges">${this.getItemBadgeMarkup(item, detailEntry, model)}</div>
           ${riskCallout ? `<div class="pack-risk-callout">${escapeHtml(riskCallout)}</div>` : ""}
-          <div class="pack-inspector-copy">${escapeHtml(describeItem(item))}</div>
-          <div class="pack-stat-grid">
-            ${statLines.map((line) => `<div class="pack-stat-pill">${escapeHtml(line)}</div>`).join("")}
-          </div>
-          ${equippedSwap}
-          ${comparisonBlock}
+          ${inspectorCopy ? `<div class="pack-inspector-copy">${escapeHtml(inspectorCopy)}</div>` : ""}
           ${cursedNote}
-          ${readyRows}
+          ${inspectorDisclosure}
           <div class="modal-actions pack-inspector-actions">
             ${actions}
           </div>
@@ -10310,7 +11988,428 @@ export class Game {
     `;
   }
 
-  getPackHubMarkup() {
+  getHubModalTitle(activeTab = this.activeHubTab) {
+    return activeTab === "magic"
+      ? "Magic"
+      : activeTab === "journal"
+        ? "Field Guide"
+        : "Pack & Equipment";
+  }
+
+  getHubModalBodyMarkup(activeTab = this.activeHubTab) {
+    if (activeTab === "magic") {
+      return this.getMagicHubMarkup();
+    }
+    if (activeTab === "journal") {
+      return this.getJournalHubMarkup();
+    }
+    return this.getPackHubMarkup();
+  }
+
+  getHubPaneMarkup(tab, activeTab = this.activeHubTab) {
+    return `
+      <div data-hub-pane="${tab}"${tab === activeTab ? "" : " hidden"}>
+        ${tab === activeTab ? this.getHubModalBodyMarkup(tab) : ""}
+      </div>
+    `;
+  }
+
+  getHubModalShellMarkup(activeTab = this.activeHubTab) {
+    return `
+      <div class="hub-window hub-window-${activeTab}">
+        <div data-hub-tabs-host>${this.getHubTabsMarkup(activeTab)}</div>
+        <div data-hub-body-host>
+          ${["pack", "magic", "journal"].map((tab) => this.getHubPaneMarkup(tab, activeTab)).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  getHubPaneHost(tab, root = this.modalRoot) {
+    if (!root || !tab) {
+      return null;
+    }
+    return root.querySelector(`[data-hub-pane="${tab}"]`);
+  }
+
+  renderHubPaneContent(tab, options = {}) {
+    const { forceRefresh = false, root = this.modalRoot } = options;
+    const paneHost = this.getHubPaneHost(tab, root);
+    if (!paneHost) {
+      return false;
+    }
+    if (!forceRefresh && paneHost.childElementCount > 0 && !this.hubPaneDirty[tab]) {
+      return false;
+    }
+    paneHost.innerHTML = this.getHubModalBodyMarkup(tab);
+    this.hubPaneDirty[tab] = false;
+    return true;
+  }
+
+  syncHubTabButtons(activeTab, tabsHost) {
+    if (!(tabsHost instanceof HTMLElement)) {
+      return;
+    }
+    const buttons = Array.from(tabsHost.querySelectorAll('[data-action="open-hub"][data-tab]'));
+    if (buttons.length !== 3) {
+      tabsHost.innerHTML = this.getHubTabsMarkup(activeTab);
+      return;
+    }
+    buttons.forEach((button) => {
+      button.classList.toggle("active", button.dataset.tab === activeTab);
+    });
+  }
+
+  syncHubPaneVisibility(activeTab, bodyHost) {
+    if (!(bodyHost instanceof HTMLElement)) {
+      return;
+    }
+    bodyHost.querySelectorAll("[data-hub-pane]").forEach((paneHost) => {
+      paneHost.hidden = paneHost.dataset.hubPane !== activeTab;
+    });
+  }
+
+  queueHubPanePrewarm(activeTab = this.activeHubTab) {
+    this.cancelPendingHubPanePrewarm();
+    const prewarmTabs = activeTab === "journal"
+      ? ["pack"]
+      : activeTab === "pack"
+        ? ["magic", "journal"]
+        : ["journal", "pack"];
+    const scheduled = this.queueDeferredUiTask(() => {
+      this.pendingHubPrewarmHandle = 0;
+      this.pendingHubPrewarmMode = "";
+      if (this.mode !== "modal" || !String(this.modalSurfaceKey || "").startsWith("hub:")) {
+        return;
+      }
+      const bodyHost = this.modalRoot.querySelector("[data-hub-body-host]");
+      if (!(bodyHost instanceof HTMLElement)) {
+        return;
+      }
+      prewarmTabs.forEach((tab) => {
+        this.renderHubPaneContent(tab, { root: this.modalRoot });
+      });
+    }, {
+      preferIdle: true,
+      timeout: 900
+    });
+    this.pendingHubPrewarmHandle = scheduled.handle;
+    this.pendingHubPrewarmMode = scheduled.mode;
+  }
+
+  updateHubModalContent(activeTab = this.activeHubTab, options = {}) {
+    const {
+      preserveScroll = false,
+      focusTarget = null,
+      fallbackFocus = true,
+      recordOpenTelemetry = false,
+      forceRefresh = false
+    } = options;
+    const currentSurfaceKey = this.modalSurfaceKey;
+    const nextSurfaceKey = `hub:${activeTab}`;
+    const previousState = preserveScroll ? this.captureModalRefreshState(currentSurfaceKey) : null;
+    const modalTitle = this.modalRoot.querySelector("#generic-modal-title");
+    const hubWindow = this.modalRoot.querySelector(".hub-window");
+    const tabsHost = this.modalRoot.querySelector("[data-hub-tabs-host]");
+    const bodyHost = this.modalRoot.querySelector("[data-hub-body-host]");
+    if (!modalTitle || !hubWindow || !tabsHost || !bodyHost || !String(currentSurfaceKey || "").startsWith("hub:")) {
+      return false;
+    }
+    this.setModalVisibility(true);
+    this.modalRoot.classList.remove("hidden");
+    modalTitle.textContent = this.getHubModalTitle(activeTab);
+    hubWindow.className = `hub-window hub-window-${activeTab}`;
+    this.syncHubTabButtons(activeTab, tabsHost);
+    this.renderHubPaneContent(activeTab, {
+      forceRefresh: forceRefresh || currentSurfaceKey === nextSurfaceKey
+    });
+    this.syncHubPaneVisibility(activeTab, bodyHost);
+    this.modalSurfaceKey = nextSurfaceKey;
+    this.modalReturnContext = null;
+    if (recordOpenTelemetry) {
+      this.recordTelemetry(activeTab === "magic"
+        ? "magic_opened"
+        : activeTab === "journal"
+          ? "journal_opened"
+          : "pack_opened");
+    }
+    this.ensureModalInteractionFeedbackHost();
+    this.syncModalInteractionFeedbackHost();
+    this.syncModalAdaptiveUiState();
+    this.applyControllerNavigationMetadata();
+    const nextModal = this.getModalScrollHost();
+    if (nextModal && previousState) {
+      nextModal.scrollTop = previousState.scrollTop;
+    }
+    const focusElement = this.resolveModalFocusTarget(focusTarget, previousState);
+    if (focusElement) {
+      this.focusUiElement(focusElement);
+      return true;
+    }
+    if (fallbackFocus) {
+      this.focusFirstUiElement();
+    }
+    if (currentSurfaceKey !== nextSurfaceKey) {
+      this.queueHubPanePrewarm(activeTab);
+    }
+    return true;
+  }
+
+  restoreModalRefreshState(previousState = null, focusTarget = null, fallbackFocus = true) {
+    const nextModal = this.getModalScrollHost();
+    if (nextModal && previousState) {
+      nextModal.scrollTop = previousState.scrollTop;
+    }
+    const focusElement = this.resolveModalFocusTarget(focusTarget, previousState);
+    if (focusElement) {
+      this.focusUiElement(focusElement);
+      return true;
+    }
+    if (fallbackFocus) {
+      this.focusFirstUiElement();
+      return true;
+    }
+    return false;
+  }
+
+  refreshHubPaneRegions(tab, selectors = [], options = {}) {
+    const {
+      preserveScroll = true,
+      focusTarget = null,
+      fallbackFocus = true
+    } = options;
+    const currentSurfaceKey = this.modalSurfaceKey;
+    if (this.mode !== "modal" || this.activeHubTab !== tab || !String(currentSurfaceKey || "").startsWith("hub:")) {
+      return false;
+    }
+    const paneHost = this.getHubPaneHost(tab);
+    if (!(paneHost instanceof HTMLElement) || selectors.length === 0) {
+      return false;
+    }
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = this.getHubModalBodyMarkup(tab).trim();
+    const nextPaneHost = wrapper.firstElementChild;
+    if (!(nextPaneHost instanceof HTMLElement)) {
+      return false;
+    }
+    const regionPairs = selectors.map((selector) => ({
+      current: paneHost.querySelector(selector),
+      next: nextPaneHost.querySelector(selector)
+    }));
+    if (regionPairs.some(({ current, next }) => !(current instanceof HTMLElement) || !(next instanceof HTMLElement))) {
+      return false;
+    }
+    const previousState = preserveScroll ? this.captureModalRefreshState(currentSurfaceKey) : null;
+    regionPairs.forEach(({ current, next }) => {
+      current.innerHTML = next.innerHTML;
+    });
+    this.hubPaneDirty[tab] = false;
+    this.syncModalAdaptiveUiState();
+    this.applyControllerNavigationMetadata();
+    this.restoreModalRefreshState(previousState, focusTarget, fallbackFocus);
+    return true;
+  }
+
+  refreshModalBodyRegions(surfaceKey, bodyHtml, selectors = [], options = {}) {
+    const {
+      preserveScroll = true,
+      focusTarget = null,
+      fallbackFocus = true
+    } = options;
+    if (this.mode !== "modal" || this.modalSurfaceKey !== surfaceKey || selectors.length === 0) {
+      return false;
+    }
+    const modalBody = this.modalRoot?.querySelector("#generic-modal-body");
+    if (!(modalBody instanceof HTMLElement)) {
+      return false;
+    }
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = bodyHtml.trim();
+    const regionPairs = selectors.map((selector) => ({
+      current: modalBody.querySelector(selector),
+      next: wrapper.querySelector(selector)
+    }));
+    if (regionPairs.some(({ current, next }) => !(current instanceof HTMLElement) || !(next instanceof HTMLElement))) {
+      return false;
+    }
+    const previousState = preserveScroll ? this.captureModalRefreshState(surfaceKey) : null;
+    regionPairs.forEach(({ current, next }) => {
+      current.innerHTML = next.innerHTML;
+    });
+    this.syncModalAdaptiveUiState();
+    this.applyControllerNavigationMetadata();
+    this.restoreModalRefreshState(previousState, focusTarget, fallbackFocus);
+    return true;
+  }
+
+  refreshMagicHubContent(focusTarget = null, options = {}) {
+    const {
+      preserveScroll = true,
+      fallbackFocus = true,
+      sections = ["summary", "filter", "list"]
+    } = options;
+    const selectorMap = {
+      summary: "[data-magic-summary-host]",
+      filter: "[data-magic-filter-host]",
+      list: "[data-magic-list-host]"
+    };
+    const selectors = sections.map((section) => selectorMap[section]).filter(Boolean);
+    if (selectors.length === 0) {
+      return false;
+    }
+    if (this.refreshHubPaneRegions("magic", selectors, {
+      preserveScroll,
+      focusTarget,
+      fallbackFocus
+    })) {
+      return true;
+    }
+    return this.updateHubModalContent("magic", {
+      preserveScroll,
+      focusTarget,
+      fallbackFocus,
+      recordOpenTelemetry: false,
+      forceRefresh: true
+    });
+  }
+
+  refreshJournalHubSection(focusTarget = null, options = {}) {
+    const {
+      preserveScroll = true,
+      fallbackFocus = true
+    } = options;
+    const currentSurfaceKey = this.modalSurfaceKey;
+    if (this.mode === "modal" && this.activeHubTab === "journal" && String(currentSurfaceKey || "").startsWith("hub:")) {
+      const paneHost = this.getHubPaneHost("journal");
+      const activeSectionHost = paneHost?.querySelector("[data-journal-active-section-host]");
+      if (paneHost instanceof HTMLElement && activeSectionHost instanceof HTMLElement) {
+        const previousState = preserveScroll ? this.captureModalRefreshState(currentSurfaceKey) : null;
+        paneHost.querySelectorAll('[data-action="journal-section"][data-section]').forEach((button) => {
+          button.classList.toggle("active", button.dataset.section === this.activeJournalSection);
+        });
+        activeSectionHost.innerHTML = this.getJournalActiveSectionMarkup(this.activeJournalSection);
+        this.hubPaneDirty.journal = false;
+        this.syncModalAdaptiveUiState();
+        this.applyControllerNavigationMetadata();
+        this.restoreModalRefreshState(previousState, focusTarget, fallbackFocus);
+        return true;
+      }
+    }
+    return this.updateHubModalContent("journal", {
+      preserveScroll,
+      focusTarget,
+      fallbackFocus,
+      recordOpenTelemetry: false,
+      forceRefresh: true
+    });
+  }
+
+  updateShopModalPanel(focusTarget = null, options = {}) {
+    const {
+      preserveScroll = true,
+      fallbackFocus = true
+    } = options;
+    const shopId = this.pendingShop?.id || "";
+    if (!shopId || !this.pendingShop) {
+      return false;
+    }
+    const surfaceKey = `shop:${shopId}`;
+    if (this.mode === "modal" && this.modalSurfaceKey === surfaceKey) {
+      const modalBody = this.modalRoot?.querySelector("#generic-modal-body");
+      const currentPanelBody = modalBody?.querySelector("[data-shop-panel-body-host]");
+      if (modalBody instanceof HTMLElement && currentPanelBody instanceof HTMLElement) {
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = this.getShopModalBodyMarkup(shopId, this.pendingShop).trim();
+        const nextPanelBody = wrapper.querySelector("[data-shop-panel-body-host]");
+        if (nextPanelBody instanceof HTMLElement) {
+          const previousState = preserveScroll ? this.captureModalRefreshState(surfaceKey) : null;
+          modalBody.querySelectorAll('[data-action="shop-panel"][data-panel]').forEach((button) => {
+            button.classList.toggle("active", button.dataset.panel === this.activeShopPanel);
+          });
+          currentPanelBody.innerHTML = nextPanelBody.innerHTML;
+          this.refreshShopHoverPreview();
+          this.syncModalAdaptiveUiState();
+          this.applyControllerNavigationMetadata();
+          this.restoreModalRefreshState(previousState, focusTarget, fallbackFocus);
+          return true;
+        }
+      }
+    }
+    this.showShopModal(shopId, this.pendingShop, {
+      preserveScroll,
+      focusTarget,
+      fallbackFocus,
+      panel: this.activeShopPanel
+    });
+    return true;
+  }
+
+  refreshPackHub(options = {}) {
+    const {
+      selection = null,
+      preserveScroll = true,
+      focusTarget = null,
+      fallbackFocus = true
+    } = options;
+    if (selection) {
+      this.setPackSelection(selection);
+      this.resolvePackSelection();
+    }
+    if (this.mode === "modal" && this.activeHubTab === "pack") {
+      const refreshSections = selection
+        ? ["equipment", "list", "inspector"]
+        : ["filter", "list", "inspector"];
+      if (this.refreshPackHubContent(focusTarget, {
+        preserveScroll,
+        fallbackFocus,
+        sections: refreshSections
+      })) {
+        return;
+      }
+      this.updateHubModalContent("pack", {
+        preserveScroll,
+        focusTarget,
+        fallbackFocus,
+        recordOpenTelemetry: false
+      });
+      return;
+    }
+    this.showHubModal("pack", { selection, preserveScroll, focusTarget, fallbackFocus });
+  }
+
+  refreshPackHubContent(focusTarget = null, options = {}) {
+    const {
+      preserveScroll = true,
+      fallbackFocus = true,
+      sections = ["equipment", "filter", "list", "inspector"]
+    } = options;
+    const selectorMap = {
+      equipment: "[data-pack-equipment-host]",
+      filter: "[data-pack-filter-host]",
+      list: "[data-pack-list-host]",
+      inspector: "[data-pack-inspector-host]"
+    };
+    const selectors = sections.map((section) => selectorMap[section]).filter(Boolean);
+    if (selectors.length === 0) {
+      return false;
+    }
+    if (this.refreshHubPaneRegions("pack", selectors, {
+      preserveScroll,
+      focusTarget,
+      fallbackFocus
+    })) {
+      return true;
+    }
+    return this.updateHubModalContent("pack", {
+      preserveScroll,
+      focusTarget,
+      fallbackFocus,
+      recordOpenTelemetry: false,
+      forceRefresh: true
+    });
+  }
+
+  buildPackHubViewModel() {
     const shopId = this.getCurrentPackShopContext();
     let model = this.getPackSelectionModel();
     let inventoryModel = buildInventoryPresentationModel(this, {
@@ -10327,6 +12426,15 @@ export class Game {
         shopId
       });
     }
+    return { shopId, model, inventoryModel };
+  }
+
+  getPackHubMarkup(viewModel = null) {
+    const {
+      shopId,
+      model,
+      inventoryModel
+    } = viewModel || this.buildPackHubViewModel();
     const burdenUi = inventoryModel.burdenUi;
     const equipmentValue = Object.values(this.player.equipment).reduce((sum, item) => sum + (item ? getItemValue(item) : 0), 0);
     const packValue = this.player.inventory.reduce((sum, item) => sum + getItemValue(item), 0);
@@ -10346,38 +12454,54 @@ export class Game {
         </button>
       `;
     }).join("");
+    const loadoutInnerMarkup = `
+      <div class="pack-equipment-summary workspace-hero compact">
+        <div class="workspace-title">${escapeHtml(buildSummary.headline)}</div>
+        <div class="pack-build-tags">${buildSummary.tags.map((tag) => `<span class="item-chip">${escapeHtml(tag)}</span>`).join("")}</div>
+      </div>
+      <div class="pack-paperdoll">
+        ${paperdoll}
+      </div>
+      <div class="inventory-detail pack-field-note pack-value-strip">
+        <span class="pack-value-chip">Pack ${Math.floor(packValue)} gp</span>
+        <span class="pack-value-chip">Equipped ${Math.floor(equipmentValue)} gp</span>
+      </div>
+    `;
+    const loadoutMarkup = this.layoutMode === "mobile"
+      ? this.getDisclosureMarkup({
+        title: "Loadout",
+        summary: this.getCompactUiCopy(buildSummary.headline, 34),
+        className: "pack-loadout-disclosure",
+        open: false,
+        body: loadoutInnerMarkup
+      })
+      : loadoutInnerMarkup;
 
     return `
       <div class="hub-body hub-body-pack">
-        <div class="hub-summary hub-summary-compact">
+        <div class="hub-summary hub-summary-compact pack-build-strip">
           <div class="mini-panel"><strong>${escapeHtml(this.player.name)}</strong><br>${escapeHtml(`${this.player.race} ${this.player.className}`)}<div class="mini-panel-note">${escapeHtml(buildSummary.headline)}</div></div>
           <div class="mini-panel burden-panel burden-${burdenUi.state}"><strong>Burden</strong><br><span class="burden-value burden-${burdenUi.state}">${burdenUi.weight} / ${burdenUi.capacity}</span><div class="mini-meter burden burden-${burdenUi.state}"><span style="width:${burdenUi.percent}%"></span></div><span class="mini-panel-note">${escapeHtml(burdenUi.label)}</span></div>
           <div class="mini-panel"><strong>Attack / Armor</strong><br>${this.getAttackValue()} / ${this.getArmorValue()}<div class="mini-panel-note">Guard ${this.getGuardValue()} · Ward ${this.getWardValue()} · ${Math.floor(this.player.gold)} gp</div></div>
         </div>
+        ${this.getPackQuickStateMarkup(model, inventoryModel)}
         <div class="pack-layout">
-          <section class="hub-section pack-equipment-panel">
-            <div class="panel-title">Equipped Gear</div>
-            <div class="pack-equipment-summary">
-              <div class="pack-equipment-name">${escapeHtml(this.player.name)}</div>
-              <div class="pack-equipment-copy">${escapeHtml(`${buildSummary.note}`)}</div>
-              <div class="pack-build-tags">${buildSummary.tags.map((tag) => `<span class="item-chip">${escapeHtml(tag)}</span>`).join("")}</div>
-            </div>
-            <div class="pack-paperdoll">
-              ${paperdoll}
-            </div>
-            <div class="inventory-detail pack-field-note">
-              <strong>Pack Value</strong> ${Math.floor(packValue)} gp<br>
-              <strong>Equipped Value</strong> ${Math.floor(equipmentValue)} gp
-            </div>
-          </section>
-          <section class="hub-section pack-inventory-panel">
-            <div class="panel-title">Pack Contents</div>
-            ${this.getPackFilterMarkup(inventoryModel)}
-            <div class="inventory-list-panel pack-list-panel">
+          <section class="hub-section pack-inventory-panel pack-column pack-column-secondary">
+            <div class="panel-title">Inventory</div>
+            <div data-pack-filter-host>${this.getPackFilterMarkup(inventoryModel)}</div>
+            <div class="inventory-list-panel pack-list-panel" data-pack-list-host>
               ${this.getInventoryGroupsMarkup(inventoryModel, model.selection.type === "inventory" ? model.selection.value : -1)}
             </div>
           </section>
-          ${this.getPackInspectorMarkup(model, inventoryModel)}
+          <div class="pack-side-rail">
+            <div data-pack-inspector-host class="pack-column pack-column-primary">${this.getPackInspectorMarkup(model, inventoryModel)}</div>
+            <div data-pack-equipment-host class="pack-column pack-column-secondary">
+              <section class="hub-section pack-equipment-panel">
+                <div class="panel-title">Loadout</div>
+                ${loadoutMarkup}
+              </section>
+            </div>
+          </div>
         </div>
         ${shopId
           ? `<section class="hub-section inventory-detail pack-field-note"><strong>Shop Context</strong><br>${escapeHtml(this.pendingShop.name)} accepts the highlighted sell tags in this view.</section>`
@@ -10388,44 +12512,76 @@ export class Game {
 
   getMagicHubMarkup() {
     const pinnedSpellIds = this.getPinnedSpellIds();
-    const sortedSpellIds = this.getSortedKnownSpellIds(this.player.spellsKnown);
-    const selectedSpellId = this.targetMode?.spellId || this.pendingSpell || pinnedSpellIds[0] || sortedSpellIds[0] || "";
-    const filterDefs = this.getSpellFilterDefsForEntries(sortedSpellIds.map((spellId) => SPELLS[spellId]).filter(Boolean));
-    const activeFilter = filterDefs.some((entry) => entry.key === this.activeMagicFilter) ? this.activeMagicFilter : "all";
+    const {
+      sortedSpellIds,
+      filterDefs,
+      activeFilter,
+      visibleSpellIds
+    } = this.getMagicSpellListState(this.activeMagicFilter, this.player.spellsKnown);
+    const selectedSpellId = this.getMagicSelectedSpellId({
+      sortedSpellIds,
+      filterDefs,
+      activeFilter,
+      visibleSpellIds
+    });
+    const categoryDefs = new Map(getSpellCategoryDefs().map((entry) => [entry.key, entry]));
+    const orderedGroups = [];
+    visibleSpellIds.forEach((spellId) => {
+      const categoryKey = getSpellCategoryKey(SPELLS[spellId]);
+      const label = categoryDefs.get(categoryKey)?.label || capitalize(categoryKey || "utility");
+      const lastGroup = orderedGroups[orderedGroups.length - 1];
+      if (lastGroup?.key === categoryKey) {
+        lastGroup.spellIds.push(spellId);
+        return;
+      }
+      orderedGroups.push({
+        key: categoryKey,
+        label,
+        spellIds: [spellId]
+      });
+    });
     const rows = sortedSpellIds.length === 0
       ? `<div class="text-block">No spells are known.</div>`
-      : getSpellCategoryDefs().map((category) => {
-        if (activeFilter !== "all" && activeFilter !== category.key) {
-          return "";
-        }
-        const spellIds = sortedSpellIds.filter((spellId) => getSpellCategoryKey(SPELLS[spellId]) === category.key);
-        if (spellIds.length === 0) {
-          return "";
-        }
+      : orderedGroups.map((category) => {
         return `
           <section class="magic-category-group">
             <div class="magic-category-heading">
               <div class="magic-category-title">${escapeHtml(category.label)}</div>
-              <div class="magic-category-count">${spellIds.length}</div>
+              <div class="magic-category-count">${category.spellIds.length}</div>
             </div>
             <div class="magic-grid">
-              ${spellIds.map((spellId) => {
+              ${category.spellIds.map((spellId) => {
                 const spell = SPELLS[spellId];
                 const manaCost = getSpellCost(this, spell);
                 const overcast = this.player.mana < manaCost;
-                const targetingLabel = this.getSpellTargetingLabel(spell);
+                const targetingLabel = this.getSpellUiTargetingLabel(spell);
                 const pinnedIndex = pinnedSpellIds.indexOf(spellId);
                 const isPinned = pinnedIndex >= 0;
                 const trayFull = pinnedSpellIds.length >= this.getSpellTrayLimit();
                 const isSelected = selectedSpellId === spellId;
+                const iconMeta = this.getSpellIconMeta(spell);
                 const pinLabel = isPinned
-                  ? `Tray Slot ${pinnedIndex + 1}`
+                  ? `Tray Slot ${pinnedIndex + 1} · ${iconMeta.symbol}`
                   : "Book Only";
+                const compactCopy = this.getCompactUiCopy(this.getSpellCardCopy(spell), 96);
+                const rowReorderDisclosure = isPinned
+                  ? this.getDisclosureMarkup({
+                      title: "Tray Order",
+                      summary: `Slot ${pinnedIndex + 1}`,
+                      className: "magic-card-disclosure",
+                      body: `
+                        <div class="magic-card-actions magic-card-actions-secondary">
+                          <button class="menu-button" data-action="spell-pin-up" data-spell="${spellId}" data-focus-key="hub:spell-up:${spellId}" type="button"${pinnedIndex === 0 ? " disabled" : ""}>Move Up</button>
+                          <button class="menu-button" data-action="spell-pin-down" data-spell="${spellId}" data-focus-key="hub:spell-down:${spellId}" type="button"${pinnedIndex === pinnedSpellIds.length - 1 ? " disabled" : ""}>Move Down</button>
+                        </div>
+                      `
+                    })
+                  : "";
                 return `
-                  <article class="magic-card${isSelected ? " active" : ""}${isPinned ? " pinned" : ""}">
+                <article class="magic-card${isSelected ? " active" : ""}${isPinned ? " pinned" : ""}" data-spell-card="${spellId}">
                     <button class="magic-card-select" data-action="spell-select" data-double-action="spell-cast" data-surface="book" data-spell="${spellId}" data-focus-key="${this.getSpellBookFocusKey(spellId)}" type="button">
                       <div class="magic-card-header">
-                        <div class="magic-card-title">${escapeHtml(spell.name)}</div>
+                        <div class="magic-card-title"><span class="spell-symbol-inline" aria-hidden="true">${escapeHtml(iconMeta.symbol)}</span><span>${escapeHtml(spell.name)}</span></div>
                         <div class="magic-card-cost${overcast ? " warning" : ""}">${manaCost} mana${overcast ? " / overcast" : ""}</div>
                       </div>
                       <div class="magic-card-tags">
@@ -10434,15 +12590,16 @@ export class Game {
                         <span class="spell-badge subtle">${escapeHtml(targetingLabel)}</span>
                       </div>
                       <div class="magic-card-meta">${escapeHtml(`Tier ${spell.tier || 1} | ${capitalize(this.getSpellRoleLabel(spell))} | ${spell.target === "self" ? "Self cast" : `Range ${spell.range || 1}`}`)}</div>
-                      <div class="magic-card-copy">${escapeHtml(spell.description)}</div>
-                      <div class="magic-card-status">${escapeHtml(isSelected ? `${pinLabel} | Selected` : pinLabel)}</div>
+                      <div class="magic-card-copy">${escapeHtml(compactCopy)}</div>
+                      <div class="magic-card-status" data-spell-status="${spellId}">${escapeHtml(isSelected ? `${pinLabel} | Selected` : pinLabel)}</div>
                     </button>
-                    <div class="magic-card-actions">
-                      <button class="menu-button pack-action-primary" data-action="spell-cast" data-spell="${spellId}" data-focus-key="${this.getSpellCastFocusKey(spellId)}" type="button">Cast</button>
-                      <button class="menu-button" data-action="spell-pin-toggle" data-spell="${spellId}" data-focus-key="hub:spell-pin:${spellId}" type="button"${!isPinned && trayFull ? " disabled" : ""}>${isPinned ? "Remove From Tray" : trayFull ? "Tray Full" : "Pin To Tray"}</button>
-                      <button class="menu-button" data-action="spell-pin-up" data-spell="${spellId}" data-focus-key="hub:spell-up:${spellId}" type="button"${!isPinned || pinnedIndex === 0 ? " disabled" : ""}>Move Up</button>
-                      <button class="menu-button" data-action="spell-pin-down" data-spell="${spellId}" data-focus-key="hub:spell-down:${spellId}" type="button"${!isPinned || pinnedIndex === pinnedSpellIds.length - 1 ? " disabled" : ""}>Move Down</button>
-                    </div>
+                    ${isSelected ? `
+                      <div class="magic-card-actions">
+                        <button class="menu-button pack-action-primary" data-action="spell-cast" data-spell="${spellId}" data-focus-key="${this.getSpellCastFocusKey(spellId)}" type="button">Cast</button>
+                        <button class="menu-button" data-action="spell-pin-toggle" data-spell="${spellId}" data-focus-key="hub:spell-pin:${spellId}" type="button"${!isPinned && trayFull ? " disabled" : ""}>${isPinned ? "Remove From Tray" : trayFull ? "Tray Full" : "Pin To Tray"}</button>
+                      </div>
+                      ${rowReorderDisclosure}
+                    ` : ""}
                   </article>
                 `;
               }).join("")}
@@ -10450,44 +12607,91 @@ export class Game {
           </section>
         `;
       }).join("");
+    const selectedSpell = SPELLS[selectedSpellId] || null;
+    const selectedCategoryLabel = selectedSpell ? (categoryDefs.get(getSpellCategoryKey(selectedSpell))?.label || "Utility") : "Utility";
+    const selectedManaCost = selectedSpell ? getSpellCost(this, selectedSpell) : 0;
+    const selectedPinnedIndex = selectedSpell ? pinnedSpellIds.indexOf(selectedSpellId) : -1;
+    const selectedPinned = selectedPinnedIndex >= 0;
+    const selectedTrayFull = pinnedSpellIds.length >= this.getSpellTrayLimit();
+    const selectedIconMeta = selectedSpell ? this.getSpellIconMeta(selectedSpell) : null;
+    const selectedFeatureLead = selectedSpell
+      ? this.getCompactUiCopy(this.getSpellMechanicalReadout(selectedSpell) || this.getSpellCardCopy(selectedSpell), 122)
+      : "";
+    const selectedFeatureDisclosure = selectedSpell
+      ? this.getDisclosureMarkup({
+          title: "Spell Readout",
+          summary: `Tier ${selectedSpell.tier || 1} | ${capitalize(this.getSpellRoleLabel(selectedSpell))}`,
+          className: "magic-feature-disclosure",
+          body: `
+            <div class="magic-feature-copy">${escapeHtml(this.getSpellCardCopy(selectedSpell))}</div>
+            <div class="magic-feature-meta-grid">
+              <div class="pack-stat-pill">${escapeHtml(this.getSpellUiTargetingLabel(selectedSpell))}</div>
+              <div class="pack-stat-pill">${escapeHtml(selectedPinned ? `Tray slot ${selectedPinnedIndex + 1}` : "Not pinned")}</div>
+              <div class="pack-stat-pill">${escapeHtml(this.player.mana < selectedManaCost ? "Will overcast" : "Safe to cast now")}</div>
+            </div>
+          `
+        })
+      : "";
+    const selectedFeatureTrayDisclosure = selectedSpell && selectedPinned
+      ? this.getDisclosureMarkup({
+          title: "Tray Order",
+          summary: `Slot ${selectedPinnedIndex + 1}`,
+          className: "magic-feature-disclosure",
+          body: `
+            <div class="magic-feature-actions magic-feature-actions-secondary">
+              <button class="menu-button" data-action="spell-pin-up" data-spell="${selectedSpellId}" data-focus-key="magic:feature:up" type="button"${selectedPinnedIndex === 0 ? " disabled" : ""}>Move Up</button>
+              <button class="menu-button" data-action="spell-pin-down" data-spell="${selectedSpellId}" data-focus-key="magic:feature:down" type="button"${selectedPinnedIndex === pinnedSpellIds.length - 1 ? " disabled" : ""}>Move Down</button>
+            </div>
+          `
+        })
+      : "";
 
     return `
       <div class="hub-body hub-body-magic">
-        <div class="hub-summary hub-summary-compact">
-          <div class="mini-panel"><strong>Mana</strong><br>${Math.floor(this.player.mana)} / ${this.player.maxMana}</div>
-          <div class="mini-panel"><strong>Known</strong><br>${this.player.spellsKnown.length}</div>
-          <div class="mini-panel"><strong>Tray</strong><br>${pinnedSpellIds.length} / ${this.getSpellTrayLimit()}</div>
-          <div class="mini-panel"><strong>Casting</strong><br>${this.spellTrayOpen || this.mode === "target" ? "Field tray" : "Book view"}</div>
+        <div data-magic-summary-host>
+          <div class="hub-summary hub-summary-compact magic-summary-strip">
+            <div class="mini-panel"><strong>Mana</strong><br>${Math.floor(this.player.mana)} / ${this.player.maxMana}</div>
+            <div class="mini-panel"><strong>Known</strong><br>${this.player.spellsKnown.length}</div>
+            <div class="mini-panel"><strong>Tray</strong><br>${pinnedSpellIds.length} / ${this.getSpellTrayLimit()}</div>
+            <div class="mini-panel"><strong>Casting</strong><br>${this.spellTrayOpen || this.mode === "target" ? "Field tray" : "Book view"}</div>
+          </div>
+          ${this.getMagicQuickStateMarkup(selectedSpellId, filterDefs, orderedGroups)}
         </div>
         <section class="hub-section">
-          <div class="panel-title">Spell Book</div>
-          <div class="text-block magic-intro">Single-click selects a spell. Double-click or Cast starts it immediately. Spells are grouped by job so travel, identify, defense, and offense tools stay easy to scan on a phone. The field tray only shows pinned quick casts, so manage those tray slots here.</div>
-          ${this.getSpellFilterChipsMarkup(activeFilter, "magic-filter", (key) => this.getMagicFilterFocusKey(key), "magic-filter-row", filterDefs)}
-          <div class="magic-category-list">${rows}</div>
+          <div class="panel-title">Spell Desk</div>
+          ${selectedSpell ? `
+            <article class="magic-feature-card">
+              <div class="magic-feature-meta">
+                <span class="spell-badge accent">${escapeHtml(selectedCategoryLabel)}</span>
+                <span class="spell-badge">${escapeHtml(capitalize(selectedSpell.school || "spell"))}</span>
+                <span class="spell-badge subtle">${escapeHtml(this.getSpellUiTargetingLabel(selectedSpell))}</span>
+              </div>
+              <div class="magic-feature-header">
+                <div>
+                  <div class="magic-feature-title"><span class="spell-symbol-inline spell-symbol-inline-feature" aria-hidden="true">${escapeHtml(selectedIconMeta?.symbol || "✦")}</span><span>${escapeHtml(selectedSpell.name)}</span></div>
+                  <div class="magic-feature-detail">${escapeHtml(selectedFeatureLead)}</div>
+                </div>
+                <div class="magic-feature-cost${this.player.mana < selectedManaCost ? " warning" : ""}">${selectedManaCost} mana${this.player.mana < selectedManaCost ? " / overcast" : ""}</div>
+              </div>
+              <div class="magic-feature-actions">
+                <button class="menu-button pack-action-primary" data-action="spell-cast" data-spell="${selectedSpellId}" data-focus-key="magic:feature:cast" type="button">Cast</button>
+                <button class="menu-button" data-action="spell-pin-toggle" data-spell="${selectedSpellId}" data-focus-key="magic:feature:pin" type="button"${!selectedPinned && selectedTrayFull ? " disabled" : ""}>${selectedPinned ? "Remove From Tray" : selectedTrayFull ? "Tray Full" : "Pin To Tray"}</button>
+              </div>
+              ${selectedFeatureDisclosure}
+              ${selectedFeatureTrayDisclosure}
+            </article>
+          ` : ""}
+          <div data-magic-filter-host>${this.getSpellFilterChipsMarkup(activeFilter, "magic-filter", (key) => this.getMagicFilterFocusKey(key), "magic-filter-row", filterDefs)}</div>
+          <div class="magic-category-list" data-magic-list-host>${rows}</div>
         </section>
       </div>
     `;
   }
 
-  getJournalHubMarkup() {
-    const activeSection = this.getResolvedJournalSection();
+  getJournalCurrentSectionMarkup() {
     const townCycle = this.getTownCycleState();
-    const reactions = this.getTownReactionLines();
     const milestoneSummary = this.getQuestMilestoneSummary();
-    const milestoneJournal = this.getActiveMilestoneJournalText();
-    const currentChapter = this.getCurrentChapterObjective();
-    const activeBriefing = this.getActiveBriefingText();
-    const discoverySummary = this.getKnownDiscoveryLines();
-    const namedLootSummary = this.getNamedLootLines();
     const roomEvent = this.currentLevel?.roomEvents?.[0] || null;
-    const featuredStockSummary = Object.entries(townCycle.featuredStock || {})
-      .map(([shopId, itemIds]) => {
-        const label = SHOPS[shopId]?.name;
-        const names = (itemIds || []).map((itemId) => ITEM_DEFS[itemId]?.name).filter(Boolean).join(", ");
-        return label && names ? `${label}: ${names}` : "";
-      })
-      .filter(Boolean)
-      .join(" | ");
     const questState = this.player.quest.complete
       ? "Returned to town with the Runestone."
       : this.player.quest.hasRunestone
@@ -10500,6 +12704,227 @@ export class Game {
       ...(this.player.perks || []).map((id) => PERK_DEFS[id]?.name).filter(Boolean),
       ...(this.player.relics || []).map((id) => RELIC_DEFS[id]?.name).filter(Boolean)
     ];
+    const townStateLine = this.currentDepth === 0
+      ? `${this.getTownCycleLabel()} | ${townCycle.stockSummary}`
+      : `Deepest ${this.player.deepestDepth} | ${this.currentLevel?.encounterSummary || "The floor is still quiet enough to read."}`;
+    const buildLine = buildSummary.length > 0
+      ? buildSummary.join(", ")
+      : "No perks or relics claimed yet.";
+    const inTown = this.currentDepth === 0;
+    const nextMoveTitle = inTown
+      ? "Prepare, then enter the keep."
+      : this.currentLevel?.floorResolved
+        ? "Choose extract or greed."
+        : "Push toward the floor objective.";
+    const nextMoveDetail = inTown
+      ? "Town has no active floor objective. Use the bank or a service if needed, then take the north road into the keep."
+      : this.currentLevel?.floorResolved
+        ? "The floor objective is done. Review risk, route, and supplies before committing to one more room."
+        : `${objectiveText}${optionalText ? ` Optional: ${optionalText}` : ""}`;
+    const actionButtons = `
+      <div class="modal-actions utility-row field-guide-action-row">
+        <button class="menu-button" data-action="open-hub" data-tab="pack" data-focus-key="journal:pack" type="button">Pack</button>
+        <button class="menu-button" data-action="open-hub" data-tab="magic" data-focus-key="journal:magic" type="button">Magic</button>
+        <button class="menu-button" data-action="view-map" data-focus-key="journal:map" type="button">Floor Map</button>
+      </div>
+    `;
+    return `
+      <div class="field-guide-shell field-guide-shell-current">
+        <aside class="field-guide-rail">
+          ${this.getFieldGuideBriefMarkup({
+            label: "Now",
+            title: inTown ? "Town pause" : this.currentLevel?.floorResolved ? "Objective resolved" : "Objective live",
+            detail: nextMoveDetail,
+            tone: "priority"
+          })}
+          ${this.getFieldGuideBriefMarkup({
+            label: "Next Move",
+            title: nextMoveTitle,
+            detail: inTown
+              ? "Open a service, review gear, or step into the keep."
+              : this.currentLevel?.floorResolved
+                ? "Extract if the pack is shaky. Push only if the route still looks clean."
+                : "Keep the route and pressure in view while you move.",
+            actions: actionButtons
+          })}
+        </aside>
+        <div class="field-guide-main field-guide-layout">
+        <section class="hub-section field-guide-card">
+          <div class="panel-title">Current Floor</div>
+          <div class="field-guide-copy">
+            <strong>${escapeHtml(this.currentLevel.description)}</strong><br><br>
+            ${escapeHtml(objectiveText)}<br><br>
+            ${escapeHtml(optionalText || questState)}
+          </div>
+        </section>
+        <section class="hub-section field-guide-card">
+          <div class="panel-title">Pressure</div>
+          ${this.getFieldGuideFactListMarkup([
+            ["Pressure", dangerText],
+            ["Encounter read", this.currentLevel?.encounterSummary || "The floor is still quiet enough to read."]
+          ])}
+        </section>
+        <section class="hub-section field-guide-card">
+          <div class="panel-title">Run Build</div>
+          ${this.getFieldGuideFactListMarkup([
+            ["Build read", buildLine],
+            ["Reward preview", getObjectiveRewardPreview(this.currentLevel) || "No objective reward preview available."]
+          ])}
+        </section>
+        <section class="hub-section field-guide-card">
+          <div class="panel-title">${this.currentDepth === 0 ? "Town State" : "Run State"}</div>
+          ${this.getFieldGuideFactListMarkup([
+            [this.currentDepth === 0 ? "Town cycle" : "Run state", townStateLine],
+            ["Milestones", milestoneSummary],
+            ["Signature room", roomEvent ? `${roomEvent.label}. ${roomEvent.summary}` : ""]
+          ])}
+        </section>
+        </div>
+      </div>
+    `;
+  }
+
+  getJournalMissionSectionMarkup() {
+    const currentChapter = this.getCurrentChapterObjective();
+    const activeBriefing = this.getActiveBriefingText();
+    const milestoneJournal = this.getActiveMilestoneJournalText();
+    const latestSummary = (this.runSummaryHistory || []).at(-1) || this.lastRunSummary;
+    const questState = this.player.quest.complete
+      ? "Returned to town with the Runestone."
+      : this.player.quest.hasRunestone
+        ? "The Runestone is in your possession. Return to town."
+        : "Descend to the lowest halls and recover the Runestone.";
+    const rewardPreview = getObjectiveRewardPreview(this.currentLevel) || "No floor reward preview available.";
+    return `
+      <div class="field-guide-shell field-guide-shell-mission">
+        <aside class="field-guide-rail">
+          ${this.getFieldGuideBriefMarkup({
+            label: "Goal",
+            title: currentChapter,
+            detail: "Use this section when you need the chapter objective and route context in one glance.",
+            tone: "priority"
+          })}
+          ${this.getFieldGuideBriefMarkup({
+            label: "Payoff",
+            title: rewardPreview,
+            detail: latestSummary
+              ? `Last return reached depth ${latestSummary.extractedDepth} and banked or carried ${latestSummary.returnValue} gp.`
+              : "No banked return record yet."
+          })}
+        </aside>
+        <div class="field-guide-main field-guide-layout">
+        <section class="hub-section field-guide-card">
+          <div class="panel-title">Mission Brief</div>
+          <div class="field-guide-copy">
+            <strong>${escapeHtml(currentChapter)}</strong><br><br>
+            ${escapeHtml(activeBriefing)}
+          </div>
+        </section>
+        <section class="hub-section field-guide-card">
+          <div class="panel-title">Objective Path</div>
+          ${this.getFieldGuideFactListMarkup([
+            ["Route context", milestoneJournal],
+            ["Quest state", questState]
+          ])}
+        </section>
+        <section class="hub-section field-guide-card">
+          <div class="panel-title">Reward Stakes</div>
+          ${this.getFieldGuideFactListMarkup([
+            ["Floor reward", rewardPreview],
+            ["Last return", latestSummary
+              ? `Depth ${latestSummary.extractedDepth}, ${latestSummary.greedCount} greed room${latestSummary.greedCount === 1 ? "" : "s"}, ${latestSummary.returnValue} gp banked or carried.`
+              : "No banked return record yet."]
+          ])}
+        </section>
+        </div>
+      </div>
+    `;
+  }
+
+  getJournalGuideSectionMarkup() {
+    const controlLead = this.gamepadInput?.isConnected()
+      ? {
+          title: this.gamepadInput.getControllerName() || "Controller",
+          detail: "Controller is connected, so this is the fastest control reference right now."
+        }
+      : this.layoutMode === "mobile" && this.settings.touchControlsEnabled
+        ? {
+            title: "Touch controls",
+            detail: "Mobile layout is active. Use the on-screen pad and dock first, then fall back to keyboard if needed."
+          }
+        : {
+            title: "Keyboard first",
+            detail: "Desktop play is active. Arrows or numpad remain the quickest way to move and search."
+          };
+    return `
+      <div class="field-guide-shell field-guide-shell-rules">
+        <aside class="field-guide-rail">
+          ${this.getFieldGuideBriefMarkup({
+            label: "Best Match Right Now",
+            title: controlLead.title,
+            detail: controlLead.detail,
+            tone: "priority"
+          })}
+          ${this.getFieldGuideBriefMarkup({
+            label: "Use This Section",
+            title: "Check one rule, then leave.",
+            detail: "This page should settle movement, controls, or dungeon behavior without becoming a manual."
+          })}
+        </aside>
+        <div class="field-guide-main field-guide-layout">
+        <section class="hub-section help-panel field-guide-card">
+          <div class="panel-title">Core Loop</div>
+          <div class="field-guide-copy">
+            Start in town, prep the build, enter the keep, clear the floor objective, then decide whether to extract or push deeper.
+          </div>
+        </section>
+        <section class="hub-section help-panel field-guide-card">
+          <div class="panel-title">Reference</div>
+          <div class="field-guide-copy">
+            HUD handles tactical-now status. Pack handles gear and burden. Magic handles tray management and casting. Open the pieces you need, then leave.
+          </div>
+          ${this.getDisclosureMarkup({
+            title: "Controls",
+            summary: controlLead.title,
+            className: "field-guide-disclosure",
+            open: this.layoutMode !== "mobile",
+            body: this.getFieldGuideFactListMarkup([
+              ["Keyboard", "Arrows or numpad move. F searches. U uses. I opens pack. S opens magic. M opens the map. R rests. Shift+R sleeps until restored."],
+              ["Controller", "D-pad or left stick moves. A confirms or uses. B backs out. X uses the alternate action. Y opens pack. Start opens the run menu. Back toggles the map. LB or RB switch tabs. RT or the right stick scrolls long lists."],
+              ["Touch", "Use the on-screen pad for fallback movement and the dock for your main actions."]
+            ])
+          })}
+          ${this.getDisclosureMarkup({
+            title: "Dungeon Rules",
+            summary: "Search, burden, line of sight, rest, intent",
+            className: "field-guide-disclosure",
+            body: this.getFieldGuideBulletListMarkup([
+              "Search reveals hidden doors, traps, and better routes.",
+              "Heavy burden lowers dodge and lets monsters press harder.",
+              "Targeted spells and wands need line of sight.",
+              "Resting and sleeping are noisy, and sleep breaks when a monster enters view.",
+              "Enemy intent icons warn about rushes, ranged shots, summons, and other dangerous turns before they land."
+            ])
+          })}
+        </section>
+        </div>
+      </div>
+    `;
+  }
+
+  getJournalChronicleSectionMarkup() {
+    const townCycle = this.getTownCycleState();
+    const reactions = this.getTownReactionLines();
+    const discoverySummary = this.getKnownDiscoveryLines();
+    const namedLootSummary = this.getNamedLootLines();
+    const featuredStockSummary = Object.entries(townCycle.featuredStock || {})
+      .map(([shopId, itemIds]) => {
+        const label = SHOPS[shopId]?.name;
+        const names = (itemIds || []).map((itemId) => ITEM_DEFS[itemId]?.name).filter(Boolean).join(", ");
+        return label && names ? `${label}: ${names}` : "";
+      })
+      .filter(Boolean)
+      .join(" | ");
     const telemetrySummary = this.getTelemetrySummary();
     const telemetryReview = this.getTelemetryReviewSnapshot();
     const latestSummary = (this.runSummaryHistory || []).at(-1) || this.lastRunSummary;
@@ -10512,208 +12937,150 @@ export class Game {
     const telemetryRecent = telemetryReview.recentEvents.length > 0
       ? telemetryReview.recentEvents.map((entry) => `<div class="log-line">[T${entry.turn} D${entry.depth}] ${escapeHtml(entry.text)}</div>`).join("")
       : "<div class='muted'>No run telemetry captured yet.</div>";
+    const latestDigest = latestSummary
+      ? `${latestSummary.outcome} at depth ${latestSummary.extractedDepth}. Greed rooms: ${latestSummary.greedCount}.`
+      : "No completed extraction or death summary is recorded yet.";
+    const townDigest = [
+      this.getTownCycleLabel(),
+      townCycle.turnsUntilRefresh === 1 ? "Next market turnover in 1 turn." : `Next market turnover in ${townCycle.turnsUntilRefresh} turns.`,
+      townCycle.stockSummary,
+      townCycle.rumorSummary
+    ].join(" ");
+    return `
+      <div class="field-guide-shell field-guide-shell-chronicle">
+        <aside class="field-guide-rail">
+          ${this.getFieldGuideBriefMarkup({
+            label: "Digest",
+            title: latestSummary ? (latestSummary.outcome || "Latest run") : "No completed run yet",
+            detail: latestDigest,
+            tone: "priority"
+          })}
+          ${this.getFieldGuideBriefMarkup({
+            label: "Town Shift",
+            title: this.getTownCycleLabel(),
+            detail: reactions.lines[0] || townDigest
+          })}
+        </aside>
+        <div class="field-guide-main field-guide-layout">
+        <section class="hub-section field-guide-card">
+          <div class="panel-title">Discoveries</div>
+          ${this.getFieldGuideBulletListMarkup(
+            discoverySummary.length > 0 ? discoverySummary : ["No written fragments recovered yet."]
+          )}
+        </section>
+        <section class="hub-section field-guide-card">
+          <div class="panel-title">Town Digest</div>
+          ${this.getFieldGuideFactListMarkup([
+            ["Cycle", this.getTownCycleLabel()],
+            ["Turnover", townCycle.turnsUntilRefresh === 1 ? "1 turn" : `${townCycle.turnsUntilRefresh} turns`],
+            ["Stock posture", townCycle.stockSummary],
+            ["Rumor posture", townCycle.rumorSummary],
+            ["Featured market", featuredStockSummary || "No featured market picks are posted yet."],
+            ["Town reaction", reactions.lines[0] || "The town has not shifted around your run yet."]
+          ])}
+        </section>
+        <section class="hub-section field-guide-card">
+          <div class="panel-title">Named Loot</div>
+          ${this.getFieldGuideBulletListMarkup(
+            namedLootSummary.length > 0 ? namedLootSummary : ["No signature finds claimed yet."]
+          )}
+        </section>
+        <section class="hub-section field-guide-card">
+          <div class="panel-title">Persistence</div>
+          ${this.getFieldGuideFactListMarkup([
+            ["Contract state", activeContract ? `${activeContract.name}. Next run only.` : "No contract armed for the next run."],
+            ["Mastery", masterySummary],
+            ["Contract adoption", `${Math.round((metaReview.armedRunStartRate || 0) * 100)}% of tracked runs started armed. Most armed: ${metaReview.mostArmedContract || "none yet"}.`]
+          ])}
+          ${this.getDisclosureMarkup({
+            title: "Contracts",
+            summary: activeContract ? activeContract.name : "None armed",
+            className: "field-guide-disclosure",
+            body: contractMarkup
+          })}
+          ${this.getDisclosureMarkup({
+            title: "Current Class Mastery",
+            summary: masterySummary,
+            className: "field-guide-disclosure",
+            body: masteryMarkup
+          })}
+          ${this.getDisclosureMarkup({
+            title: "Latest 3 Returns",
+            summary: latestSummary ? `${latestSummary.outcome} depth ${latestSummary.extractedDepth}` : "No return archive yet",
+            className: "field-guide-disclosure",
+            body: archiveMarkup
+          })}
+        </section>
+        <section class="hub-section field-guide-card">
+          <div class="panel-title">Chronicle</div>
+          ${this.getDisclosureMarkup({
+            title: "Recent Chronicle",
+            summary: "Last 12 entries",
+            className: "field-guide-disclosure",
+            body: `<div class="message-log journal-log">${renderChronicleMarkup(this, 12)}</div>`
+          })}
+        </section>
+        <section class="hub-section field-guide-card">
+          <div class="panel-title">Telemetry</div>
+          ${this.getFieldGuideFactListMarkup([
+            ["Events", telemetrySummary.eventCount],
+            ["Searches", telemetrySummary.searches],
+            ["Buys / Sells", `${telemetrySummary.shopBuys} / ${telemetrySummary.shopSells}`],
+            ["Spells / Items", `${telemetrySummary.spellsCast} / ${telemetrySummary.itemsUsed}`],
+            ["Returns", telemetrySummary.townReturns],
+            ["Latest", latestSummary
+              ? `${latestSummary.outcome} | first objective ${latestSummary.firstObjectiveType || "unknown"} | clear turn ${latestSummary.firstObjectiveClearTurn ?? "?"} | greed ${latestSummary.greedCount}`
+              : "No extraction or death summary recorded yet."]
+          ])}
+          ${this.getDisclosureMarkup({
+            title: "Recent Telemetry",
+            summary: `${telemetryReview.recentEvents.length} recent event${telemetryReview.recentEvents.length === 1 ? "" : "s"}`,
+            className: "field-guide-disclosure",
+            body: `<div class="message-log journal-log">${telemetryRecent}</div>`
+          })}
+        </section>
+        </div>
+      </div>
+    `;
+  }
+
+  getJournalActiveSectionMarkup(activeSection = this.getResolvedJournalSection()) {
+    if (activeSection === "mission") {
+      return this.getJournalMissionSectionMarkup();
+    }
+    if (activeSection === "guide") {
+      return this.getJournalGuideSectionMarkup();
+    }
+    if (activeSection === "chronicle") {
+      return this.getJournalChronicleSectionMarkup();
+    }
+    return this.getJournalCurrentSectionMarkup();
+  }
+
+  getJournalHubMarkup() {
+    const activeSection = this.getResolvedJournalSection();
+    const objectiveText = getObjectiveStatusText(this.currentLevel);
+    const hero = this.getFieldGuideHeroModel(activeSection);
     const sectionButtons = this.getJournalSectionDefs().map((section) => `
       <button class="hub-filter-chip${section.id === activeSection ? " active" : ""}" data-action="journal-section" data-section="${section.id}" data-focus-key="${this.getJournalSectionFocusKey(section.id)}" type="button">${section.label}</button>
     `).join("");
-    const townStateLine = this.currentDepth === 0
-      ? `${this.getTownCycleLabel()} | ${townCycle.stockSummary}`
-      : `Deepest ${this.player.deepestDepth} | ${this.currentLevel?.encounterSummary || "The floor is still quiet enough to read."}`;
-    const buildLine = buildSummary.length > 0
-      ? buildSummary.join(", ")
-      : "No perks or relics claimed yet.";
-    const currentSectionMarkup = `
-      <div class="field-guide-layout">
-        <section class="hub-section">
-          <div class="panel-title">Current Floor</div>
-          <div class="text-block">
-            <strong>${escapeHtml(this.currentLevel.description)}</strong><br><br>
-            ${escapeHtml(objectiveText)}<br><br>
-            ${escapeHtml(optionalText || questState)}
-          </div>
-          <div class="modal-actions utility-row">
-            <button class="menu-button" data-action="open-hub" data-tab="pack" data-focus-key="journal:pack" type="button">Pack</button>
-            <button class="menu-button" data-action="open-hub" data-tab="magic" data-focus-key="journal:magic" type="button">Magic</button>
-            <button class="menu-button" data-action="view-map" data-focus-key="journal:map" type="button">Floor Map</button>
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Pressure</div>
-          <div class="text-block">
-            ${escapeHtml(dangerText)}<br><br>
-            ${escapeHtml(this.currentLevel?.encounterSummary || "The floor is still quiet enough to read.")}
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Run Build</div>
-          <div class="text-block">
-            ${escapeHtml(buildLine)}<br><br>
-            ${escapeHtml(getObjectiveRewardPreview(this.currentLevel) || "No objective reward preview available.")}
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">${this.currentDepth === 0 ? "Town State" : "Run State"}</div>
-          <div class="text-block">
-            ${escapeHtml(townStateLine)}<br><br>
-            ${escapeHtml(milestoneSummary)}
-            ${roomEvent ? `<br><br>${escapeHtml(`Signature room: ${roomEvent.label}. ${roomEvent.summary}`)}` : ""}
-          </div>
-        </section>
-      </div>
-    `;
-    const missionSectionMarkup = `
-      <div class="field-guide-layout">
-        <section class="hub-section">
-          <div class="panel-title">Mission Brief</div>
-          <div class="text-block">
-            <strong>${escapeHtml(currentChapter)}</strong><br><br>
-            ${escapeHtml(activeBriefing)}
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Objective Path</div>
-          <div class="text-block">
-            ${escapeHtml(milestoneJournal)}<br><br>
-            ${escapeHtml(questState)}
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Reward Stakes</div>
-          <div class="text-block">
-            ${escapeHtml(getObjectiveRewardPreview(this.currentLevel) || "No floor reward preview available.")}<br><br>
-            ${latestSummary
-              ? escapeHtml(`Last return: depth ${latestSummary.extractedDepth}, ${latestSummary.greedCount} greed room${latestSummary.greedCount === 1 ? "" : "s"}, ${latestSummary.returnValue} gp banked or carried.`)
-              : "No banked return summary yet."}
-          </div>
-        </section>
-      </div>
-    `;
-    const guideSectionMarkup = `
-      <div class="field-guide-layout">
-        <section class="hub-section help-panel">
-          <div class="panel-title">Core Loop</div>
-          <div class="text-block">
-            Start in town, prep the build, enter the keep, clear the floor objective, then decide whether to extract or push deeper.
-          </div>
-        </section>
-        <section class="hub-section help-panel">
-          <div class="panel-title">Where Info Lives</div>
-          <div class="text-block">
-            HUD handles tactical-now status. Pack handles gear and burden. Magic handles tray management and casting. Field Guide holds mission, rules, and run history.
-          </div>
-        </section>
-        <section class="hub-section help-panel">
-          <div class="panel-title">Controls</div>
-          <ul class="help-list">
-            <li><strong>Keyboard:</strong> Arrows or numpad move. F searches. U uses. I opens pack. S opens magic. M opens the map. R rests. Shift+R sleeps until restored.</li>
-            <li><strong>Controller:</strong> D-pad or left stick moves. A confirms or uses. B backs out of targeting and menus. X triggers the alternate action. Y opens pack. Start opens the run menu. Back toggles the map. LB or RB switch tabs. RT or the right stick scrolls long lists.</li>
-            <li><strong>Touch:</strong> Use the on-screen pad for fallback movement and the dock for your main actions.</li>
-          </ul>
-        </section>
-        <section class="hub-section help-panel">
-          <div class="panel-title">Dungeon Rules</div>
-          <ul class="help-list">
-            <li>Search reveals hidden doors, traps, and better routes.</li>
-            <li>Heavy burden lowers dodge and lets monsters press harder.</li>
-            <li>Targeted spells and wands need line of sight.</li>
-            <li>Resting and sleeping are noisy, and sleep breaks when a monster enters view.</li>
-            <li>Enemy intent icons warn about rushes, ranged shots, summons, and other dangerous turns before they land.</li>
-          </ul>
-        </section>
-      </div>
-    `;
-    const chronicleSectionMarkup = `
-      <div class="field-guide-layout">
-        <section class="hub-section">
-          <div class="panel-title">Discoveries</div>
-          <div class="text-block">
-            ${discoverySummary.length > 0
-              ? discoverySummary.map((line) => escapeHtml(line)).join("<br><br>")
-              : "No written fragments recovered yet."}
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Town Cycle</div>
-          <div class="text-block">
-            ${escapeHtml(this.getTownCycleLabel())}<br><br>
-            ${escapeHtml(townCycle.turnsUntilRefresh === 1 ? "Next market turnover in 1 turn." : `Next market turnover in ${townCycle.turnsUntilRefresh} turns.`)}<br><br>
-            ${escapeHtml(townCycle.stockSummary)}<br>
-            ${escapeHtml(townCycle.rumorSummary)}<br><br>
-            ${escapeHtml(featuredStockSummary || "No featured market picks are posted yet.")}
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Town Reactions</div>
-          <div class="text-block">
-            ${reactions.lines.length > 0
-              ? reactions.lines.slice(0, 4).map((line) => escapeHtml(line)).join("<br><br>")
-              : "The town has not shifted around your run yet."}
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Named Loot</div>
-          <div class="text-block">
-            ${namedLootSummary.length > 0
-              ? namedLootSummary.map((line) => escapeHtml(line)).join("<br>")
-              : "No signature finds claimed yet."}
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Town Persistence</div>
-          <div class="text-block">
-            ${escapeHtml(activeContract ? `Active contract: ${activeContract.name}. Town Persistence, opt-in, next run only.` : "No contract armed for the next run.")}<br><br>
-            ${escapeHtml(masterySummary)}<br><br>
-            ${escapeHtml(`Contract adoption: ${Math.round((metaReview.armedRunStartRate || 0) * 100)}% of tracked runs started armed. Most armed: ${metaReview.mostArmedContract || "none yet"}.`)}
-          </div>
-          ${contractMarkup}
-          <div class="section-block">
-            <div class="field-label">Current Class Mastery</div>
-            ${masteryMarkup}
-          </div>
-          <div class="section-block">
-            <div class="field-label">Latest 3 Returns</div>
-            ${archiveMarkup}
-          </div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Chronicle</div>
-          <div class="message-log journal-log">${renderChronicleMarkup(this, 12)}</div>
-        </section>
-        <section class="hub-section">
-          <div class="panel-title">Run Telemetry</div>
-          <div class="text-block">
-            ${escapeHtml(`Events ${telemetrySummary.eventCount} | Searches ${telemetrySummary.searches} | Buys ${telemetrySummary.shopBuys} | Sells ${telemetrySummary.shopSells} | Spells ${telemetrySummary.spellsCast} | Items ${telemetrySummary.itemsUsed} | Returns ${telemetrySummary.townReturns}`)}<br><br>
-            ${escapeHtml(latestSummary
-              ? `Latest summary: ${latestSummary.outcome} | first objective ${latestSummary.firstObjectiveType || "unknown"} | clear turn ${latestSummary.firstObjectiveClearTurn ?? "?"} | greed ${latestSummary.greedCount}`
-              : "No extraction or death summary recorded yet.")}
-          </div>
-          <div class="message-log journal-log">${telemetryRecent}</div>
-        </section>
-      </div>
-    `;
-    const activeSectionMarkup = activeSection === "mission"
-      ? missionSectionMarkup
-      : activeSection === "guide"
-        ? guideSectionMarkup
-        : activeSection === "chronicle"
-          ? chronicleSectionMarkup
-          : currentSectionMarkup;
-
     return `
       <div class="hub-body field-guide-body">
-        <div class="hub-summary hub-summary-compact">
-          <div class="mini-panel"><strong>Depth</strong><br>${this.currentDepth}</div>
-          <div class="mini-panel"><strong>Turn</strong><br>${this.turn}</div>
-          <div class="mini-panel"><strong>Objective</strong><br>${escapeHtml(objectiveText)}</div>
-          <div class="mini-panel"><strong>Pressure</strong><br>${escapeHtml(this.dangerLevel)}</div>
-        </div>
-        <section class="hub-section field-guide-kicker">
-          <div class="panel-title">Field Guide</div>
-          <div class="text-block">One support surface for the current floor, mission context, rules reference, and the long-form run record.</div>
+        <section class="hub-section field-guide-kicker workspace-hero">
+          <div class="workspace-eyebrow">Field Guide</div>
+          <div class="workspace-title">${escapeHtml(hero.title)}</div>
+          <div class="workspace-detail">${escapeHtml(hero.detail)}</div>
+          <div class="field-guide-inline-meta">
+            <span class="item-chip">Depth ${this.currentDepth}</span>
+            <span class="item-chip">Turn ${this.turn}</span>
+            <span class="item-chip">${escapeHtml(objectiveText)}</span>
+            <span class="item-chip">${escapeHtml(this.dangerLevel)}</span>
+          </div>
         </section>
-        <div class="pack-filter-row journal-section-row">
+        <div class="pack-filter-row journal-section-row" data-journal-section-host>
           ${sectionButtons}
         </div>
-        ${activeSectionMarkup}
+        <div data-journal-active-section-host>${this.getJournalActiveSectionMarkup(activeSection)}</div>
       </div>
     `;
   }
@@ -10734,42 +13101,34 @@ export class Game {
     if (this.activeHubTab === "journal") {
       this.activeJournalSection = this.getResolvedJournalSection(journalSection || this.activeJournalSection);
     }
-    this.recordTelemetry(this.activeHubTab === "magic"
-      ? "magic_opened"
-      : this.activeHubTab === "journal"
-        ? "journal_opened"
-        : "pack_opened");
     if (this.activeHubTab === "pack") {
       this.setPackSelection(selection || this.activePackSelection || this.getDefaultPackSelection());
       this.resolvePackSelection();
     } else {
       this.hoveredPackSelection = null;
     }
-
-    const tabMarkup = this.getHubTabsMarkup(this.activeHubTab);
-    const bodyMarkup = this.activeHubTab === "magic"
-      ? this.getMagicHubMarkup()
+    if (this.updateHubModalContent(this.activeHubTab, {
+      preserveScroll,
+      focusTarget,
+      fallbackFocus,
+      recordOpenTelemetry: true,
+      forceRefresh: Boolean(selection) || journalSection !== null
+    })) {
+      return;
+    }
+    this.recordTelemetry(this.activeHubTab === "magic"
+      ? "magic_opened"
       : this.activeHubTab === "journal"
-        ? this.getJournalHubMarkup()
-        : this.getPackHubMarkup();
-
-    const title = this.activeHubTab === "magic"
-      ? "Magic"
-      : this.activeHubTab === "journal"
-        ? "Field Guide"
-        : "Pack & Equipment";
-
-    this.showSimpleModal(title, `
-      <div class="hub-window hub-window-${this.activeHubTab}">
-        ${tabMarkup}
-        ${bodyMarkup}
-      </div>
-    `, {
+        ? "journal_opened"
+        : "pack_opened");
+    this.showSimpleModal(this.getHubModalTitle(this.activeHubTab), this.getHubModalShellMarkup(this.activeHubTab), {
       surfaceKey: `hub:${this.activeHubTab}`,
       preserveScroll,
       focusTarget,
       fallbackFocus
     });
+    this.hubPaneDirty[this.activeHubTab] = false;
+    this.queueHubPanePrewarm(this.activeHubTab);
   }
 
   showInventoryModal() {
@@ -10796,28 +13155,9 @@ export class Game {
     })).filter((group) => group.entries.length > 0);
   }
 
-  showShopModal(shopId, shop, options = {}) {
-    const {
-      preserveScroll = false,
-      focusTarget = null,
-      fallbackFocus = true,
-      panel = null
-    } = options;
-    this.mode = "modal";
-    const previousShopId = this.pendingShop?.id || "";
-    this.pendingShop = { ...shop, id: shopId };
-    this.pendingService = null;
-    this.activeShopPanel = panel || (previousShopId === shopId ? this.activeShopPanel : "buy");
-    const townCycle = this.getTownCycleState();
-    const reactions = this.getTownReactionLines(shopId);
-    const returnSting = this.getTownReturnStingText();
-    const turnoverLabel = townCycle.turnsUntilRefresh === 1 ? "1 turn" : `${townCycle.turnsUntilRefresh} turns`;
+  getShopBuyPanelMarkup(shopId, shop, turnoverLabel) {
     const state = this.shopState[shopId] || { stock: [...shop.stock], buyback: [] };
     const liveStock = [...state.stock, ...state.buyback];
-    const featuredToday = (townCycle.featuredStock?.[shopId] || [])
-      .map((itemId) => ITEM_DEFS[itemId]?.name)
-      .filter(Boolean)
-      .join(", ");
     const stockEntries = liveStock.map((itemId) => {
       const item = createTownItem(itemId);
       const semanticEntry = buildInventoryItemSemantics(this, item, -1, { shopId });
@@ -10835,11 +13175,18 @@ export class Game {
         <div class="shop-sell-group">
           <div class="field-label">${escapeHtml(group.label)}</div>
           ${group.entries.map((entry) => `
-            <div class="shop-row">
+            <div class="shop-row" data-shop-preview-kind="buy" data-shop-preview-value="${entry.itemId}">
               <div>
                 <div><strong>${escapeHtml(getItemName(entry.item, true))}</strong> <span class="muted">${entry.price} gp</span></div>
-                <div class="muted">${escapeHtml(describeItem(entry.item))}</div>
-                ${this.getPackRowTagMarkup(entry.semanticEntry)}
+                ${this.getDisclosureMarkup({
+                  title: "Item Readout",
+                  summary: this.getCompactUiCopy(describeItem(entry.item), 62),
+                  className: "shop-row-disclosure",
+                  body: `
+                    <div class="muted">${escapeHtml(describeItem(entry.item))}</div>
+                    ${this.getPackRowTagMarkup(entry.semanticEntry)}
+                  `
+                })}
               </div>
               <div class="actions">
                 <button class="tiny-button" data-action="shop-buy" data-shop="${shopId}" data-item="${entry.itemId}" data-focus-key="${this.getShopBuyFocusKey(shopId, entry.itemId)}" type="button"${this.player.gold < entry.price ? " disabled" : ""}>Buy</button>
@@ -10848,14 +13195,23 @@ export class Game {
           `).join("")}
         </div>
       `).join("");
+    return `
+      <div class="section-block">
+        <div class="field-label">Buy</div>
+        ${stockRows}
+      </div>
+    `;
+  }
 
+  getShopSellPanelMarkup(shopId) {
     const sellModel = buildInventoryPresentationModel(this, {
       filter: "sell",
       selectedIndex: this.activePackSelection?.type === "inventory" ? this.activePackSelection.value : -1,
       shopId
     });
-    const markedSellEntries = this.player.inventory.filter((item) => item?.markedForSale && (shopId === "junk" || shopAcceptsItem(shopId, item)));
-    const markedSellValue = markedSellEntries.reduce((sum, item) => sum + getShopSellPrice(this, item, shopId), 0);
+    const protectedSellEntries = this.player.inventory.filter((item) => item?.doNotSell && (shopId === "junk" || shopAcceptsItem(shopId, item)));
+    const unmarkedSellEntries = this.player.inventory.filter((item) => !item?.doNotSell && (shopId === "junk" || shopAcceptsItem(shopId, item)));
+    const unmarkedSellValue = unmarkedSellEntries.reduce((sum, item) => sum + getShopSellPrice(this, item, shopId), 0);
     const sellEntries = sellModel.groups.flatMap((group) => group.sections.flatMap((section) => section.items));
     const sellGroups = this.groupShopEntriesByCategory(sellEntries, (entry) => entry.categoryKey);
     const sellRows = sellModel.visibleCount === 0
@@ -10864,17 +13220,24 @@ export class Game {
         <div class="shop-sell-group">
           <div class="field-label">${escapeHtml(group.label)}</div>
           ${group.entries.map((entry) => `
-            <div class="shop-row">
+            <div class="shop-row" data-shop-preview-kind="sell" data-shop-preview-value="${entry.index}">
               <div>
                 <div><strong>${escapeHtml(getItemName(entry.item))}</strong>${entry.count > 1 ? ` <span class="muted">x${entry.count}</span>` : ""} <span class="muted">${getShopSellPrice(this, entry.item, shopId)} gp</span></div>
-                <div class="muted">${escapeHtml(entry.reason)}</div>
-                ${this.getPackRowTagMarkup(entry)}
-                <div class="muted">${escapeHtml(this.getPackItemNote(entry.item, entry))}</div>
+                ${this.getDisclosureMarkup({
+                  title: "Sale Context",
+                  summary: this.getCompactUiCopy(entry.reason, 62),
+                  className: "shop-row-disclosure",
+                  body: `
+                    <div class="muted">${escapeHtml(entry.reason)}</div>
+                    ${this.getPackRowTagMarkup(entry)}
+                    <div class="muted">${escapeHtml(this.getPackItemNote(entry.item, entry))}</div>
+                  `
+                })}
               </div>
               <div class="actions">
                 <label class="mark-sale-toggle">
-                  <input type="checkbox" data-action="toggle-sale-mark" data-index="${entry.index}" data-shop-sell-row="true" data-focus-key="${this.getShopSellFocusKey(entry.index)}:mark" ${entry.item.markedForSale ? "checked" : ""}>
-                  <span>Mark</span>
+                  <input type="checkbox" data-action="toggle-do-not-sell" data-index="${entry.index}" data-shop-sell-row="true" data-focus-key="${this.getShopSellFocusKey(entry.index)}:protect" ${entry.item.doNotSell ? "checked" : ""}>
+                  <span>No Sell</span>
                 </label>
                 <button class="tiny-button" data-action="shop-sell" data-index="${entry.index}" data-focus-key="${this.getShopSellFocusKey(entry.index)}" type="button">Sell</button>
               </div>
@@ -10882,43 +13245,83 @@ export class Game {
           `).join("")}
         </div>
       `).join("");
-    const panelTabs = this.getShopPanelTabsMarkup(this.activeShopPanel);
-    const panelBody = this.activeShopPanel === "sell"
-      ? `
-        <div class="section-block">
-          <div class="field-label">Sell</div>
-          <div class="modal-actions utility-row">
-            <button class="menu-button" data-action="shop-sell-marked" data-focus-key="shop:sell-marked" type="button"${markedSellEntries.length === 0 ? " disabled" : ""}>Sell Marked${markedSellEntries.length > 0 ? ` (${markedSellEntries.length})` : ""}</button>
-            <button class="menu-button" data-action="open-hub" data-tab="pack" data-filter="sell" data-focus-key="shop:review-pack" type="button">Review Pack</button>
-          </div>
-          <div class="text-block muted">${escapeHtml(markedSellEntries.length > 0 ? `${markedSellEntries.length} marked item${markedSellEntries.length === 1 ? "" : "s"} will sell here for ${markedSellValue} gp.` : "Use the checkboxes to mark items, then sell the whole marked bundle here.")}</div>
-          ${sellRows}
-        </div>
-      `
-      : `
-        <div class="section-block">
-          <div class="field-label">Buy</div>
-          ${stockRows}
-        </div>
-      `;
-
-    this.showSimpleModal(`${shop.name}`, `
-      <div class="section-block text-block">${escapeHtml(shop.greeting)}</div>
+    return `
       <div class="section-block">
+        <div class="field-label">Sell</div>
+        <div class="modal-actions utility-row">
+          <button class="menu-button" data-action="shop-sell-unmarked" data-focus-key="shop:sell-unmarked" type="button"${unmarkedSellEntries.length === 0 ? " disabled" : ""}>Sell All Unmarked${unmarkedSellEntries.length > 0 ? ` (${unmarkedSellEntries.length})` : ""}</button>
+          <button class="menu-button" data-action="open-hub" data-tab="pack" data-filter="sell" data-focus-key="shop:review-pack" type="button">Review Pack</button>
+        </div>
+        <div class="text-block muted">${escapeHtml(
+          unmarkedSellEntries.length > 0
+            ? `${unmarkedSellEntries.length} unmarked item${unmarkedSellEntries.length === 1 ? "" : "s"} will sell here for ${unmarkedSellValue} gp.${protectedSellEntries.length > 0 ? ` ${protectedSellEntries.length} marked Do Not Sell will stay in your pack.` : ""}`
+            : protectedSellEntries.length > 0
+              ? `${protectedSellEntries.length} item${protectedSellEntries.length === 1 ? "" : "s"} marked Do Not Sell are protected from bulk sale here.`
+              : "Use Do Not Sell to protect anything you want to keep, then sell the rest in one tap."
+        )}</div>
+        ${sellRows}
+      </div>
+    `;
+  }
+
+  getShopPanelBodyMarkup(shopId, shop, panel = this.activeShopPanel) {
+    const townCycle = this.getTownCycleState();
+    const turnoverLabel = townCycle.turnsUntilRefresh === 1 ? "1 turn" : `${townCycle.turnsUntilRefresh} turns`;
+    return panel === "sell"
+      ? this.getShopSellPanelMarkup(shopId)
+      : this.getShopBuyPanelMarkup(shopId, shop, turnoverLabel);
+  }
+
+  getShopModalBodyMarkup(shopId, shop) {
+    const townCycle = this.getTownCycleState();
+    const reactions = this.getTownReactionLines(shopId);
+    const returnSting = this.getTownReturnStingText();
+    const turnoverLabel = townCycle.turnsUntilRefresh === 1 ? "1 turn" : `${townCycle.turnsUntilRefresh} turns`;
+    const featuredToday = (townCycle.featuredStock?.[shopId] || [])
+      .map((itemId) => ITEM_DEFS[itemId]?.name)
+      .filter(Boolean)
+      .join(", ");
+    const panelTabs = this.getShopPanelTabsMarkup(this.activeShopPanel);
+    const panelBody = this.getShopPanelBodyMarkup(shopId, shop, this.activeShopPanel);
+
+    return `
+      <div class="workspace-stack town-workspace">
+      <section class="workspace-hero compact">
+        <div class="workspace-eyebrow">${escapeHtml(shop.name)}</div>
+        <div class="workspace-title">${escapeHtml(shop.greeting)}</div>
+        <div class="workspace-detail">${escapeHtml(reactions.lines[0] || returnSting || "Review the current market posture, then buy or sell with intent.")}</div>
+      </section>
+      <section class="section-block workspace-overview">
         <div class="stat-line"><span>Your gold</span><strong>${Math.floor(this.player.gold)} gp</strong></div>
         <div class="stat-line"><span>Town cycle</span><strong>${escapeHtml(this.getTownCycleLabel())}</strong></div>
         <div class="stat-line"><span>Stock turnover</span><strong>${escapeHtml(turnoverLabel)}</strong></div>
         <div class="stat-line"><span>Phase note</span><strong>${escapeHtml(townCycle.stockSummary)}</strong></div>
         <div class="stat-line"><span>Featured today</span><strong>${escapeHtml(featuredToday || "No special picks")}</strong></div>
         <div class="stat-line"><span>Reaction tags</span><strong>${escapeHtml(reactions.stockTags.join(", ") || "None")}</strong></div>
-      </div>
-      ${reactions.lines.length > 0 ? `
-        <div class="section-block text-block">${escapeHtml(reactions.lines[0])}</div>
-      ` : ""}
+      </section>
       ${returnSting ? `<div class="section-block text-block muted">${escapeHtml(returnSting)}</div>` : ""}
-      ${panelTabs}
-      ${panelBody}
-    `, {
+      <div data-shop-panel-tabs-host>${panelTabs}</div>
+      ${this.getShopQuickStateMarkup(shopId, shop)}
+      <div class="shop-hover-preview-host" data-shop-hover-preview-host></div>
+      <div data-shop-panel-body-host>${panelBody}</div>
+      </div>
+    `;
+  }
+
+  showShopModal(shopId, shop, options = {}) {
+    const {
+      preserveScroll = false,
+      focusTarget = null,
+      fallbackFocus = true,
+      panel = null
+    } = options;
+    this.mode = "modal";
+    const previousShopId = this.pendingShop?.id || "";
+    this.pendingShop = { ...shop, id: shopId };
+    this.hoveredShopPreview = null;
+    this.pendingService = null;
+    this.activeShopPanel = panel || (previousShopId === shopId ? this.activeShopPanel : "buy");
+    this.showSimpleModal(`${shop.name}`, this.getShopModalBodyMarkup(shopId, shop), {
       surfaceKey: `shop:${shopId}`,
       preserveScroll,
       focusTarget,
@@ -10938,26 +13341,41 @@ export class Game {
     const townCycle = this.getTownCycleState();
     const reactions = this.getTownReactionLines("temple");
     const returnSting = this.getTownReturnStingText();
+    const recommendedService = TEMPLE_SERVICES.find((service) => service.id === "heal")
+      || TEMPLE_SERVICES[0]
+      || null;
     this.showSimpleModal("Temple", `
-      <div class="section-block text-block">${escapeHtml(STORY_NPCS.templeKeeper.name)}, ${escapeHtml(STORY_NPCS.templeKeeper.title)}, offers healing, restoration, and the expensive correction of cursed mistakes.</div>
-      <div class="section-block">
-        <div class="stat-line"><span>Your gold</span><strong>${Math.floor(this.player.gold)} gp</strong></div>
-        <div class="stat-line"><span>Town cycle</span><strong>${escapeHtml(this.getTownCycleLabel())}</strong></div>
-        <div class="stat-line"><span>Phase note</span><strong>${escapeHtml(townCycle.stockSummary)}</strong></div>
+      <div class="workspace-stack town-workspace">
+        <section class="workspace-hero compact">
+          <div class="workspace-eyebrow">Temple</div>
+          <div class="workspace-title">${escapeHtml(STORY_NPCS.templeKeeper.name)}</div>
+          <div class="workspace-detail">${escapeHtml(STORY_NPCS.templeKeeper.title)} handles healing, cleansing, and costly recovery before the next descent.</div>
+        </section>
+        <section class="section-block workspace-overview">
+          <div class="stat-line"><span>Your gold</span><strong>${Math.floor(this.player.gold)} gp</strong></div>
+          <div class="stat-line"><span>Town cycle</span><strong>${escapeHtml(this.getTownCycleLabel())}</strong></div>
+          <div class="stat-line"><span>Phase note</span><strong>${escapeHtml(townCycle.stockSummary)}</strong></div>
+          <div class="stat-line"><span>Recommended</span><strong>${escapeHtml(recommendedService ? recommendedService.name : "Review your wounds")}</strong></div>
+        </section>
+        ${reactions.lines.length > 0 ? `<div class="section-block text-block">${escapeHtml(reactions.lines[0])}</div>` : ""}
+        ${returnSting ? `<div class="section-block text-block muted">${escapeHtml(returnSting)}</div>` : ""}
+        <section class="section-block">
+          <div class="field-label">Services</div>
+          <div class="workspace-section-stack">
+            ${TEMPLE_SERVICES.map((service) => `
+              <div class="shop-row">
+                <div>
+                  <div><strong>${escapeHtml(service.name)}</strong> <span class="muted">${getTemplePrice(this, service.price)} gp</span></div>
+                  <div class="muted">${escapeHtml(service.description)}</div>
+                </div>
+                <div class="actions">
+                  <button class="tiny-button" data-action="service-use" data-service="${service.id}" data-focus-key="${this.getServiceFocusKey("temple", service.id)}" type="button">Use</button>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </section>
       </div>
-      ${reactions.lines.length > 0 ? `<div class="section-block text-block">${escapeHtml(reactions.lines[0])}</div>` : ""}
-      ${returnSting ? `<div class="section-block text-block muted">${escapeHtml(returnSting)}</div>` : ""}
-      ${TEMPLE_SERVICES.map((service) => `
-        <div class="shop-row">
-          <div>
-            <div><strong>${escapeHtml(service.name)}</strong> <span class="muted">${getTemplePrice(this, service.price)} gp</span></div>
-            <div class="muted">${escapeHtml(service.description)}</div>
-          </div>
-          <div class="actions">
-            <button class="tiny-button" data-action="service-use" data-service="${service.id}" data-focus-key="${this.getServiceFocusKey("temple", service.id)}" type="button">Use</button>
-          </div>
-        </div>
-      `).join("")}
     `, {
       surfaceKey: "temple",
       preserveScroll,
@@ -10981,19 +13399,28 @@ export class Game {
     const reactions = this.getTownReactionLines("guild");
     const returnSting = this.getTownReturnStingText();
     this.showSimpleModal("Sage's Tower", `
-      <div class="section-block text-block">${escapeHtml(STORY_NPCS.guildSage.name)} identifies your mysterious belongings for a flat fee and keeps the old warding records close at hand.</div>
-      <div class="section-block">
-        <div class="stat-line"><span>Your gold</span><strong>${Math.floor(this.player.gold)} gp</strong></div>
-        <div class="stat-line"><span>Unknown items</span><strong>${unknownCount}</strong></div>
-        <div class="stat-line"><span>Price</span><strong>${sagePrice} gp</strong></div>
-        <div class="stat-line"><span>Town cycle</span><strong>${escapeHtml(this.getTownCycleLabel())}</strong></div>
-        <div class="stat-line"><span>Phase note</span><strong>${escapeHtml(townCycle.rumorSummary)}</strong></div>
-      </div>
-      ${reactions.lines.length > 0 ? `<div class="section-block text-block">${escapeHtml(reactions.lines[0])}</div>` : ""}
-      ${returnSting ? `<div class="section-block text-block muted">${escapeHtml(returnSting)}</div>` : ""}
-      <div class="modal-actions">
-        <button class="menu-button" data-action="service-use" data-service="identifyAll" data-focus-key="${this.getServiceFocusKey("sage", "identifyAll")}" type="button">Identify</button>
-        <button class="menu-button" data-action="close-modal" data-focus-key="sage:close" type="button">Close</button>
+      <div class="workspace-stack town-workspace">
+        <section class="workspace-hero compact">
+          <div class="workspace-eyebrow">Sage</div>
+          <div class="workspace-title">${escapeHtml(STORY_NPCS.guildSage.name)}</div>
+          <div class="workspace-detail">Identify mysterious belongings for a flat fee, then leave with a clearer read on the next floor.</div>
+        </section>
+        <section class="section-block workspace-overview">
+          <div class="stat-line"><span>Your gold</span><strong>${Math.floor(this.player.gold)} gp</strong></div>
+          <div class="stat-line"><span>Unknown items</span><strong>${unknownCount}</strong></div>
+          <div class="stat-line"><span>Price</span><strong>${sagePrice} gp</strong></div>
+          <div class="stat-line"><span>Town cycle</span><strong>${escapeHtml(this.getTownCycleLabel())}</strong></div>
+          <div class="stat-line"><span>Phase note</span><strong>${escapeHtml(townCycle.rumorSummary)}</strong></div>
+        </section>
+        ${reactions.lines.length > 0 ? `<div class="section-block text-block">${escapeHtml(reactions.lines[0])}</div>` : ""}
+        ${returnSting ? `<div class="section-block text-block muted">${escapeHtml(returnSting)}</div>` : ""}
+        <section class="section-block">
+          <div class="field-label">Recommended Next Action</div>
+          <div class="text-block">${escapeHtml(unknownCount > 0 ? `Identify ${unknownCount} unknown item${unknownCount === 1 ? "" : "s"} before buying or descending again.` : "No unknown items are waiting on identification.")}</div>
+          <div class="modal-actions inline-modal-actions">
+            <button class="menu-button primary" data-action="service-use" data-service="identifyAll" data-focus-key="${this.getServiceFocusKey("sage", "identifyAll")}" type="button"${unknownCount === 0 || this.player.gold < sagePrice ? " disabled" : ""}>Identify All</button>
+          </div>
+        </section>
       </div>
     `, {
       surfaceKey: "sage",
@@ -11046,6 +13473,7 @@ export class Game {
     const masterySummary = this.getClassMasterySummary(this.player?.classId);
     const latestSummary = (this.runSummaryHistory || []).at(-1) || this.lastRunSummary;
     const contractModel = this.getContractViewModel();
+    const activeContract = this.getActiveContract(true) || this.getActiveContract(false);
     const masteryMarkup = this.getMasteryReviewMarkup(this.player?.classId);
     const archiveMarkup = this.getRunSummaryArchiveMarkup(5);
     const featuredStockSummary = Object.entries(intel.featuredStock || {})
@@ -11080,78 +13508,88 @@ export class Game {
               ? `<button class="menu-button primary" data-action="bank-deposit" data-focus-key="bank:recommended-deposit" type="button">${escapeHtml(townMeta.recommendedActionLabel)}</button>`
               : "";
     this.showSimpleModal("Bank", `
-      <div class="section-block text-block">${escapeHtml(STORY_NPCS.chronicler.name)} keeps the ledgers while ${escapeHtml(STORY_NPCS.steward.name)} turns banked gold into safer carry, forward intel, and funded leverage for this adventurer.</div>
-      <div class="section-block text-block">
-        Bank gold for safety on the next descent.<br>
-        Buy intel to learn the next floor before you walk into it.<br>
-        Fund projects to improve stock and encounters for this current campaign.<br>
-        Contracts stay opt-in and apply to the next run only.
-      </div>
-      <div class="section-block">
-        <div class="field-label">Next Run Prep</div>
-        <div class="stat-line"><span>On Hand</span><strong>${Math.floor(this.player.gold)} gp</strong></div>
-        <div class="stat-line"><span>On Account</span><strong>${Math.floor(this.player.bankGold)} gp</strong></div>
-        <div class="stat-line"><span>Rumor Tokens</span><strong>${this.player.runCurrencies?.rumorTokens || 0}</strong></div>
-        <div class="stat-line"><span>Town Cycle</span><strong>${escapeHtml(this.getTownCycleLabel())}</strong></div>
-        <div class="stat-line"><span>Next Turnover</span><strong>${escapeHtml(townCycle.turnsUntilRefresh === 1 ? "1 turn" : `${townCycle.turnsUntilRefresh} turns`)}</strong></div>
-        <div class="stat-line"><span>Phase note</span><strong>${escapeHtml(townCycle.rumorSummary)}</strong></div>
-      </div>
-      ${reactions.lines.length > 0 ? `<div class="section-block text-block">${escapeHtml(reactions.lines[0])}</div>` : ""}
-      ${returnSting ? `<div class="section-block text-block muted">${escapeHtml(returnSting)}</div>` : ""}
-      <div class="section-block text-block">${escapeHtml(prepAdvice)}</div>
-      <div class="section-block">
-        <div class="field-label">One More Run</div>
-        <div class="text-block">${nextRunIntent.motivators.map((entry) => escapeHtml(`${entry.label} ${entry.detail}`)).join("<br><br>")}</div>
-      </div>
-      <div class="section-block">
-        <div class="field-label">Recommended Next Action</div>
-        <div class="text-block">
-          ${escapeHtml(townMeta.recommendedAction)}<br><br>
-          ${escapeHtml(townMeta.recommendedReason)}
+      <div class="workspace-stack town-workspace bank-workspace">
+        <section class="workspace-hero compact">
+          <div class="workspace-eyebrow">Bank</div>
+          <div class="workspace-title">Plan the next descent before you spend.</div>
+          <div class="workspace-detail">${escapeHtml(`${STORY_NPCS.chronicler.name} keeps the ledgers while ${STORY_NPCS.steward.name} turns banked gold into safer carry, forward intel, and funded leverage.`)}</div>
+        </section>
+        <section class="section-block workspace-overview">
+          <div class="stat-line"><span>On hand</span><strong>${Math.floor(this.player.gold)} gp</strong></div>
+          <div class="stat-line"><span>On account</span><strong>${Math.floor(this.player.bankGold)} gp</strong></div>
+          <div class="stat-line"><span>Rumor tokens</span><strong>${this.player.runCurrencies?.rumorTokens || 0}</strong></div>
+          <div class="stat-line"><span>Town cycle</span><strong>${escapeHtml(this.getTownCycleLabel())}</strong></div>
+          <div class="stat-line"><span>Next turnover</span><strong>${escapeHtml(townCycle.turnsUntilRefresh === 1 ? "1 turn" : `${townCycle.turnsUntilRefresh} turns`)}</strong></div>
+          <div class="stat-line"><span>Phase note</span><strong>${escapeHtml(townCycle.rumorSummary)}</strong></div>
+        </section>
+        ${reactions.lines.length > 0 ? `<div class="section-block text-block">${escapeHtml(reactions.lines[0])}</div>` : ""}
+        ${returnSting ? `<div class="section-block text-block muted">${escapeHtml(returnSting)}</div>` : ""}
+        <div class="section-block text-block">${escapeHtml(prepAdvice)}</div>
+        <div class="section-block bank-recommended-panel">
+          <div class="field-label">Recommended Next Action</div>
+          <div class="text-block">
+            ${escapeHtml(townMeta.recommendedAction)}<br><br>
+            ${escapeHtml(townMeta.recommendedReason)}
+          </div>
+          ${recommendedTownActionButton ? `<div class="modal-actions inline-modal-actions">${recommendedTownActionButton}</div>` : ""}
         </div>
-        ${recommendedTownActionButton ? `<div class="modal-actions inline-modal-actions">${recommendedTownActionButton}</div>` : ""}
-      </div>
-      <div class="modal-actions">
-        <button class="menu-button" data-action="bank-deposit" data-focus-key="${this.getTownActionFocusKey("deposit")}" type="button">Deposit 100</button>
-        <button class="menu-button" data-action="bank-withdraw" data-focus-key="${this.getTownActionFocusKey("withdraw")}" type="button">Withdraw 100</button>
-        <button class="menu-button" data-action="town-rumor" data-focus-key="${this.getTownActionFocusKey("rumor")}" type="button">Buy Intel (${getRumorPrice(this)} gp)</button>
-        <button class="menu-button" data-action="close-modal" data-focus-key="bank:close" type="button">Close</button>
-      </div>
-      <div class="section-block">
-        <div class="text-block">${escapeHtml(recommendedText)}</div><br>
-        <div class="text-block muted">${escapeHtml(carryForward)}</div><br>
-        <div class="field-label">Next Floor Intel</div>
-        ${nextRumor}
-      </div>
-      <div class="section-block">
-        <div class="field-label">Featured Market Picks</div>
-        <div class="text-block">${escapeHtml(featuredStockSummary || "No featured wares are posted for this cycle.")}</div>
-      </div>
-      <div class="section-block">
-        <div class="field-label">Investments</div>
-        ${unlockRows || "<div class='text-block muted'>All current town investments are funded.</div>"}
-      </div>
-      <div class="section-block">
-        <div class="field-label">Contracts</div>
-        <div class="text-block">
-          Town Persistence. Opt-in. Applies to next run only.
+        <div class="section-block bank-actions-panel">
+          <div class="field-label">Transactions</div>
+          <div class="modal-actions">
+            <button class="menu-button" data-action="bank-deposit" data-focus-key="${this.getTownActionFocusKey("deposit")}" type="button">Deposit 100</button>
+            <button class="menu-button" data-action="bank-withdraw" data-focus-key="${this.getTownActionFocusKey("withdraw")}" type="button">Withdraw 100</button>
+            <button class="menu-button" data-action="town-rumor" data-focus-key="${this.getTownActionFocusKey("rumor")}" type="button">Buy Intel (${getRumorPrice(this)} gp)</button>
+          </div>
+          <div class="text-block muted">${escapeHtml(carryForward)}</div>
         </div>
-        ${this.getContractReviewMarkup()}
-      </div>
-      <div class="section-block">
-        <div class="field-label">Mastery</div>
-        <div class="text-block">
-          ${escapeHtml(`Class-based. Permanent. Finite ranks. ${masterySummary}`)}
-        </div>
-        ${masteryMarkup}
-      </div>
-      <div class="section-block">
-        <div class="field-label">Return Archive</div>
-        ${archiveMarkup}
-      </div>
-      <div class="section-block">
-        <div class="field-label">Rumor Archive</div>
-        <div class="message-log journal-log">${knownRumors}</div>
+        ${this.getDisclosureMarkup({
+          title: "One More Run",
+          summary: this.getCompactUiCopy(nextRunIntent.motivators[0] ? `${nextRunIntent.motivators[0].label} ${nextRunIntent.motivators[0].detail}` : "No extra run motivator yet.", 72),
+          className: "bank-disclosure",
+          body: `<div class="text-block">${nextRunIntent.motivators.map((entry) => escapeHtml(`${entry.label} ${entry.detail}`)).join("<br><br>")}</div>`
+        })}
+        ${this.getDisclosureMarkup({
+          title: "Next Floor Intel",
+          summary: this.getCompactUiCopy(recommendedText, 72),
+          className: "bank-disclosure",
+          body: `<div class="text-block">${escapeHtml(recommendedText)}</div><br>${nextRumor}`
+        })}
+        ${this.getDisclosureMarkup({
+          title: "Featured Market Picks",
+          summary: this.getCompactUiCopy(featuredStockSummary || "No featured wares are posted for this cycle.", 72),
+          className: "bank-disclosure",
+          body: `<div class="text-block">${escapeHtml(featuredStockSummary || "No featured wares are posted for this cycle.")}</div>`
+        })}
+        ${this.getDisclosureMarkup({
+          title: "Investments",
+          summary: townMeta.nextUnlock ? `${townMeta.nextUnlock.name} | ${townMeta.nextUnlock.cost} gp` : "All current investments funded",
+          className: "bank-disclosure",
+          body: unlockRows || "<div class='text-block muted'>All current town investments are funded.</div>"
+        })}
+        ${this.getDisclosureMarkup({
+          title: "Contracts",
+          summary: activeContract ? activeContract.name : "No contract armed",
+          className: "bank-disclosure",
+          body: `<div class="text-block">Town Persistence. Opt-in. Applies to next run only.</div>${this.getContractReviewMarkup()}`
+        })}
+        ${this.getDisclosureMarkup({
+          title: "Mastery",
+          summary: masterySummary,
+          className: "bank-disclosure",
+          body: `<div class="text-block">${escapeHtml(`Class-based. Permanent. Finite ranks. ${masterySummary}`)}</div>${masteryMarkup}`
+        })}
+        ${this.getDisclosureMarkup({
+          title: "Return Archive",
+          summary: latestSummary ? `${latestSummary.outcome} depth ${latestSummary.extractedDepth}` : "No return archive yet",
+          className: "bank-disclosure",
+          body: archiveMarkup
+        })}
+        ${this.getDisclosureMarkup({
+          title: "Rumor Archive",
+          summary: intel.known.length > 0 ? `${intel.known.length} secured rumor${intel.known.length === 1 ? "" : "s"}` : "No secured rumors yet",
+          className: "bank-disclosure",
+          body: `<div class="message-log journal-log">${knownRumors}</div>`
+        })}
       </div>
     `, {
       surfaceKey: "bank",
@@ -11237,7 +13675,12 @@ export class Game {
     ` : "";
     this.mode = "modal";
     this.showSimpleModal(mode === "save" ? "Save Slots" : "Continue Run", `
-      <div class="section-block text-block">${escapeHtml(intro)}</div>
+      <div class="workspace-stack save-slot-workspace">
+      <section class="workspace-hero compact">
+        <div class="workspace-eyebrow">${mode === "save" ? "Save Slots" : "Continue Run"}</div>
+        <div class="workspace-title">${escapeHtml(intro)}</div>
+        <div class="workspace-detail">${escapeHtml(latestMeta ? `Latest slot: ${this.getSaveSlotLabel(latestMeta.slotId)} | ${latestMeta.name}` : "Three slots are available on this device.")}</div>
+      </section>
       ${musicControls}
       <div class="save-slot-modal">
         ${this.getSaveSlotSummaryMarkup({
@@ -11246,6 +13689,7 @@ export class Game {
           buttonClass: "menu-button",
           focusPrefix: `save-slots:${mode}`
         })}
+      </div>
       </div>
     `, {
       surfaceKey: `save-slots:${mode}`,
@@ -11298,11 +13742,77 @@ export class Game {
     });
   }
 
+  cancelPendingUtilityMenuSummary() {
+    this.clearDeferredUiTask(this.pendingUtilitySummaryFrame, "frame");
+    this.pendingUtilitySummaryFrame = 0;
+  }
+
+  getUtilityMenuPlaceholderMarkup(title, detail) {
+    return `
+      <div class="utility-menu-title">${escapeHtml(title)}</div>
+      <div class="utility-menu-meta">${escapeHtml(detail)}</div>
+    `;
+  }
+
+  hydrateUtilityMenuSummaries(root = this.modalRoot) {
+    if (this.modalSurfaceKey !== "utility-menu") {
+      return;
+    }
+    const savedMeta = this.getSavedRunMeta();
+    const connected = this.gamepadInput.isConnected();
+    const activeContract = this.getActiveContract(true) || this.getActiveContract(false);
+    const latestSummary = this.getLatestPersistenceSummary();
+    const latestUnlock = this.getLatestPermanentUnlock();
+    const utilityRunSummary = root?.querySelector("#utility-run-summary");
+    const utilitySaveSummary = root?.querySelector("#utility-save-summary");
+    const utilityControlSummary = root?.querySelector("#utility-control-summary");
+
+    if (utilityRunSummary) {
+      utilityRunSummary.innerHTML = this.player
+        ? `
+          <div class="utility-menu-title">${escapeHtml(this.player.name)} | ${escapeHtml(this.currentDepth === 0 ? "Town" : `Depth ${this.currentDepth}`)}</div>
+          <div class="utility-menu-meta">${escapeHtml([
+            this.currentLevel?.description || "Run in progress.",
+            activeContract ? `Contract: ${activeContract.name}` : "No contract armed"
+          ].join(" | "))}</div>
+        `
+        : `
+          <div class="utility-menu-title">No active run</div>
+          <div class="utility-menu-meta">${escapeHtml(activeContract ? `Contract armed: ${activeContract.name}` : "Start a new adventurer to begin a descent.")}</div>
+        `;
+    }
+
+    if (utilitySaveSummary) {
+      if (!savedMeta) {
+        utilitySaveSummary.innerHTML = `
+          <div class="utility-menu-title">Resume Point</div>
+          <div class="utility-menu-meta">${escapeHtml(latestSummary ? `Latest return: ${latestSummary.outcome} depth ${latestSummary.extractedDepth}` : "No saved run yet.")}</div>
+          <div class="utility-menu-meta subtle">${escapeHtml(latestUnlock ? `Unlock: ${latestUnlock}` : "No unlock yet")}</div>
+        `;
+      } else {
+        const timeLabel = savedMeta.savedAt ? this.formatSaveStamp(savedMeta.savedAt) : null;
+        utilitySaveSummary.innerHTML = `
+          <div class="utility-menu-title">${escapeHtml(savedMeta.name)}</div>
+          <div class="utility-menu-meta">${escapeHtml(`${this.getSaveSlotLabel(savedMeta.slotId || 1)} | Level ${savedMeta.level} | Depth ${savedMeta.depth}`)}</div>
+          <div class="utility-menu-meta subtle">${escapeHtml(timeLabel || (latestUnlock ? `Unlock: ${latestUnlock}` : "Saved on this device"))}</div>
+        `;
+      }
+    }
+
+    if (utilityControlSummary) {
+      utilityControlSummary.innerHTML = `
+        <div class="utility-menu-title">${connected ? "Controller ready" : "Touch active"}</div>
+        <div class="utility-menu-meta">${escapeHtml(connected ? `${this.gamepadInput.getControllerName()} | A confirm | B back | RT scroll` : "Pad and dock are active for movement and actions.")}</div>
+      `;
+    }
+  }
+
   showUtilityMenu(options = {}) {
     const {
       focusTarget = null,
       openerFocusKey = undefined
     } = options;
+    this.utilityMenuSecondaryExpanded = false;
     const currentOpenerFocusKey = this.getCurrentUiFocusKey() || "utility-menu-button";
     if (typeof openerFocusKey === "string") {
       this.utilityMenuOpenerFocusKey = openerFocusKey || null;
@@ -11313,69 +13823,28 @@ export class Game {
     this.setModalVisibility(true);
     const template = document.getElementById("utility-menu-template");
     const fragment = template.content.cloneNode(true);
-    const savedMeta = this.getSavedRunMeta();
     const savedSlots = this.getAllSavedRunMeta();
     const hasSavedRun = savedSlots.some((entry) => Boolean(entry.meta));
-    const connected = this.gamepadInput.isConnected();
     const utilityRunSummary = fragment.getElementById("utility-run-summary");
     const utilitySaveSummary = fragment.getElementById("utility-save-summary");
     const utilityControlSummary = fragment.getElementById("utility-control-summary");
     const utilitySaveButton = fragment.getElementById("utility-save-button");
     const utilityLoadButton = fragment.getElementById("utility-load-button");
     const utilityStatsButton = fragment.getElementById("utility-stats-button");
-    const activeContract = this.getActiveContract(true) || this.getActiveContract(false);
-    const latestSummary = this.getLatestPersistenceSummary();
-    const latestUnlock = this.getLatestPermanentUnlock();
 
     if (utilityRunSummary) {
-      utilityRunSummary.innerHTML = this.player
-        ? `
-          <div class="utility-menu-title">${escapeHtml(this.player.name)} &middot; ${escapeHtml(this.currentDepth === 0 ? "Town" : `Depth ${this.currentDepth}`)}</div>
-          <div class="utility-menu-meta">${escapeHtml(this.currentLevel?.description || "Run in progress.")}</div>
-          <div class="utility-menu-meta">${escapeHtml(activeContract ? `Active contract: ${activeContract.name}` : "Active contract: none armed")}</div>
-        `
-        : `
-          <div class="utility-menu-title">No active run</div>
-          <div class="utility-menu-meta">Start a new adventurer to begin a descent.</div>
-          <div class="utility-menu-meta">${escapeHtml(activeContract ? `Active contract: ${activeContract.name}` : "Active contract: none armed")}</div>
-        `;
+      utilityRunSummary.innerHTML = this.getUtilityMenuPlaceholderMarkup(
+        this.player ? `${this.player.name} · ${this.currentDepth === 0 ? "Town" : `Depth ${this.currentDepth}`}` : "No active run",
+        "Syncing current run summary..."
+      );
     }
 
     if (utilitySaveSummary) {
-      if (!savedMeta) {
-        utilitySaveSummary.innerHTML = `
-          <div class="utility-menu-title">No saved run</div>
-          <div class="utility-menu-meta">Save slots appear here once you bank a run.</div>
-          <div class="utility-menu-meta">${escapeHtml(latestSummary ? `Latest return: ${latestSummary.outcome} depth ${latestSummary.extractedDepth}, ${latestSummary.returnValue} gp value.` : "Latest return: none recorded yet.")}</div>
-          <div class="utility-menu-meta">${escapeHtml(latestUnlock ? `Latest permanent unlock: ${latestUnlock}` : "Latest permanent unlock: none yet.")}</div>
-          ${this.getSaveSlotSummaryMarkup({
-            action: "load",
-            actionLabel: "Load",
-            focusPrefix: "utility:load-slot"
-          })}
-        `;
-      } else {
-        const timeLabel = savedMeta.savedAt ? this.formatSaveStamp(savedMeta.savedAt) : null;
-        utilitySaveSummary.innerHTML = `
-          <div class="utility-menu-title">${escapeHtml(savedMeta.name)}</div>
-          <div class="utility-menu-meta">${escapeHtml(this.getSaveSlotLabel(savedMeta.slotId || 1))} &middot; ${escapeHtml(`Level ${savedMeta.level} | Depth ${savedMeta.depth}`)}</div>
-          ${timeLabel ? `<div class="utility-menu-meta">${escapeHtml(timeLabel)}</div>` : ""}
-          <div class="utility-menu-meta">${escapeHtml(latestSummary ? `Latest return: ${latestSummary.outcome} depth ${latestSummary.extractedDepth}, ${latestSummary.returnValue} gp value.` : "Latest return: none recorded yet.")}</div>
-          <div class="utility-menu-meta">${escapeHtml(latestUnlock ? `Latest permanent unlock: ${latestUnlock}` : "Latest permanent unlock: none yet.")}</div>
-          ${this.getSaveSlotSummaryMarkup({
-            action: "load",
-            actionLabel: "Load",
-            focusPrefix: "utility:load-slot"
-          })}
-        `;
-      }
+      utilitySaveSummary.innerHTML = this.getUtilityMenuPlaceholderMarkup("Resume Point", "Checking save slots...");
     }
 
     if (utilityControlSummary) {
-      utilityControlSummary.innerHTML = `
-        <div class="utility-menu-title">${connected ? "Controller ready" : "Touch active"}</div>
-        <div class="utility-menu-meta">${escapeHtml(connected ? `${this.gamepadInput.getControllerName()} | A Confirm/Use | B Back | X Alt | Y Pack | RT Scroll` : "Touch controls are available for movement and actions.")}</div>
-      `;
+      utilityControlSummary.innerHTML = this.getUtilityMenuPlaceholderMarkup("Device & Controls", "Reading current input mode...");
     }
 
     if (utilitySaveButton) {
@@ -11388,15 +13857,25 @@ export class Game {
       utilityStatsButton.disabled = !this.player;
     }
 
+    this.cancelPendingUtilityMenuSummary();
+    this.clearModalInteractionFeedback();
     this.modalRoot.innerHTML = "";
     this.modalRoot.appendChild(fragment);
     this.modalRoot.classList.remove("hidden");
+    this.applyModalSurfacePresentation("utility-menu", this.modalRoot.querySelector(".modal"));
     this.modalSurfaceKey = "utility-menu";
     this.modalReturnContext = null;
     this.recordTelemetry("modal_opened", {
       surface: "utility-menu"
     });
+    this.ensureModalInteractionFeedbackHost();
+    this.syncModalInteractionFeedbackHost();
+    this.syncModalAdaptiveUiState();
     this.applyControllerNavigationMetadata();
+    this.pendingUtilitySummaryFrame = this.queueAnimationFrame(() => {
+      this.pendingUtilitySummaryFrame = 0;
+      this.hydrateUtilityMenuSummaries();
+    });
     const focusElement = this.resolveModalFocusTarget(focusTarget);
     if (focusElement) {
       this.focusUiElement(focusElement);
@@ -11407,24 +13886,26 @@ export class Game {
 
   closeModal() {
     this.resetMovementCadence();
+    this.cancelPendingUtilityMenuSummary();
+    this.cancelPendingHubPanePrewarm();
+    this.cancelModalInteractionFeedback();
+    this.modalInteractionFeedback = { message: "", tone: "" };
     const closingSurfaceKey = this.modalSurfaceKey;
     const modalReturnContext = this.modalReturnContext;
     const openerFocusKey = this.utilityMenuOpenerFocusKey;
-    if (this.modalSurfaceKey === "return-summary") {
-      this.recordTelemetry("return_summary_closed", {
-        outcome: this.lastRunSummary?.outcome || ""
-      });
-      this.storyFlags.postReturnBankPrompt = true;
-      this.log("Bank is the cleanest next stop. Review town persistence before sending this adventurer north again.", "warning");
-    }
     this.setModalVisibility(false);
     this.modalRoot.classList.add("hidden");
     this.modalRoot.innerHTML = "";
+    delete this.modalRoot.dataset.surfaceTier;
+    delete this.modalRoot.dataset.surfaceKey;
     this.modalSurfaceKey = null;
     this.modalReturnContext = null;
     this.pendingService = null;
     this.activeHubTab = "pack";
     this.hoveredPackSelection = null;
+    this.utilityMenuSecondaryExpanded = false;
+    this.fieldGuideRailCollapsed = false;
+    this.resetHubPaneDirtyState();
     if (this.targetMode && this.mode !== "target") {
       this.targetMode = null;
     }
@@ -11436,6 +13917,11 @@ export class Game {
       return;
     }
     if (!this.player) {
+      this.utilityMenuOpenerFocusKey = null;
+      this.showTitleScreen();
+      return;
+    }
+    if (this.isPlayerDead()) {
       this.utilityMenuOpenerFocusKey = null;
       this.showTitleScreen();
       return;
@@ -11469,20 +13955,32 @@ export class Game {
         };
       }
     }
+    if (
+      this.mode === "modal"
+      && this.modalRoot
+      && !this.modalRoot.classList.contains("hidden")
+      && ["good", "warning", "bad"].includes(tone)
+    ) {
+      this.showModalInteractionFeedback(message, tone, {
+        persistMs: tone === "bad" ? 1600 : tone === "warning" ? 1350 : 1100
+      });
+    }
   }
 
   render() {
     const previousFocusKey = this.mode === "modal" ? null : (this.getActiveUiActionableElement()?.dataset?.focusKey || this.controllerFocusKey || null);
+    const advisor = this.player && this.currentLevel ? this.getAdvisorModel() : null;
     this.syncSurfaceMusic();
     this.syncUtilityBar();
     this.renderBoard();
     this.renderMiniMap();
-    this.renderPanels();
+    this.renderPanels(advisor);
     this.renderEventTicker();
-    this.renderActionBar();
+    this.renderActionBar(advisor);
+    this.renderDesktopShell();
     this.syncSpellTray();
-    this.syncContextChip();
     this.applyControllerNavigationMetadata();
+    this.ensureRuntimeLoop();
     if (previousFocusKey && this.lastInputSource !== "pointer") {
       const nextFocus = this.findUiElementByFocusKey(previousFocusKey);
       if (nextFocus) {
@@ -11736,7 +14234,9 @@ export class Game {
     });
 
     const targetActor = this.targetMode ? actorAt(this.currentLevel, this.targetMode.cursor.x, this.targetMode.cursor.y) : null;
-    const focusedThreat = targetActor || this.getFocusedThreat();
+    const sortedVisibleEnemies = this.getSortedVisibleEnemies();
+    const focusedThreat = targetActor || this.getFocusedThreat(sortedVisibleEnemies);
+    const targetPreview = this.targetMode ? this.getActiveSpellTargetPreview() : null;
     this.currentLevel.actors.forEach((actor) => {
       if (!isVisible(this.currentLevel, actor.x, actor.y)) {
         return;
@@ -11764,7 +14264,7 @@ export class Game {
     if (this.targetMode) {
       drawTargetCursor(ctx, this.targetMode.cursor, view, this.player, time, {
         ...effectProfile,
-        targetPreview: this.getActiveSpellTargetPreview(),
+        targetPreview,
         targetMode: this.targetMode
       });
     }
@@ -11979,6 +14479,7 @@ export class Game {
       this.appShell.classList.toggle("targeting-active", this.mode === "target" && Boolean(this.targetMode));
     }
     this.syncUtilityBar();
+    this.syncDesktopOverlayPlacement();
     if (this.mapDrawer) {
       const showMap = this.mapDrawerOpen && Boolean(this.player);
       this.mapDrawer.classList.toggle("hidden", !showMap);
@@ -11989,7 +14490,7 @@ export class Game {
     }
     if (this.spellTrayToggleButton) {
       const hasSpellTray = Boolean(this.player && this.getPinnedSpellIds().length > 0);
-      const canShowToggle = hasSpellTray && !["title", "creation", "levelup"].includes(this.mode);
+      const canShowToggle = this.layoutMode !== "desktop" && hasSpellTray && !["title", "creation", "levelup"].includes(this.mode);
       this.spellTrayToggleButton.classList.toggle("hidden", !canShowToggle);
       this.spellTrayToggleButton.disabled = !canShowToggle;
       this.spellTrayToggleButton.textContent = this.spellTrayOpen || (this.mode === "target" && this.targetMode?.type === "spell")
@@ -12001,6 +14502,7 @@ export class Game {
       const hiddenByController = this.settings.controllerHintsEnabled && this.gamepadInput.isConnected();
       this.touchControls.classList.toggle("hidden", hiddenBySetting || hiddenByController);
     }
+    this.renderDesktopShell();
     this.syncSpellTray();
     syncSaveChrome(this);
     this.applyControllerNavigationMetadata();
@@ -12015,6 +14517,36 @@ export class Game {
     const width = Math.round(viewport?.width || window.innerWidth || 0);
     const height = Math.round(viewport?.height || window.innerHeight || 0);
     return { width, height };
+  }
+
+  getBoardOverlayHeightPx() {
+    if (!this.eventTicker || this.eventTicker.classList.contains("hidden")) {
+      return 0;
+    }
+    const overlayRect = this.eventTicker.getBoundingClientRect?.();
+    if (overlayRect?.height > 0) {
+      return overlayRect.height;
+    }
+    return BOARD_OVERLAY_HEIGHT_PX[this.layoutMode] || BOARD_OVERLAY_HEIGHT_PX.mobile;
+  }
+
+  getBoardOverlayReserveRows() {
+    const overlayHeight = this.getBoardOverlayHeightPx();
+    if (overlayHeight <= 0) {
+      return 0;
+    }
+    const canvasRect = this.canvas?.getBoundingClientRect?.();
+    const canvasHeight = canvasRect?.height || this.canvas?.height || (VIEW_SIZE * TILE_SIZE);
+    const tileHeight = canvasHeight > 0 ? canvasHeight / VIEW_SIZE : TILE_SIZE;
+    return clamp(Math.ceil(overlayHeight / Math.max(tileHeight, 1)), 0, VIEW_SIZE - 1);
+  }
+
+  getViewportAnchorRow() {
+    const reserveRows = this.getBoardOverlayReserveRows();
+    if (reserveRows <= 0) {
+      return Math.floor(VIEW_SIZE / 2);
+    }
+    return clamp(VIEW_SIZE - reserveRows - 1 - BOARD_OVERLAY_BUFFER_ROWS, 0, VIEW_SIZE - 1);
   }
 
   getResponsiveLayoutMode() {
@@ -12040,6 +14572,7 @@ export class Game {
     if ((force || changed) && this.player && this.mapDrawer) {
       this.mapDrawerOpen = nextMode === "desktop";
     }
+    this.syncDesktopOverlayPlacement();
   }
 
   getDirectionToPoint(point) {
@@ -12186,7 +14719,17 @@ export class Game {
     if (!this.eventTicker) {
       return;
     }
-    this.eventTicker.innerHTML = renderHudFeed(this);
+    const model = this.getLiveFeedModel();
+    const markup = renderHudFeed(this, model);
+    const previousScrollTop = this.eventTicker.scrollTop || 0;
+    if (this.lastEventTickerMarkup !== markup) {
+      this.eventTicker.innerHTML = markup;
+      this.lastEventTickerMarkup = markup;
+      if (previousScrollTop > 0) {
+        this.eventTicker.scrollTop = previousScrollTop;
+      }
+    }
+    this.eventTicker.classList.toggle("hidden", !model.visible || !markup);
   }
 
   syncUtilityBar() {
@@ -12215,6 +14758,11 @@ export class Game {
         this.pressureStatus.textContent = pressure.label;
         this.pressureStatus.className = `utility-chip utility-pressure-status tone-${pressure.tone}`;
       }
+    }
+    if (this.topMusicButton) {
+      const musicOn = Boolean(this.settings.musicEnabled);
+      this.topMusicButton.textContent = musicOn ? "Music On" : "Music Off";
+      this.topMusicButton.setAttribute("aria-pressed", musicOn ? "true" : "false");
     }
     if (this.runStatus) {
       if (!this.player || !this.currentLevel) {
@@ -12300,28 +14848,71 @@ export class Game {
 
   processMonsters() { processMonsterTurns(this); }
 
-  useStairs(direction) { applyCommandResult(this, useStairsCommand(this, direction)); }
+  useStairs(direction) {
+    this.resetMovementCadence();
+    const result = useStairsCommand(this, direction);
+    if (!result) {
+      return;
+    }
+    result.logs.forEach((entry) => this.log(entry.message, entry.tone));
+    result.sounds.forEach((sound) => this.audio.play(sound));
+    if (result.refreshChrome) {
+      this.refreshChrome();
+    }
+    if (!result.render) {
+      if (result.autosave) {
+        this.scheduleAutosave();
+      }
+      return;
+    }
+    this.transitionPending = true;
+    this.updateFov();
+    this.applyIntroFloorRecon();
+    this.refreshChrome();
+    this.render();
+    this.queueAnimationFrame(() => {
+      this.updateMonsterIntents();
+      this.checkQuestState();
+      this.transitionPending = false;
+      this.render();
+      if (result.autosave) {
+        this.scheduleAutosave();
+      }
+    });
+  }
 
   saveGame(options = {}) { saveGameState(this, options); }
 
   loadGame(options = {}) {
     this.resetMovementCadence();
+    this.cancelScheduledAutosave();
+    this.cancelPendingHubPanePrewarm();
+    this.clearDeferredUiTask(this.pendingAdventureBootstrapFrame, "frame");
+    this.pendingAdventureBootstrapFrame = 0;
+    this.transitionPending = false;
+    this.resetHubPaneDirtyState();
     loadGameState(this, options);
     this.syncSurfaceMusic();
   }
 
   showTitleScreen() {
     this.resetMovementCadence();
+    this.cancelScheduledAutosave();
+    this.cancelPendingHubPanePrewarm();
+    this.clearDeferredUiTask(this.pendingAdventureBootstrapFrame, "frame");
+    this.pendingAdventureBootstrapFrame = 0;
+    this.transitionPending = false;
+    this.resetHubPaneDirtyState();
     showTitleModal(this);
   }
 
   showCreationModal(options = {}) { showCreationScreen(this, options); }
 
-  renderActionBar() { renderAdvisorActionBar(this); }
+  renderActionBar(advisor = null) { renderAdvisorActionBar(this, advisor); }
 
   getAdvisorModel() { return buildAdvisorModel(this); }
 
-  renderPanels() { renderAdvisorPanels(this); }
+  renderPanels(advisor = null) { renderAdvisorPanels(this, advisor); }
 
   recordTelemetry(type, context = {}) {
     return recordTelemetry(this, type, context);

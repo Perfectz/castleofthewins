@@ -1,0 +1,30 @@
+[
+  {
+    "area": "journal-section-switch",
+    "file": "src/game.js",
+    "hotspot": "case \"journal-section\" and refreshJournalHubSection()",
+    "why": "Section changes were routing through broader hub refresh work than the interaction required.",
+    "change": "Keep the journal shell mounted, toggle button active state in place, replace only the active section body."
+  },
+  {
+    "area": "magic-selection",
+    "file": "src/game.js",
+    "hotspot": "selectSpell()",
+    "why": "Selecting a spell rebuilt live magic UI even though only selection state changed.",
+    "change": "Retag the affected spell cards and status labels in place."
+  },
+  {
+    "area": "magic-filter-switch",
+    "file": "src/game.js",
+    "hotspot": "case \"magic-filter\" and refreshMagicHubContent()",
+    "why": "Filter changes were refreshing more live UI than the filter interaction needed.",
+    "change": "Toggle filter chip state in place and replace only the list region."
+  },
+  {
+    "area": "shop-panel-switch",
+    "file": "src/game.js",
+    "hotspot": "case \"shop-panel\" and updateShopModalPanel()",
+    "why": "Provisioner buy/sell toggles were calling showShopModal() again and rebuilding the service body.",
+    "change": "Keep the modal mounted, toggle tab state in place, replace only the panel body."
+  }
+]

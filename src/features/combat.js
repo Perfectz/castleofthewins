@@ -1,4 +1,4 @@
-import { rollTreasure, weightedMonster } from "../core/entities.js";
+import { getMonsterHealthState, rollTreasure, weightedMonster } from "../core/entities.js";
 import { actorAt, getTile, hasLineOfSight, inBounds, isVisible, summonMonsterNear } from "../core/world.js";
 import { clamp, distance, nowTime, randInt, removeFromArray, roll } from "../core/utils.js";
 import { buildDeathRecapMarkup, noteDeathContext, recordChronicleEvent } from "./chronicle.js";
@@ -6,6 +6,7 @@ import { getBuildAttackBonus, getBuildDamageBonus, onMonsterKilled, queuePerkCho
 
 const UNDEAD_IDS = new Set(["skeleton", "wraith", "cryptlord"]);
 const BASE_MOVE_THRESHOLD = 100;
+const MAX_MONSTER_REMOTE_ATTACK_DISTANCE = 8;
 
 function getMonsterMoveSpeed(monster) {
   let speed = typeof monster.moveSpeed === "number" ? monster.moveSpeed : BASE_MOVE_THRESHOLD;
@@ -169,6 +170,73 @@ export function canCharge(game, monster, dx, dy, distanceToPlayer) {
   return hasLineOfSight(game.currentLevel, monster.x, monster.y, game.player.x, game.player.y);
 }
 
+function canMonsterUseRemoteAttack(monster, distanceToPlayer) {
+  if (!monster || distanceToPlayer > MAX_MONSTER_REMOTE_ATTACK_DISTANCE) {
+    return false;
+  }
+  if (monster.ranged && distanceToPlayer <= monster.ranged.range) {
+    return true;
+  }
+  return Boolean(monster.spells && monster.spells.length > 0);
+}
+
+function getEnemyMeleeAttackFlavor(attacker, defender) {
+  const id = (attacker?.id || "").toLowerCase();
+  if (id.includes("wolf") || id.includes("hound")) {
+    return `${attacker.name} snaps at ${defender.name}.`;
+  }
+  if (id.includes("wyrm") || id.includes("dragon")) {
+    return `${attacker.name} claws into ${defender.name}.`;
+  }
+  if (id.includes("skeleton") || id.includes("bone")) {
+    return `${attacker.name} hacks at ${defender.name}.`;
+  }
+  if (attacker?.behaviorKit === "breaker") {
+    return `${attacker.name} hammers at ${defender.name}.`;
+  }
+  if (attacker?.abilities?.includes("charge")) {
+    return `${attacker.name} slams into ${defender.name}.`;
+  }
+  if (attacker?.spells?.length) {
+    return `${attacker.name} lashes out at ${defender.name}.`;
+  }
+  if (attacker?.tactic === "skirmish") {
+    return `${attacker.name} darts in at ${defender.name}.`;
+  }
+  return `${attacker.name} strikes at ${defender.name}.`;
+}
+
+function getEnemyMeleeMissFlavor(attacker, defender) {
+  const id = (attacker?.id || "").toLowerCase();
+  if (id.includes("wolf") || id.includes("hound")) {
+    return `${attacker.name} snaps at ${defender.name} but misses.`;
+  }
+  if (attacker?.behaviorKit === "breaker") {
+    return `${attacker.name} overextends on a crushing swing and misses ${defender.name}.`;
+  }
+  if (attacker?.abilities?.includes("charge")) {
+    return `${attacker.name} lunges past ${defender.name}.`;
+  }
+  return `${attacker.name} misses ${defender.name}.`;
+}
+
+function getEnemyRangedAttackMessage(monster) {
+  const id = (monster?.id || "").toLowerCase();
+  if (id.includes("slinger")) {
+    return `${monster.name} whips a stone across the room.`;
+  }
+  if (id.includes("archer")) {
+    return `${monster.name} looses a quick arrow.`;
+  }
+  if (id.includes("wyrm")) {
+    return `${monster.name} spits a burning shot down the lane.`;
+  }
+  if (id.includes("stormwarden")) {
+    return `${monster.name} hurls a crackling storm bolt.`;
+  }
+  return `${monster.name} launches a ranged attack.`;
+}
+
 export function applyCharge(game, monster) {
   if (!monster.chargeWindup) {
     return false;
@@ -206,16 +274,17 @@ export function getMonsterIntent(game, monster) {
   const dy = game.player.y - monster.y;
   const distanceToPlayer = Math.max(Math.abs(dx), Math.abs(dy));
   const canSeePlayer = distanceToPlayer <= 9 && hasLineOfSight(game.currentLevel, monster.x, monster.y, game.player.x, game.player.y);
+  const canUseRemoteAttack = canSeePlayer && canMonsterUseRemoteAttack(monster, distanceToPlayer);
   if (distanceToPlayer <= 1) {
     return { type: "melee", symbol: "!", color: "#ff6f6f" };
   }
-  if (monster.ranged && canSeePlayer && distanceToPlayer <= monster.ranged.range) {
+  if (monster.ranged && canUseRemoteAttack) {
     if (distanceToPlayer <= 2) {
       return { type: "retreat", symbol: "<", color: "#9fd0ff" };
     }
     return { type: "shoot", symbol: "*", color: "#ffd46b" };
   }
-  if (monster.spells && canSeePlayer && monster.mana >= 4) {
+  if (monster.spells && canUseRemoteAttack && monster.mana >= 4) {
     if (monster.abilities && monster.abilities.includes("summon")) {
       return { type: "summon", symbol: "+", color: "#d6a8ff" };
     }
@@ -248,7 +317,7 @@ export function attack(game, attacker, defender) {
   const rollHit = randInt(1, 20) + attackScore;
   makeNoise(game, isPlayer ? 5 : 4, attacker, "combat");
   if (rollHit < 10 + defenseScore) {
-    game.log(`${attacker.name} misses ${defender.name}.`, "warning");
+    game.log(isPlayer ? `${attacker.name} misses ${defender.name}.` : getEnemyMeleeMissFlavor(attacker, defender), "warning");
     game.audio.play("ui");
     if (defender && typeof defender.x === "number" && typeof defender.y === "number") {
       game.flashTile(defender.x, defender.y, "#f2deb1", 100, { alpha: 0.1, decorative: true });
@@ -272,6 +341,9 @@ export function attack(game, attacker, defender) {
     }
   } else if (attacker.behaviorKit === "breaker" && defender.id === "player" && game.getGuardValue && game.getGuardValue() >= 3) {
     damage += 2;
+  }
+  if (!isPlayer && defender.id === "player") {
+    game.log(getEnemyMeleeAttackFlavor(attacker, defender), "warning");
   }
   game.damageActor(attacker, defender, damage, "physical");
   return true;
@@ -338,6 +410,10 @@ export function damageActor(game, attacker, defender, amount, damageType = "phys
   }
 
   game.log(`${attacker.name} hits ${defender.name} for ${resolvedAmount}.`, attacker.id === "player" ? "good" : "bad");
+  if (attacker.id === "player" && defender.hp > 0) {
+    const healthState = getMonsterHealthState(defender);
+    game.log(`${defender.name} is ${healthState.label.toLowerCase()}.`, healthState.tone);
+  }
   if (defender.hp <= 0) {
     game.killMonster(defender);
   }
@@ -415,6 +491,7 @@ export function checkLevelUp(game) {
 }
 
 export function handleDeath(game) {
+  game.cancelScheduledAutosave?.();
   game.recordTelemetry?.("run_death", {
     cause: game.deathContext?.cause || "Unknown",
     lastHitBy: game.deathContext?.lastHitBy || "Unknown",
@@ -422,13 +499,21 @@ export function handleDeath(game) {
   });
   game.handleRunDeath?.();
   game.mode = "modal";
-  game.showSimpleModal("Fallen", buildDeathRecapMarkup(game));
+  game.showSimpleModal("Fallen", buildDeathRecapMarkup(game), {
+    closeLabel: "Main Menu"
+  });
   game.render();
 }
 
 export function processMonsters(game) {
   const level = game.currentLevel;
-  level.actors.forEach((monster) => {
+  if (!level || !game.player || game.player.hp <= 0 || game.mode !== "game") {
+    return;
+  }
+  for (const monster of [...level.actors]) {
+    if (!game.player || game.player.hp <= 0 || game.mode !== "game") {
+      return;
+    }
     bankMonsterMovement(monster);
     if ((monster.tempBuffTurns || 0) > 0) {
       monster.tempBuffTurns -= 1;
@@ -460,6 +545,7 @@ export function processMonsters(game) {
     const dy = game.player.y - monster.y;
     const distanceToPlayer = Math.max(Math.abs(dx), Math.abs(dy));
     const canSeePlayer = distanceToPlayer <= 9 && hasLineOfSight(level, monster.x, monster.y, game.player.x, game.player.y);
+    const canUseRemoteAttack = canSeePlayer && canMonsterUseRemoteAttack(monster, distanceToPlayer);
     if (canSeePlayer) {
       monster.alerted = 6;
       monster.sleeping = false;
@@ -501,7 +587,7 @@ export function processMonsters(game) {
       return;
     }
 
-    if (monster.ranged && canSeePlayer && distanceToPlayer <= monster.ranged.range) {
+    if (monster.ranged && canUseRemoteAttack) {
       if (distanceToPlayer <= (monster.behaviorKit === "coward_caster" ? 3 : 2)) {
         const retreat = findRetreatStep(game, monster);
         if (retreat) {
@@ -512,7 +598,7 @@ export function processMonsters(game) {
       }
       if (Math.random() < (monster.behaviorKit === "coward_caster" ? 0.72 : 0.55)) {
         game.playProjectile(monster, game.player, monster.ranged.color);
-        game.log(`${monster.name} launches a ranged attack.`, "bad");
+        game.log(getEnemyRangedAttackMessage(monster), "bad");
         game.emitReadout("Shot", monster.x, monster.y, "#ffd46b", 320);
         game.audio.play("hit");
         game.damageActor(monster, game.player, roll(...monster.ranged.damage), "physical");
@@ -520,7 +606,7 @@ export function processMonsters(game) {
       }
     }
 
-    if (monster.spells && canSeePlayer && monster.mana >= 4 && Math.random() < (monster.behaviorKit === "coward_caster" ? 0.36 : 0.24)) {
+    if (monster.spells && canUseRemoteAttack && monster.mana >= 4 && Math.random() < (monster.behaviorKit === "coward_caster" ? 0.36 : 0.24)) {
       const spellId = (monster.spells || [])[randInt(0, monster.spells.length - 1)];
       const spellCost = spellId === "lightningBolt" ? 6 : spellId === "holdMonster" ? 5 : 4;
       monster.mana -= spellCost;
@@ -627,5 +713,5 @@ export function processMonsters(game) {
       monster.x = nx;
       monster.y = ny;
     }
-  });
+  }
 }

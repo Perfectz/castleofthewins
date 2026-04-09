@@ -1,3 +1,4 @@
+import { DUNGEON_DEPTH } from "../core/constants.js";
 import { addCommandLog, addCommandSound, createCommandResult } from "../core/command-result.js";
 import { getTile, inBounds, revealSecretTile } from "../core/world.js";
 import { randInt } from "../core/utils.js";
@@ -80,8 +81,16 @@ export function useStairsCommand(game, direction) {
       return result;
     }
     const nextDepth = game.currentDepth + 1;
-    if (nextDepth >= game.levels.length) {
+    if (nextDepth > DUNGEON_DEPTH) {
       addCommandLog(result, "No deeper path opens here.", "warning");
+      result.render = true;
+      return result;
+    }
+    if (typeof game.ensureWorldDepth === "function") {
+      game.ensureWorldDepth(nextDepth);
+    }
+    if (!game.levels[nextDepth]) {
+      addCommandLog(result, "The next floor is still unstable. Try the descent again.", "warning");
       result.render = true;
       return result;
     }
@@ -163,11 +172,11 @@ export function useStairsCommand(game, direction) {
       }
       if (previousLevel?.floorResolved) {
         const returnMeta = game.recordTownReturnSummary?.(previousLevel, game.currentDepth + 1);
-        if (returnMeta?.summary && !blockedByStorySurface) {
-          game.showExtractionSummaryModal?.(returnMeta.summary, {
-            ...returnMeta,
-            level: previousLevel
-          });
+        if (returnMeta?.summary) {
+          game.storyFlags.postReturnBankPrompt = true;
+          if (!blockedByStorySurface) {
+            game.log("Bank is the cleanest next stop. Review town persistence before sending this adventurer north again.", "warning");
+          }
         }
       }
     }

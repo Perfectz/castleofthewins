@@ -193,7 +193,8 @@ export function noteFloorIntro(game) {
 }
 
 export function markGreedAction(game, source = "greed") {
-  const amount = game.currentLevel?.floorResolved ? 2 : 1;
+  const greedyPurseBonus = game.currentLevel?.floorResolved && game.player?.relics?.includes("greedy_purse") ? 1 : 0;
+  const amount = (game.currentLevel?.floorResolved ? 2 : 1) + greedyPurseBonus;
   return increaseDanger(game, source, amount);
 }
 
