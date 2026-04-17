@@ -45,6 +45,8 @@ const orderedFiles = [
   "features/screens/settings-modal.js",
   "features/screens/journal-chronicle-section.js",
   "features/screens/pack-inspector.js",
+  "features/screens/pack-hub.js",
+  "features/screens/magic-hub.js",
   "ui/render.js",
   "audio/soundboard.js",
   "input/gamepad.js",
