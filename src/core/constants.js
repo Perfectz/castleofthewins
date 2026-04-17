@@ -1,5 +1,6 @@
 export const TILE_SIZE = 24;
-export const VIEW_SIZE = 25;
+export const VIEW_SIZE = 17;
+export const BOARD_CANVAS_SIZE = VIEW_SIZE * TILE_SIZE;
 export const FOV_RADIUS = 8;
 export const DUNGEON_DEPTH = 7;
 export const SAVE_KEY = "castle-of-the-winds-web-save";

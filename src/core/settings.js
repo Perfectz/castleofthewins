@@ -4,6 +4,7 @@ export function defaultSettings() {
   return {
     soundEnabled: true,
     musicEnabled: false,
+    musicTrackChoice: "area",
     uiScale: "compact",
     effectIntensity: "standard",
     reducedMotionEnabled: false,

@@ -264,6 +264,285 @@ test("depth-1 objective and optional rooms do not overlap or touch", async () =>
   }
 });
 
+test("top music button cycles tracks with arrows without moving the player", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "dwarf", classId: "fighter", name: "Music Rules" });
+    await page.locator("#top-music-button").focus();
+
+    const start = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      const button = document.getElementById("top-music-button");
+      return {
+        x: game.player.x,
+        y: game.player.y,
+        choice: game.settings.musicTrackChoice,
+        label: button?.textContent || ""
+      };
+    });
+
+    await page.keyboard.press("ArrowRight");
+    const afterTown = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      const button = document.getElementById("top-music-button");
+      return {
+        x: game.player.x,
+        y: game.player.y,
+        enabled: game.settings.musicEnabled,
+        choice: game.settings.musicTrackChoice,
+        track: game.audio.musicTrack,
+        label: button?.textContent || ""
+      };
+    });
+
+    await page.keyboard.press("ArrowRight");
+    const afterDungeon = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      const button = document.getElementById("top-music-button");
+      return {
+        x: game.player.x,
+        y: game.player.y,
+        choice: game.settings.musicTrackChoice,
+        track: game.audio.musicTrack,
+        label: button?.textContent || ""
+      };
+    });
+
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("ArrowLeft");
+    const afterArea = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      const button = document.getElementById("top-music-button");
+      return {
+        x: game.player.x,
+        y: game.player.y,
+        choice: game.settings.musicTrackChoice,
+        track: game.audio.musicTrack,
+        label: button?.textContent || ""
+      };
+    });
+
+    assert.deepEqual({ x: afterTown.x, y: afterTown.y }, { x: start.x, y: start.y });
+    assert.equal(afterTown.enabled, true);
+    assert.equal(afterTown.choice, "town");
+    assert.match(afterTown.track, /town-theme\.mp3$/);
+    assert.equal(afterTown.label, "Music: Town");
+
+    assert.deepEqual({ x: afterDungeon.x, y: afterDungeon.y }, { x: start.x, y: start.y });
+    assert.equal(afterDungeon.choice, "dungeon");
+    assert.match(afterDungeon.track, /dungeon-theme\.mp3$/);
+    assert.equal(afterDungeon.label, "Music: Dungeon");
+
+    assert.deepEqual({ x: afterArea.x, y: afterArea.y }, { x: start.x, y: start.y });
+    assert.equal(afterArea.choice, "area");
+    assert.match(afterArea.track, /town-theme\.mp3$/);
+    assert.equal(afterArea.label, "Music: Area");
+  } finally {
+    await page.close();
+  }
+});
+
+test("pack opens in equipment mode with slot tabs and compare panel", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "elf", classId: "wizard", name: "Pack Rules" });
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      game.showInventoryModal();
+      return {
+        filter: game.activePackFilter,
+        selectionType: game.activePackSelection?.type || "",
+        bodyText: document.getElementById("generic-modal-body")?.textContent || "",
+        slotTabs: document.querySelectorAll(".pack-slot-tab").length,
+        familyLabels: Array.from(document.querySelectorAll(".pack-slot-tab-label")).map((node) => node.textContent.trim()),
+        subtabCount: document.querySelectorAll(".pack-slot-subtab").length,
+        resultVisible: Boolean(document.querySelector("[data-pack-result-panel]"))
+      };
+    });
+    assert.equal(result.filter, "equip");
+    assert.equal(result.selectionType, "slot");
+    assert.ok(result.slotTabs >= 6, JSON.stringify(result));
+    assert.match(result.familyLabels.join(" | "), /Ring/i, JSON.stringify(result));
+    assert.match(result.familyLabels.join(" | "), /Amulet/i, JSON.stringify(result));
+    assert.ok(!result.familyLabels.includes("Ring II"), JSON.stringify(result));
+    assert.equal(result.subtabCount, 0, JSON.stringify(result));
+    assert.equal(result.resultVisible, true, JSON.stringify(result));
+    assert.ok(!/Loadout/i.test(result.bodyText), JSON.stringify(result));
+    assert.ok(!/Candidates/i.test(result.bodyText), JSON.stringify(result));
+  } finally {
+    await page.close();
+  }
+});
+
+test("equip view shows compatible gear, verdict-first compare, and hides unknown payoff", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "human", classId: "fighter", name: "Inventory Deep Dive" });
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      game.player.equipment.weapon = {
+        id: "rusty_blade",
+        name: "Rusty Blade",
+        kind: "weapon",
+        slot: "weapon",
+        power: 4,
+        weight: 2,
+        identified: true
+      };
+      game.player.inventory = [
+        {
+          id: "iron_blade",
+          name: "Iron Blade",
+          kind: "weapon",
+          slot: "weapon",
+          power: 7,
+          accuracyBonus: 1,
+          critBonus: 1,
+          weight: 3,
+          identified: true
+        },
+        {
+          id: "mystery_robe",
+          name: "Mystery Robe",
+          kind: "armor",
+          slot: "body",
+          armor: 5,
+          intBonus: 3,
+          weight: 2,
+          identified: false
+        },
+        {
+          id: "heal_potion",
+          name: "Potion of Healing",
+          kind: "consumable",
+          effect: "heal",
+          weight: 1,
+          identified: true
+        }
+      ];
+      game.recalculateDerivedStats();
+      game.showInventoryModal();
+      const initialRows = Array.from(document.querySelectorAll(".pack-classic-list .pack-item-name")).map((node) => node.textContent.trim());
+      game.refreshPackHub({
+        selection: { type: "inventory", value: 0 },
+        preserveScroll: true
+      });
+      const knownPanel = {
+        verdict: document.querySelector("[data-pack-result-panel] .pack-decision-summary-row strong")?.textContent || "",
+        deltas: Array.from(document.querySelectorAll("[data-pack-result-deltas] .pack-comparison-row")).map((node) => node.textContent.trim()),
+        panelText: document.querySelector("[data-pack-result-panel]")?.textContent || ""
+      };
+      game.refreshPackHub({
+        selection: { type: "slot", value: "body" },
+        preserveScroll: true
+      });
+      game.refreshPackHub({
+        selection: { type: "inventory", value: 1 },
+        preserveScroll: true
+      });
+      const unknownPanel = {
+        panelText: document.querySelector("[data-pack-result-panel]")?.textContent || "",
+        deltas: Array.from(document.querySelectorAll("[data-pack-result-deltas] .pack-comparison-row")).map((node) => node.textContent.trim())
+      };
+      return {
+        initialRows,
+        knownPanel,
+        unknownPanel
+      };
+    });
+    assert.deepEqual(result.initialRows, ["Leave Current", "Iron Blade"], JSON.stringify(result));
+    assert.match(result.knownPanel.panelText, /Verdict/i, JSON.stringify(result));
+    assert.match(result.knownPanel.panelText, /Upgrade/i, JSON.stringify(result));
+    assert.match(result.knownPanel.deltas.join(" | "), /ATK \+3/i, JSON.stringify(result));
+    assert.ok(!/Potion of Healing/i.test(result.initialRows.join(" | ")), JSON.stringify(result));
+    assert.match(result.unknownPanel.panelText, /Identify first/i, JSON.stringify(result));
+    assert.ok(!/INT \+3/i.test(result.unknownPanel.deltas.join(" | ")), JSON.stringify(result));
+  } finally {
+    await page.close();
+  }
+});
+
+test("equip view keeps the result panel after clicking a candidate", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "human", classId: "fighter", name: "Equip Click" });
+    await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      game.player.equipment.head = {
+        id: "eq_head",
+        name: "+3 Hooded Cowl",
+        kind: "armor",
+        slot: "head",
+        armor: 4,
+        ward: 1,
+        weight: 1,
+        identified: true
+      };
+      game.player.inventory.push(
+        {
+          id: "head_keep",
+          name: "Warden's Hooded Cowl",
+          kind: "armor",
+          slot: "head",
+          armor: 1,
+          ward: 1,
+          weight: 1,
+          identified: true
+        },
+        {
+          id: "head_alt",
+          name: "Hooded Cowl",
+          kind: "armor",
+          slot: "head",
+          armor: 1,
+          weight: 1,
+          identified: true
+        }
+      );
+      game.recalculateDerivedStats();
+      game.showInventoryModal();
+      game.refreshPackHub({
+        selection: { type: "slot", value: "head" },
+        preserveScroll: true
+      });
+    });
+    await page.locator(".pack-classic-list .pack-item-row").nth(1).click();
+    const result = await page.evaluate(() => ({
+      panelTitle: document.querySelector("[data-pack-inspector-host] .panel-title")?.textContent?.trim() || "",
+      actionLabels: Array.from(document.querySelectorAll("[data-pack-inspector-host] .menu-button")).map((node) => node.textContent.trim()),
+      inspectorText: document.querySelector("[data-pack-inspector-host]")?.textContent || ""
+    }));
+    assert.equal(result.panelTitle, "Result", JSON.stringify(result));
+    assert.match(result.actionLabels.join(" | "), /Equip/i, JSON.stringify(result));
+    assert.match(result.actionLabels.join(" | "), /Back/i, JSON.stringify(result));
+    assert.ok(!/Selected Item/i.test(result.inspectorText), JSON.stringify(result));
+  } finally {
+    await page.close();
+  }
+});
+
+test("use view does not render the loadout panel", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "human", classId: "fighter", name: "Use Rules" });
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      game.showInventoryModal();
+      document.querySelector('[data-action="pack-filter"][data-filter="use"]')?.click();
+      return {
+        activeFilter: game.activePackFilter,
+        bodyText: document.getElementById("generic-modal-body")?.textContent || "",
+        loadoutPanels: document.querySelectorAll(".pack-equipment-panel").length
+      };
+    });
+    assert.equal(result.activeFilter, "use", JSON.stringify(result));
+    assert.equal(result.loadoutPanels, 0, JSON.stringify(result));
+    assert.ok(!/Loadout/i.test(result.bodyText), JSON.stringify(result));
+  } finally {
+    await page.close();
+  }
+});
+
 test("retention scaffolding expands contracts and mastery ladders", async () => {
   const page = await openPage();
   try {
@@ -760,9 +1039,12 @@ test("board camera keeps the player above the overlay safe zone until the map bo
     const result = await page.evaluate(() => {
       const game = window.castleOfTheWindsWeb;
       game.renderEventTicker();
+      // VIEW_SIZE matches src/core/constants.js. Update both together if the
+      // visible tile count on the board ever changes.
+      const VIEW_SIZE = 17;
       const reserveRows = game.getBoardOverlayReserveRows();
       const anchorRow = game.getViewportAnchorRow();
-      const maxVy = Math.max(0, game.currentLevel.height - 25);
+      const maxVy = Math.max(0, game.currentLevel.height - VIEW_SIZE);
       const desiredVy = Math.min(Math.max(2, Math.floor(maxVy / 2)), Math.max(0, maxVy - 1));
       game.player.y = Math.min(game.currentLevel.height - 2, desiredVy + anchorRow);
       const midView = game.getViewport();
@@ -771,9 +1053,10 @@ test("board camera keeps the player above the overlay safe zone until the map bo
       const bottomView = game.getViewport();
       const bottomScreenRow = game.player.y - bottomView.y;
       return {
+        viewSize: VIEW_SIZE,
         reserveRows,
         anchorRow,
-        safeLimit: 25 - reserveRows - 1,
+        safeLimit: VIEW_SIZE - reserveRows - 1,
         desiredVy,
         maxVy,
         midViewY: midView.y,
@@ -1368,7 +1651,7 @@ test("single click selects a spell without spending mana and double click starts
   }
 });
 
-test("magic book quick state updates when a different spell is selected", async () => {
+test("magic result panel updates when a different spell is selected", async () => {
   const page = await openPage();
   try {
     await beginFreshRun(page, { race: "elf", classId: "wizard", name: "Rules" });
@@ -1378,17 +1661,17 @@ test("magic book quick state updates when a different spell is selected", async 
       game.player.spellTrayIds = ["magicMissile", "fireball"];
       game.syncPlayerSpellTray(game.player);
       game.showSpellModal();
-      const before = document.querySelector(".menu-quick-state-detail")?.textContent || "";
+      const before = document.querySelector(".magic-result-panel .pack-inspector-title")?.textContent || "";
       document.querySelector('[data-action="spell-select"][data-spell="fireball"]')?.click();
       return {
         before,
-        after: document.querySelector(".menu-quick-state-detail")?.textContent || "",
+        after: document.querySelector(".magic-result-panel .pack-inspector-title")?.textContent || "",
         pendingSpell: game.pendingSpell,
         activeSpellIds: [...document.querySelectorAll("[data-spell-card].active")].map((entry) => entry.dataset.spellCard)
       };
     });
-    assert.match(result.before, /Magic Missile selected/i);
-    assert.match(result.after, /Ball of Fire selected/i);
+    assert.match(result.before, /Magic Missile/i);
+    assert.match(result.after, /Ball of Fire/i);
     assert.equal(result.pendingSpell, "fireball");
     assert.deepEqual(result.activeSpellIds, ["fireball"]);
   } finally {
@@ -1410,13 +1693,13 @@ test("magic filter keeps selection on a visible spell", async () => {
       document.querySelector('[data-action="magic-filter"][data-filter="recovery"]')?.click();
       return {
         pendingSpell: game.pendingSpell,
-        quickDetail: document.querySelector(".menu-quick-state-detail")?.textContent || "",
+        resultTitle: document.querySelector(".magic-result-panel .pack-inspector-title")?.textContent || "",
         activeSpellIds: [...document.querySelectorAll("[data-spell-card].active")].map((entry) => entry.dataset.spellCard),
         visibleSpellIds: [...document.querySelectorAll(".magic-card-select")].map((entry) => entry.dataset.spell)
       };
     });
     assert.equal(result.pendingSpell, "healMinor");
-    assert.match(result.quickDetail, /Cure Light Wounds selected/i);
+    assert.match(result.resultTitle, /Cure Light Wounds/i);
     assert.deepEqual(result.activeSpellIds, ["healMinor"]);
     assert.deepEqual(result.visibleSpellIds, ["healMinor"]);
   } finally {
@@ -1701,6 +1984,69 @@ test("junk shop bulk sale skips items marked do not sell", async () => {
   }
 });
 
+test("shop sell view promotes sell all unmarked as the first list option", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "dwarf", classId: "fighter", name: "Shop Sell Order" });
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      game.showShopModal("junk", { id: "junk", name: "Junk Shop", stock: [] }, {
+        panel: "sell"
+      });
+      const rows = Array.from(document.querySelectorAll(".shop-transaction-list > [data-action]")).map((entry) => ({
+        action: entry.dataset.action || "",
+        text: entry.textContent.trim()
+      }));
+      return {
+        panel: game.activeShopPanel,
+        firstRow: rows[0] || null,
+        rowCount: rows.length
+      };
+    });
+    assert.equal(result.panel, "sell", JSON.stringify(result));
+    assert.equal(result.firstRow?.action, "shop-sell-unmarked", JSON.stringify(result));
+    assert.match(result.firstRow?.text || "", /Sell All Unmarked Items/i, JSON.stringify(result));
+    assert.ok(result.rowCount >= 1, JSON.stringify(result));
+  } finally {
+    await page.close();
+  }
+});
+
+test("shop buy view uses transaction shell and buy plus equip action", async () => {
+  const page = await openPage();
+  try {
+    await beginFreshRun(page, { race: "dwarf", classId: "fighter", name: "Shop Rules" });
+    const result = await page.evaluate(() => {
+      const game = window.castleOfTheWindsWeb;
+      game.player.gold = 500;
+      const stockId = game.player.equipment.weapon?.id || "dagger";
+      game.showShopModal("armory", {
+        name: "Armory",
+        greeting: "Steel for sale.",
+        stock: [stockId]
+      }, {
+        panel: "buy"
+      });
+      return {
+        panel: game.activeShopPanel,
+        browseState: game.shopBrowseState,
+        bodyText: document.getElementById("generic-modal-body")?.textContent || "",
+        buyRowCount: document.querySelectorAll("[data-action='shop-select-buy']").length,
+        resultVisible: Boolean(document.querySelector("[data-shop-result-panel]")),
+        actionLabels: Array.from(document.querySelectorAll("[data-shop-result-actions] .menu-button")).map((node) => node.textContent.trim())
+      };
+    });
+    assert.equal(result.panel, "buy", JSON.stringify(result));
+    assert.equal(result.browseState?.kind, "buy", JSON.stringify(result));
+    assert.ok(result.buyRowCount >= 1, JSON.stringify(result));
+    assert.equal(result.resultVisible, true, JSON.stringify(result));
+    assert.match(result.bodyText, /After Buy/i, JSON.stringify(result));
+    assert.match(result.actionLabels.join(" | "), /Buy\+Equip/i, JSON.stringify(result));
+  } finally {
+    await page.close();
+  }
+});
+
 test("clicking the current greed tile on the canvas still resolves with the overlay-safe viewport", async () => {
   const page = await openPage();
   try {
@@ -1709,8 +2055,10 @@ test("clicking the current greed tile on the canvas still resolves with the over
     const result = await page.evaluate(() => {
       const game = window.castleOfTheWindsWeb;
       game.renderEventTicker();
+      // VIEW_SIZE matches src/core/constants.js. Keep in sync.
+      const VIEW_SIZE = 17;
       const anchorRow = game.getViewportAnchorRow();
-      const maxVy = Math.max(0, game.currentLevel.height - 25);
+      const maxVy = Math.max(0, game.currentLevel.height - VIEW_SIZE);
       const desiredVy = Math.min(Math.max(2, Math.floor(maxVy / 2)), Math.max(0, maxVy - 1));
       game.player.x = Math.min(game.currentLevel.width - 2, Math.max(1, Math.floor(game.currentLevel.width / 2)));
       game.player.y = Math.min(game.currentLevel.height - 2, desiredVy + anchorRow);
@@ -1733,8 +2081,8 @@ test("clicking the current greed tile on the canvas still resolves with the over
       const rect = game.canvas.getBoundingClientRect();
       const view = game.getViewport();
       const screenRow = game.player.y - view.y;
-      const tileWidth = rect.width / 25;
-      const tileHeight = rect.height / 25;
+      const tileWidth = rect.width / VIEW_SIZE;
+      const tileHeight = rect.height / VIEW_SIZE;
       const clientX = rect.left + ((game.player.x - view.x) + 0.5) * tileWidth;
       const clientY = rect.top + ((game.player.y - view.y) + 0.5) * tileHeight;
       const beforeGreed = game.telemetry?.activeRun?.greedCount || 0;

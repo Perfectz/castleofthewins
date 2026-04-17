@@ -16,9 +16,9 @@ function buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lo
   const dangerNote = directive?.supportText || (game.getImmediateDangerNote?.() ?? "");
   const townMeta = game.currentDepth === 0 ? (game.getTownMetaSummary?.() ?? null) : null;
   const actions = [];
-  const pushAction = (action, label, note, recommended = false, tab = "") => {
+  const pushAction = (action, label, note, recommended = false, tab = "", service = "") => {
     if (!actions.some((entry) => entry.action === action)) {
-      actions.push({ action, label, note, recommended, tab });
+      actions.push({ action, label, note, recommended, tab, service });
     }
   };
 
@@ -114,12 +114,24 @@ function buildObjectiveAdvice(game, tile, hpRatio, manaRatio, visible, focus, lo
     advice = game.storyFlags?.townServiceVisited
       ? "You checked a town door. Take the north road into the keep."
       : "Step onto one labeled town door, then take the north road into the keep.";
-    pushAction(
-      "map-focus",
-      game.storyFlags?.townServiceVisited ? "Go North" : "Services",
-      game.storyFlags?.townServiceVisited ? "Enter the keep" : "Open a town door",
-      true
-    );
+    const onDoor = tile?.kind === "buildingDoor" && tile?.service;
+    if (onDoor && !game.storyFlags?.townServiceVisited) {
+      pushAction(
+        "open-town-service",
+        "Open Door",
+        `Step inside ${tile.label || "this service"}`,
+        true,
+        "",
+        tile.service
+      );
+    } else {
+      pushAction(
+        "map-focus",
+        game.storyFlags?.townServiceVisited ? "Go North" : "Survey",
+        game.storyFlags?.townServiceVisited ? "Enter the keep" : "Find a labeled door",
+        true
+      );
+    }
     pushAction("open-briefing", "Briefing", "Hear the run goal", false);
     pushAction("open-hub", "Journal", "Review the run goal", false, "journal");
   } else if (game.currentDepth === 0 && townMeta) {
@@ -278,17 +290,31 @@ function buildDockSlots(game, actions) {
     entry.action !== primaryAction.action || (entry.tab || "") !== (primaryAction.tab || "")
   ) || orderedCandidates[0];
 
+  // Step 3 — pressure verb swap. When the run is in "leave now" (tone bad),
+  // relabel the primary verb with an urgent tone and mark it .is-urgent so
+  // the command window colors it red. The underlying action stays whatever
+  // the objective system recommended (usually stairs-up or a safer route).
+  const urgentPressure = game.currentDepth > 0
+    && getPressureStatus(game.currentLevel)?.tone === "bad";
+  const primaryLabel = urgentPressure
+    ? (primaryAction.action === "stairs-up" ? "Ascend!" : "Flee!")
+    : primaryAction.label;
+  const primaryNote = urgentPressure
+    ? "Reinforcements inbound"
+    : primaryAction.note;
+
   return [
     {
       key: "primary",
       prompt: "A",
-      label: primaryAction.label,
-      note: primaryAction.note,
+      label: primaryLabel,
+      note: primaryNote,
       action: primaryAction.action,
       tab: primaryAction.tab || "",
       service: primaryAction.service || "",
       tone: "primary",
-      active: true
+      active: true,
+      urgent: urgentPressure
     },
     {
       key: "secondary",
@@ -324,15 +350,29 @@ function buildDockSlots(game, actions) {
 }
 
 function buildActionBarMarkup(dockSlots = []) {
-  return dockSlots.map((slot) => `
-    <button class="action-button dock-action dock-slot dock-slot-${slot.key} dock-tone-${slot.tone}${slot.tone === "primary" ? " recommended" : ""}${slot.active ? " is-active" : ""}" data-action="${slot.action}"${slot.tab ? ` data-tab="${slot.tab}"` : ""}${slot.service ? ` data-service="${slot.service}"` : ""} data-focus-key="dock:${slot.key}" type="button">
-      <span class="context-slot">${escapeHtml(slot.prompt)}</span>
-      <span class="context-copy">
-        <span class="context-main">${escapeHtml(slot.label)}</span>
-        <span class="context-note">${escapeHtml(slot.note)}</span>
-      </span>
-    </button>
-  `).join("");
+  // JRPG command window — FFVI style. Legacy dock classes are retained so
+  // existing focus-navigation, gamepad, and selector-based tests keep working.
+  const items = dockSlots.map((slot) => {
+    const toneMods = slot.tone === "primary" ? " recommended" : "";
+    const activeMod = slot.active ? " is-active" : "";
+    const urgentMod = slot.urgent ? " is-urgent" : "";
+    const legacyClasses = `action-button dock-action dock-slot dock-slot-${slot.key} dock-tone-${slot.tone}${toneMods}`;
+    const tabAttr = slot.tab ? ` data-tab="${slot.tab}"` : "";
+    const serviceAttr = slot.service ? ` data-service="${slot.service}"` : "";
+    return `
+      <button class="jrpg-window-option jrpg-command-option${activeMod}${urgentMod} ${legacyClasses}" data-action="${slot.action}"${tabAttr}${serviceAttr} data-focus-key="dock:${slot.key}" type="button">
+        <span class="jrpg-command-prompt">${escapeHtml(slot.prompt)}</span>
+        <span class="jrpg-command-label">${escapeHtml(slot.label)}</span>
+        <span class="jrpg-command-note">${escapeHtml(slot.note)}</span>
+      </button>
+    `;
+  }).join("");
+  return `
+    <section class="jrpg-window jrpg-command-window" aria-label="Command">
+      <h3 class="jrpg-window-title">Command</h3>
+      <div class="jrpg-command-list">${items}</div>
+    </section>
+  `;
 }
 
 function syncMarkup(game, cacheKey, element, markup) {
@@ -382,32 +422,33 @@ export function getAdvisorModel(game) {
   const tileAction = game.getTileActionPrompt?.(tile) ?? null;
   const pinnedEvent = game.getPinnedTickerEntry?.() ?? null;
 
+  // JRPG status window — FFVI party-status style. One bar per resource, name
+  // as the window title. Class/race subtitle and the Steady/Burdened "State"
+  // pill are intentionally dropped from the play HUD per the redesign plan;
+  // both still surface on the character sheet.
+  const hpPercent = clamp(Math.round(hpRatio * 100), 0, 100);
+  const manaPercent = clamp(Math.round(manaRatio * 100), 0, 100);
+  const burdenPercent = clamp(Math.round(burdenUi.percent || 0), 0, 100);
+  const hpCriticalClass = hpRatio < 0.25 ? " is-critical" : "";
   const statsHtml = `
-    <div class="stat-band-head">
-      <span class="stat-band-name">${escapeHtml(game.player.name)}</span>
-      <span class="stat-band-role">${escapeHtml(`${game.player.race} ${game.player.className}`)}</span>
-    </div>
-    <div class="rail-stat-row">
-      <div class="rail-stat-pill tone-health">
-        <span>HP</span>
-        <strong>${Math.floor(game.player.hp)}/${game.player.maxHp}</strong>
-        <div class="rail-meter hp"><span style="width:${clamp(Math.round(hpRatio * 100), 0, 100)}%"></span></div>
+    <section class="jrpg-window jrpg-status-window" aria-label="Party status" data-condition="${escapeHtml(condition)}">
+      <h3 class="jrpg-window-title">${escapeHtml(String(game.player.name || "HERO"))}</h3>
+      <div class="jrpg-bar is-hp${hpCriticalClass}">
+        <span class="jrpg-bar-label">HP</span>
+        <span class="jrpg-bar-track"><span class="jrpg-bar-fill" style="width:${hpPercent}%"></span></span>
+        <span class="jrpg-bar-value">${Math.floor(game.player.hp)}/${game.player.maxHp}</span>
       </div>
-      <div class="rail-stat-pill tone-mana">
-        <span>Mana</span>
-        <strong class="${manaRatio < 0.3 ? "value-warning" : ""}">${Math.floor(game.player.mana)}/${game.player.maxMana}</strong>
-        <div class="rail-meter mana"><span style="width:${clamp(Math.round(manaRatio * 100), 0, 100)}%"></span></div>
+      <div class="jrpg-bar is-mp">
+        <span class="jrpg-bar-label">MP</span>
+        <span class="jrpg-bar-track"><span class="jrpg-bar-fill" style="width:${manaPercent}%"></span></span>
+        <span class="jrpg-bar-value">${Math.floor(game.player.mana)}/${game.player.maxMana}</span>
       </div>
-      <div class="rail-stat-pill tone-load burden-${burdenUi.state}">
-        <span>Load</span>
-        <strong>${burdenUi.weight}/${burdenUi.capacity}</strong>
-        <div class="rail-meter burden burden-${burdenUi.state}"><span style="width:${burdenUi.percent}%"></span></div>
+      <div class="jrpg-bar is-load burden-${burdenUi.state}" title="Carry weight — over capacity slows dodge and lets monsters press harder.">
+        <span class="jrpg-bar-label">Load</span>
+        <span class="jrpg-bar-track"><span class="jrpg-bar-fill" style="width:${burdenPercent}%"></span></span>
+        <span class="jrpg-bar-value">${burdenUi.weight}/${burdenUi.capacity}</span>
       </div>
-      <div class="rail-stat-pill tone-meta">
-        <span>State</span>
-        <strong class="${game.player.slowed || burdenUi.state !== "safe" ? "value-warning" : ""}">${escapeHtml(condition)}</strong>
-      </div>
-    </div>
+    </section>
   `;
 
   const ribbonLabel = focus

@@ -9,7 +9,9 @@
   <link rel="apple-touch-icon" href="icons/icon-192.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700;800&family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;600;700;800&family=Cinzel:wght@500;700&family=VT323&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;600;700;800&family=Cinzel:wght@500;700&family=VT323&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;600;700;800&family=Cinzel:wght@500;700&family=VT323&display=swap"></noscript>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -20,6 +22,7 @@
         <div id="pressure-status" class="utility-chip utility-chip-muted">Town Calm</div>
       </div>
       <div class="top-band-actions">
+        <button id="top-map-button" class="utility-menu-button" data-action="toggle-map" data-focus-key="top:map" type="button" title="Show the floor survey">Map</button>
         <button id="top-music-button" class="utility-menu-button" data-action="toggle-music" data-focus-key="top:music" type="button">Music Off</button>
         <button id="utility-menu-button" class="utility-menu-button" data-action="open-utility-menu" data-focus-key="top:menu" type="button">Menu</button>
       </div>
@@ -29,7 +32,7 @@
       <section class="board-cluster">
         <section class="board-stage panel">
           <div class="board-frame">
-            <canvas id="game-canvas" width="600" height="600" aria-label="Game board"></canvas>
+            <canvas id="game-canvas" width="408" height="408" aria-label="Game board"></canvas>
           </div>
           <div class="board-overlays">
             <section id="desktop-overlay" class="desktop-shell hidden" aria-live="polite">
@@ -192,42 +195,38 @@
   </template>
 
   <template id="utility-menu-template">
-    <div class="modal mobile-sheet utility-menu-sheet modal-frame">
+    <div class="modal mobile-sheet utility-menu-sheet modal-frame jrpg-utility-sheet">
       <div class="modal-title">Adventure Menu</div>
-      <div class="modal-body utility-menu-body">
-        <section class="utility-command-summary">
-          <div class="field-label">Right Now</div>
-          <div id="utility-run-summary" class="utility-command-lead"></div>
-          <div class="utility-command-chips">
-            <div id="utility-save-summary" class="utility-command-chip utility-menu-summary"></div>
-            <div id="utility-control-summary" class="utility-command-chip utility-menu-summary"></div>
-          </div>
-        </section>
-        <section class="utility-menu-group utility-menu-group-primary">
-          <div class="field-label">Primary</div>
-          <div class="utility-menu-group-grid utility-menu-group-grid-primary">
-            <button class="action-button" data-action="open-hub" data-tab="journal" data-journal-section="mission" data-focus-key="utility:briefing" type="button">Mission</button>
-            <button class="action-button" data-action="open-hub" data-tab="journal" data-journal-section="current" data-focus-key="utility:journal" type="button">Field Guide</button>
-            <button id="utility-stats-button" class="action-button" data-action="open-character-sheet" data-focus-key="utility:stats" type="button">Character</button>
-            <button id="utility-save-button" class="action-button" data-action="save-game" data-focus-key="utility:save" type="button">Save Slot</button>
-            <button id="utility-load-button" class="action-button" data-action="load-game" data-focus-key="utility:load" type="button">Load Slot</button>
-            <button class="action-button" data-action="settings" data-focus-key="utility:settings" type="button">Settings</button>
-          </div>
-        </section>
-        <section class="utility-menu-group utility-menu-group-secondary utility-menu-group-disclosure">
-          <button class="action-button action-button-subtle utility-more-toggle" data-action="toggle-utility-more" data-focus-key="utility:more-toggle" aria-expanded="false" type="button">
-            <span data-utility-more-label>More Tools</span>
-            <span data-utility-more-meta>Reveal map, rules, and trace</span>
-          </button>
-          <div class="utility-menu-secondary-links" data-utility-more-host hidden>
-            <button class="action-button action-button-subtle" data-action="view-map" data-focus-key="utility:map" type="button">Floor Map</button>
-            <button class="action-button action-button-subtle" data-action="open-hub" data-tab="journal" data-journal-section="guide" data-focus-key="utility:help" type="button">Rules</button>
-            <button class="action-button action-button-subtle utility-trace-button" data-action="export-telemetry" data-focus-key="utility:trace" type="button">Export Trace</button>
-          </div>
-        </section>
-        <div class="modal-actions utility-command-actions">
-          <button class="action-button primary utility-menu-primary-action" data-action="close-modal" data-focus-key="utility:close" type="button">Return to Run</button>
+      <div class="modal-body utility-menu-body jrpg-utility-body">
+        <div class="jrpg-utility-grid">
+          <section class="jrpg-window jrpg-utility-party" aria-label="Current run">
+            <h3 class="jrpg-window-title">Right Now</h3>
+            <div id="utility-run-summary" class="jrpg-utility-run-line"></div>
+            <div id="utility-save-summary" class="jrpg-utility-meta-line"></div>
+            <div id="utility-control-summary" class="jrpg-utility-meta-line"></div>
+          </section>
+          <section class="jrpg-window jrpg-utility-verbs" aria-label="Menu destinations">
+            <h3 class="jrpg-window-title">Menu</h3>
+            <div class="jrpg-utility-verb-list">
+              <button class="jrpg-window-option action-button is-active" data-action="open-hub" data-tab="pack" data-focus-key="utility:pack" type="button">Item</button>
+              <button class="jrpg-window-option action-button" data-action="open-hub" data-tab="magic" data-focus-key="utility:magic" type="button">Magic</button>
+              <button id="utility-stats-button" class="jrpg-window-option action-button" data-action="open-character-sheet" data-focus-key="utility:stats" type="button">Status</button>
+              <button class="jrpg-window-option action-button" data-action="view-map" data-focus-key="utility:map" type="button">Map</button>
+              <button class="jrpg-window-option action-button" data-action="open-hub" data-tab="journal" data-focus-key="utility:journal" type="button">Guide</button>
+            </div>
+            <div class="jrpg-utility-verb-divider" aria-hidden="true"></div>
+            <div class="jrpg-utility-verb-label">Tools</div>
+            <div class="jrpg-utility-verb-list jrpg-utility-verb-tools">
+              <button id="utility-save-button" class="jrpg-window-option action-button" data-action="save-game" data-focus-key="utility:save" type="button">Save</button>
+              <button id="utility-load-button" class="jrpg-window-option action-button" data-action="load-game" data-focus-key="utility:load" type="button">Load</button>
+              <button class="jrpg-window-option action-button" data-action="settings" data-focus-key="utility:settings" type="button">Options</button>
+              <button class="jrpg-window-option action-button utility-trace-button" data-action="export-telemetry" data-focus-key="utility:trace" type="button">Export Trace</button>
+            </div>
+          </section>
         </div>
+      </div>
+      <div class="modal-actions utility-command-actions jrpg-utility-actions">
+        <button class="action-button primary utility-menu-primary-action" data-action="close-modal" data-focus-key="utility:close" type="button">Return to Run</button>
       </div>
     </div>
   </template>

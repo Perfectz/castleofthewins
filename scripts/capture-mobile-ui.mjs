@@ -73,6 +73,18 @@ async function setupRun(page) {
   await page.waitForTimeout(500);
 }
 
+async function closeVisibleModal(page) {
+  const closeButton = page.locator('[data-action="close-modal"]:visible').first();
+  if (await closeButton.count()) {
+    await closeButton.click();
+  } else {
+    await page.evaluate(() => {
+      window.castleOfTheWindsWeb?.closeModal?.();
+    });
+  }
+  await page.waitForTimeout(200);
+}
+
 async function captureHubStates(page, viewport) {
   await page.evaluate(() => {
     const game = window.castleOfTheWindsWeb;
@@ -97,8 +109,7 @@ async function captureHubStates(page, viewport) {
   });
   await page.waitForTimeout(250);
   await page.screenshot({ path: path.join(OUTPUT_DIR, `pack-hub-${viewport.slug}.png`), fullPage: true });
-  await page.click('[data-action="close-modal"]');
-  await page.waitForTimeout(200);
+  await closeVisibleModal(page);
 
   await page.evaluate(() => {
     const game = window.castleOfTheWindsWeb;
@@ -110,8 +121,7 @@ async function captureHubStates(page, viewport) {
   });
   await page.waitForTimeout(250);
   await page.screenshot({ path: path.join(OUTPUT_DIR, `pack-risk-${viewport.slug}.png`), fullPage: true });
-  await page.click('[data-action="close-modal"]');
-  await page.waitForTimeout(200);
+  await closeVisibleModal(page);
 
   await page.evaluate(() => {
     const game = window.castleOfTheWindsWeb;
@@ -124,8 +134,7 @@ async function captureHubStates(page, viewport) {
   });
   await page.waitForTimeout(250);
   await page.screenshot({ path: path.join(OUTPUT_DIR, `pack-sell-${viewport.slug}.png`), fullPage: true });
-  await page.click('[data-action="close-modal"]');
-  await page.waitForTimeout(200);
+  await closeVisibleModal(page);
 
   await page.evaluate(() => {
     const game = window.castleOfTheWindsWeb;
@@ -136,8 +145,7 @@ async function captureHubStates(page, viewport) {
   });
   await page.waitForTimeout(250);
   await page.screenshot({ path: path.join(OUTPUT_DIR, `pack-cursed-slot-${viewport.slug}.png`), fullPage: true });
-  await page.click('[data-action="close-modal"]');
-  await page.waitForTimeout(200);
+  await closeVisibleModal(page);
 
   await page.evaluate(() => {
     const game = window.castleOfTheWindsWeb;
@@ -146,8 +154,7 @@ async function captureHubStates(page, viewport) {
   });
   await page.waitForTimeout(250);
   await page.screenshot({ path: path.join(OUTPUT_DIR, `magic-hub-${viewport.slug}.png`), fullPage: true });
-  await page.click('[data-action="close-modal"]');
-  await page.waitForTimeout(200);
+  await closeVisibleModal(page);
 }
 
 async function descendToDungeon(page) {

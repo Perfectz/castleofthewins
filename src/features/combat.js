@@ -9,7 +9,7 @@
  *        game.playProjectile, game.emitCastCircle, game.emitDeathBurst
  */
 import { MAX_CORPSES, TREASURE_DROP_CHANCE } from "../core/constants.js";
-import { rollTreasure } from "../core/entities.js";
+import { getMonsterHealthState, rollTreasure } from "../core/entities.js";
 import { hasLineOfSight, isVisible } from "../core/world.js";
 import { clamp, distance, randInt, removeFromArray, roll } from "../core/utils.js";
 import { buildDeathRecapMarkup, noteDeathContext, recordChronicleEvent } from "./chronicle.js";
@@ -202,6 +202,9 @@ export function attack(game, attacker, defender) {
   } else if (attacker.behaviorKit === "breaker" && defender.id === "player" && game.getGuardValue && game.getGuardValue() >= 3) {
     damage += 2;
   }
+  if (!isPlayer && defender.id === "player") {
+    game.log(`${attacker.name} strikes at ${defender.name}.`, "warning");
+  }
   game.damageActor(attacker, defender, damage, "physical");
   return true;
 }
@@ -258,6 +261,13 @@ export function damageActor(game, attacker, defender, amount, damageType = "phys
   game.log(`${attacker.name} hits ${defender.name} for ${resolvedAmount}.`, attacker.id === "player" ? "good" : "bad");
   if (defender.hp <= 0) {
     game.killMonster(defender);
+    return;
+  }
+  if (attacker.id === "player") {
+    const injuryState = getMonsterHealthState(defender);
+    if (injuryState.label !== "Unhurt") {
+      game.log(`${defender.name} is ${injuryState.label.toLowerCase()}.`, injuryState.tone);
+    }
   }
 }
 
@@ -346,7 +356,16 @@ export function handleDeath(game) {
 
 export function processMonsters(game) {
   const level = game.currentLevel;
-  level.actors.forEach((monster) => {
+  if (!level || !Array.isArray(level.actors)) {
+    return;
+  }
+  for (const monster of [...level.actors]) {
+    if (!game.player || game.player.hp <= 0 || game.mode !== "game") {
+      break;
+    }
+    if (!level.actors.includes(monster)) {
+      continue;
+    }
     bankMonsterMovement(monster);
     if ((monster.tempBuffTurns || 0) > 0) {
       monster.tempBuffTurns -= 1;
@@ -388,7 +407,10 @@ export function processMonsters(game) {
     // --- behavior table dispatch ---
     const ctx = buildMonsterContext(game, monster);
     if (executeMonsterBehavior(game, monster, ctx, () => canMonsterSpendMovement(monster))) {
-      return;
+      if (!game.player || game.player.hp <= 0 || game.mode !== "game") {
+        break;
+      }
+      continue;
     }
 
     // --- movement fallback (no behavior matched) ---
@@ -418,11 +440,14 @@ export function processMonsters(game) {
     const ny = monster.y + stepY;
     if (nx === game.player.x && ny === game.player.y) {
       game.attack(monster, game.player);
-      return;
+      if (!game.player || game.player.hp <= 0 || game.mode !== "game") {
+        break;
+      }
+      continue;
     }
     if (canMonsterMoveToTile(game, monster, nx, ny) && canMonsterSpendMovement(monster)) {
       monster.x = nx;
       monster.y = ny;
     }
-  });
+  }
 }

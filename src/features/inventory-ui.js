@@ -47,9 +47,9 @@ const SHOP_LABELS = {
 };
 
 const FILTER_DEFS = [
-  { key: "all", label: "All" },
-  { key: "use", label: "Use" },
   { key: "equip", label: "Equip" },
+  { key: "all", label: "Pack" },
+  { key: "use", label: "Use" },
   { key: "sell", label: "Sell" }
 ];
 
@@ -846,6 +846,57 @@ export function buildInventoryPresentationModel(game, options = {}) {
     firstVisibleIndex: baseModel.firstVisibleIndex,
     visibleCount: baseModel.visibleCount
   };
+}
+
+// Smart inventory glyphs — a single character that encodes the item's most
+// important signal. Ordered by urgency: curse beats everything, urgent use
+// beats upgrade, upgrade beats unknown. Keeps the row scannable without
+// adding a second chip, and lets noise (cursed/junk) visually sink via
+// companion .is-dim / .is-noise classes applied by the renderer.
+export function getInventoryRowGlyph(entry) {
+  if (!entry) return "";
+  if (entry.cursed) return "\u00D7";               // × cursed
+  if (isUrgentUse(entry)) return "!";             // ! use me now
+  if (entry.upgrade) return "\u2191";              // ↑ upgrade available
+  if (entry.unknown) return "?";                   // ? unidentified
+  if (isDamagedOrSpent(entry.item)) return "~";   // ~ damaged / no charges
+  return "";
+}
+
+// An item is "urgent use" when the recommendation system flagged it as the
+// thing to do right now — e.g. a healing potion when HP is low, or a scroll
+// the current floor strongly wants. We read the existing `recommendation`
+// field instead of recomputing so the glyph can't diverge from the text.
+function isUrgentUse(entry) {
+  const rec = (entry.recommendation || "").toLowerCase();
+  if (!rec) return false;
+  return rec === "use"
+    || rec === "use now"
+    || rec === "drink"
+    || rec === "read"
+    || rec === "cast"
+    || rec.startsWith("use ");
+}
+
+function isDamagedOrSpent(item) {
+  if (!item) return false;
+  if (item.kind === "charged" && (item.charges || 0) <= 0) return true;
+  if (typeof item.durability === "number" && item.maxDurability > 0) {
+    return item.durability / item.maxDurability < 0.25;
+  }
+  return false;
+}
+
+// The renderer uses this to decide whether a row should be visually dimmed
+// so noise sinks. We dim items that are: cursed, already-learned spellbooks,
+// charged items with no charges, and duplicates the player is unlikely to use.
+export function isInventoryRowNoise(entry, game) {
+  if (!entry) return false;
+  if (entry.cursed) return true;
+  if (entry.item?.kind === "charged" && (entry.item.charges || 0) <= 0) return true;
+  if (entry.item?.kind === "spellbook"
+    && game?.player?.spellsKnown?.includes(entry.item.spell)) return true;
+  return false;
 }
 
 export function buildEquipmentSlotSummary(game, slotDef, compatibleCount = 0) {

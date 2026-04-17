@@ -7,11 +7,25 @@
  * @emits game.log, game.render, game.showHubModal, game.showShopModal
  */
 
-import { SPELLS } from "../data/content.js";
-import { getItemName, getItemValue, getCarryWeight, getCarryCapacity, canIdentify, countUnknownItems, curseRandomCarriedItem, classifyItem } from "../core/entities.js";
-import { revealAll } from "../core/world.js";
-import { removeAt, roll, escapeHtml } from "../core/utils.js";
-import { burdenUiState } from "../core/stat-helpers.js";
+import { SHOPS, SPELLS } from "../data/content.js";
+import {
+  classifyItem,
+  countUnknownItems,
+  createTownItem,
+  curseRandomCarriedItem,
+  describeItem,
+  getCarryCapacity,
+  getCarryWeight,
+  getEncumbranceTier,
+  getItemName,
+  getItemValue,
+  canIdentify
+} from "../core/entities.js";
+import { itemsAt, revealAll, revealAllSecrets } from "../core/world.js";
+import { escapeHtml, removeAt, removeFromArray, removeOne, roll } from "../core/utils.js";
+import { buildInventoryItemSemantics } from "./inventory-ui.js";
+import { handleObjectivePickup } from "./objectives.js";
+import { getShopBuyPrice, getShopSellPrice } from "./town-meta.js";
 
 export function getPickupBurdenPreview(game, item) {
     const beforeWeight = getCarryWeight(game.player);

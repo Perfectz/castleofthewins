@@ -10,6 +10,7 @@
  */
 
 import { SPELLS } from "../data/content.js";
+import { canonicalizeSpellId, normalizeKnownSpellIds } from "../core/entities.js";
 import { actorAt, hasLineOfSight, inBounds } from "../core/world.js";
 import { clamp, distance } from "../core/utils.js";
 import { findInitialTargetCursor } from "../core/world.js";
@@ -65,12 +66,12 @@ export function getDamageEffectColor(damageType, defender) {
 
 export function syncSpellTray(game, player = game.player) {
   if (!player) return [];
-  player.spellsKnown = Array.isArray(player.spellsKnown)
-    ? [...new Set(player.spellsKnown.filter((id) => Boolean(SPELLS[id])))]
-    : [];
+  player.spellsKnown = normalizeKnownSpellIds(player.spellsKnown);
   const hasSavedTray = Array.isArray(player.spellTrayIds);
   const tray = hasSavedTray
-    ? [...new Set(player.spellTrayIds.filter((id) => player.spellsKnown.includes(id)))]
+    ? [...new Set(player.spellTrayIds
+      .map((id) => canonicalizeSpellId(id))
+      .filter((id) => player.spellsKnown.includes(id)))]
     : [];
   if ((!hasSavedTray || tray.length === 0) && player.spellsKnown.length > 0) {
     tray.push(...player.spellsKnown.slice(0, SPELL_TRAY_LIMIT));

@@ -890,10 +890,69 @@ html[data-ui-scale="large"] .mobile-app {
   display: none;
 }
 
+/* Universal keyboard focus ring fallback. Elements with their own
+   focus-visible styles keep them via higher specificity; this only
+   paints a ring on elements that would otherwise have no indicator. */
+button:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid rgba(241, 201, 112, 0.85);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 .modal {
   width: min(840px, 100%);
   max-height: 88vh;
   overflow: auto;
+  position: relative;
+}
+
+#modal-root .modal > .modal-close-button,
+.mobile-sheet > .modal-close-button,
+.modal > .modal-close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(214, 198, 157, 0.24);
+  background: rgba(14, 18, 22, 0.82);
+  color: var(--ui-text, #e8dfc4);
+  font-size: 0;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  z-index: 30;
+  backdrop-filter: blur(4px);
+  transition: background 120ms ease-out, border-color 120ms ease-out, transform 120ms ease-out;
+}
+
+.modal-close-button::before {
+  content: "\00d7";
+  display: block;
+  font-size: 22px;
+  line-height: 1;
+  color: inherit;
+}
+
+.modal-close-button:hover,
+.modal-close-button:focus-visible {
+  background: rgba(68, 36, 28, 0.82);
+  border-color: rgba(241, 177, 159, 0.55);
+  outline: none;
+  transform: scale(1.05);
+}
+
+.modal-close-button:active {
+  transform: scale(0.96);
 }
 
 .mobile-sheet {
@@ -1509,6 +1568,10 @@ html[data-ui-scale="large"] .mobile-app {
 
 .pack-filter-row {
   margin-bottom: 10px;
+}
+
+.pack-filter-row-compact {
+  margin-bottom: 6px;
 }
 
 .hub-filter-chip {
@@ -5193,9 +5256,12 @@ body {
   color: var(--ui-text);
   font-size: 0.88rem;
   line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.event-ticker-line {
+  align-items: start;
 }
 
 .ticker-warning .event-ticker-turn {
@@ -5978,13 +6044,13 @@ body {
 
 .mobile-app[data-layout="desktop"] {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 284px;
+  grid-template-columns: minmax(0, 1fr) 320px;
   grid-template-areas:
     "top top"
     "main rail";
   align-items: start;
   max-width: 1720px;
-  gap: 10px;
+  gap: 12px;
 }
 
 .mobile-app[data-layout="desktop"] .top-band {
@@ -6020,20 +6086,38 @@ body {
 }
 
 .mobile-app[data-layout="desktop"] #game-canvas {
-  min-height: min(92vh, 1180px);
+  min-height: min(72vh, 840px);
+  max-width: 100%;
+  margin: 0 auto;
+  display: block;
+}
+
+.mobile-app[data-layout="desktop"] .board-frame {
+  display: grid;
+  place-items: center;
+  max-width: 100%;
 }
 
 .mobile-app[data-layout="desktop"] .board-overlays {
   top: 18px;
   right: 18px;
+  left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.mobile-app[data-layout="desktop"] .board-overlays > * {
+  pointer-events: auto;
 }
 
 .mobile-app[data-layout="desktop"] #event-ticker.message-log {
   left: 18px;
   right: 18px;
   bottom: 18px;
-  min-height: 176px;
-  max-height: 176px;
+  min-height: 128px;
+  max-height: 148px;
 }
 
 .mobile-app[data-layout="desktop"] .spell-tray {
@@ -6640,7 +6724,7 @@ button:disabled {
 
 .creation-choice-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
 }
 
@@ -7227,6 +7311,11 @@ body:has(#modal-root[data-surface-tier="reader"]:not(.hidden)) .mobile-app.modal
   background: linear-gradient(180deg, rgba(7, 10, 12, 0), rgba(7, 10, 12, 0.98) 38%);
 }
 
+#modal-root .modal:has(.hub-window-pack) > .modal-actions,
+#modal-root .modal:has(.shop-workspace) > .modal-actions {
+  display: none;
+}
+
 #modal-root .modal-frame.modal-surface-quick:not(.title-screen):not(.creation-sheet) {
   width: min(var(--menu-width-quick), calc(100vw - 18px));
   max-height: min(74vh, 720px);
@@ -7327,6 +7416,7 @@ body:has(#modal-root[data-surface-tier="reader"]:not(.hidden)) .mobile-app.modal
 .utility-menu-sheet {
   display: grid;
   gap: 12px;
+  max-height: min(100%, calc(100vh - 20px));
 }
 
 .utility-command-summary {
@@ -7393,7 +7483,17 @@ body:has(#modal-root[data-surface-tier="reader"]:not(.hidden)) .mobile-app.modal
 }
 
 .utility-command-actions {
-  padding-top: 2px;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding-top: 8px;
+  padding-bottom: max(6px, env(safe-area-inset-bottom));
+  background:
+    linear-gradient(180deg, rgba(10, 14, 18, 0), rgba(10, 14, 18, 0.94) 28%, rgba(10, 14, 18, 0.98));
+}
+
+.utility-command-actions .action-button {
+  width: 100%;
 }
 
 .pack-build-strip .mini-panel,
@@ -8389,24 +8489,24 @@ body:has(#modal-root[data-surface-tier="reader"]:not(.hidden)) .mobile-app.modal
 
 .pack-toolbar {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .pack-toolbar-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .pack-toolbar-chip,
 .pack-toolbar-focus,
 .pack-toolbar-detail {
-  padding: 4px 8px;
+  padding: 3px 7px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(214, 198, 157, 0.08);
-  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(214, 198, 157, 0.06);
+  font-size: 0.66rem;
 }
 
 .pack-toolbar-chip {
@@ -8452,6 +8552,434 @@ body:has(#modal-root[data-surface-tier="reader"]:not(.hidden)) .mobile-app.modal
 
 .pack-inline-chip.tone-neutral {
   color: rgba(228, 225, 214, 0.84);
+}
+
+.pack-layout.pack-layout-classic {
+  grid-template-columns: minmax(240px, 0.78fr) minmax(320px, 1.08fr) minmax(300px, 0.94fr);
+  align-items: start;
+}
+
+.pack-classic-toolbar,
+.shop-transaction-toolbar {
+  margin-bottom: 8px;
+}
+
+.pack-slot-panel,
+.pack-classic-candidates {
+  display: grid;
+  gap: 10px;
+}
+
+.hub-window-pack .pack-slot-panel,
+.hub-window-pack .pack-inventory-panel,
+.hub-window-pack .pack-inspector-panel,
+.shop-transaction-list-panel,
+.shop-result-panel {
+  align-content: start;
+}
+
+.hub-window-pack .pack-slot-panel {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.hub-window-pack .pack-inventory-panel {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.hub-window-pack .pack-slot-list,
+.hub-window-pack .pack-list-panel,
+.shop-transaction-list-panel .shop-transaction-list {
+  min-height: 0;
+}
+
+.pack-slot-list,
+.pack-classic-list {
+  display: grid;
+  gap: 0;
+}
+
+.pack-slot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 2px;
+  border: 0;
+  border-bottom: 1px solid rgba(214, 198, 157, 0.1);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.pack-slot-row.active {
+  border-color: rgba(214, 170, 88, 0.24);
+  box-shadow: inset 3px 0 0 rgba(214, 170, 88, 0.8);
+  background: linear-gradient(90deg, rgba(104, 74, 27, 0.2), rgba(104, 74, 27, 0.04));
+}
+
+.pack-slot-row-main,
+.pack-slot-row-side {
+  display: grid;
+  gap: 2px;
+}
+
+.pack-slot-row-side {
+  justify-items: end;
+  align-content: start;
+}
+
+.pack-slot-row-label {
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(214, 198, 157, 0.82);
+}
+
+.pack-slot-row-item {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  color: #f2dfbb;
+}
+
+.pack-slot-row-note,
+.pack-classic-note,
+.pack-slot-row-stat {
+  color: rgba(214, 221, 212, 0.72);
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.pack-slot-row-ready {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(214, 198, 157, 0.08);
+  color: rgba(242, 223, 187, 0.88);
+  font-size: 0.62rem;
+}
+
+.pack-classic-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 2px;
+}
+
+.pack-classic-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: #f2dfbb;
+}
+
+.pack-item-row.pack-item-row-keep {
+  border-style: dashed;
+}
+
+.pack-classic-empty {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px dashed rgba(214, 198, 157, 0.12);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.hub-body-pack-classic > .menu-quick-state {
+  display: none;
+}
+
+.hub-body-pack-classic > .hub-summary-compact {
+  display: none;
+}
+
+.pack-layout.pack-layout-classic .pack-equipment-summary.workspace-hero,
+.pack-layout.pack-layout-classic .pack-value-strip {
+  display: none;
+}
+
+@media (min-width: 920px) {
+  .pack-layout.pack-layout-classic > [data-pack-equipment-host] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .pack-layout.pack-layout-classic > .pack-inventory-panel {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .pack-layout.pack-layout-classic > .pack-side-rail {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .pack-layout.pack-layout-classic {
+    grid-template-columns: 1fr;
+  }
+
+  .pack-layout.pack-layout-classic > .pack-side-rail {
+    order: 1;
+  }
+
+  .pack-layout.pack-layout-classic > .pack-inventory-panel {
+    order: 2;
+  }
+
+  .pack-layout.pack-layout-classic > [data-pack-equipment-host] {
+    order: 3;
+  }
+
+  .pack-classic-header {
+    display: none;
+  }
+
+  .pack-classic-candidates > .panel-title,
+  .shop-transaction-list-panel > .panel-title {
+    margin-bottom: 4px;
+  }
+}
+
+.pack-decision-summary-grid {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.pack-decision-summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: rgba(222, 226, 217, 0.78);
+  font-size: 0.74rem;
+}
+
+.pack-decision-summary-row strong {
+  color: #f2dfbb;
+  font-family: var(--font-display);
+  font-size: 0.84rem;
+}
+
+.pack-decision-inline-row {
+  margin-bottom: 10px;
+}
+
+.pack-decision-deltas,
+.shop-decision-list {
+  margin-bottom: 10px;
+}
+
+.shop-transaction-shell {
+  display: grid;
+  grid-template-columns: minmax(300px, 1.02fr) minmax(300px, 0.92fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.shop-transaction-list {
+  display: grid;
+  gap: 6px;
+}
+
+.shop-transaction-row {
+  text-align: left;
+}
+
+.shop-result-panel .pack-inspector-card {
+  gap: 8px;
+}
+
+.shop-bulk-actions {
+  margin-top: 10px;
+}
+
+@media (max-width: 760px) {
+  .shop-transaction-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-result-panel .pack-inspector-card,
+  .pack-decision-panel .pack-inspector-card {
+    gap: 6px;
+  }
+
+  .pack-decision-summary-grid {
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+
+  .pack-comparison-row {
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
+  .pack-inspector-actions .menu-button {
+    min-height: 40px;
+    padding: 9px 12px;
+  }
+}
+
+.hub-window-pack .pack-group-list,
+.pack-classic-list,
+.shop-transaction-list {
+  gap: 0;
+}
+
+.hub-window-pack .pack-group-list .pack-item-row,
+.pack-classic-list .pack-item-row,
+.shop-transaction-list .pack-item-row {
+  padding: 8px 2px;
+  gap: 2px;
+  border: 0;
+  border-bottom: 1px solid rgba(214, 198, 157, 0.1);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.hub-window-pack .pack-group-list .pack-item-row:first-child,
+.pack-classic-list .pack-item-row:first-child,
+.shop-transaction-list .pack-item-row:first-child {
+  border-top: 1px solid rgba(214, 198, 157, 0.08);
+}
+
+.hub-window-pack .pack-group-list .pack-item-row.pack-item-row-good,
+.pack-classic-list .pack-item-row.pack-item-row-good,
+.shop-transaction-list .pack-item-row.pack-item-row-good,
+.hub-window-pack .pack-group-list .pack-item-row.pack-item-row-neutral,
+.pack-classic-list .pack-item-row.pack-item-row-neutral,
+.shop-transaction-list .pack-item-row.pack-item-row-neutral,
+.hub-window-pack .pack-group-list .pack-item-row.pack-item-row-bad,
+.pack-classic-list .pack-item-row.pack-item-row-bad,
+.shop-transaction-list .pack-item-row.pack-item-row-bad {
+  background: transparent;
+}
+
+.hub-window-pack .pack-group-list .pack-item-row.active,
+.pack-classic-list .pack-item-row.active,
+.shop-transaction-list .pack-item-row.active,
+.hub-window-pack .pack-group-list .pack-item-row:focus-visible,
+.pack-classic-list .pack-item-row:focus-visible,
+.shop-transaction-list .pack-item-row:focus-visible {
+  border-color: rgba(214, 170, 88, 0.24);
+  background: linear-gradient(90deg, rgba(104, 74, 27, 0.22), rgba(104, 74, 27, 0.06));
+  box-shadow: inset 4px 0 0 rgba(214, 170, 88, 0.9);
+  transform: none;
+}
+
+.hub-window-pack .pack-group-list .pack-item-head,
+.pack-classic-list .pack-item-head,
+.shop-transaction-list .pack-item-head {
+  gap: 8px;
+  align-items: baseline;
+}
+
+.hub-window-pack .pack-group-list .pack-item-head-main,
+.pack-classic-list .pack-item-head-main,
+.shop-transaction-list .pack-item-head-main {
+  gap: 1px;
+}
+
+.hub-window-pack .pack-group-list .pack-item-head-side,
+.pack-classic-list .pack-item-head-side,
+.shop-transaction-list .pack-item-head-side {
+  gap: 2px;
+}
+
+.hub-window-pack .pack-group-list .pack-item-name,
+.pack-classic-list .pack-item-name,
+.shop-transaction-list .pack-item-name {
+  font-size: 0.86rem;
+}
+
+.hub-window-pack .pack-group-list .pack-item-meta-compact,
+.pack-classic-list .pack-item-meta-compact,
+.shop-transaction-list .pack-item-meta-compact,
+.shop-transaction-list .pack-slot-row-note {
+  font-size: 0.68rem;
+  line-height: 1.2;
+  color: rgba(214, 221, 212, 0.68);
+}
+
+.hub-window-pack .pack-group-list .pack-row-chip,
+.pack-classic-list .pack-row-chip,
+.shop-transaction-list .pack-row-chip {
+  padding: 1px 6px;
+  font-size: 0.62rem;
+}
+
+.hub-window-pack .pack-group-list .pack-row-inline-compare,
+.pack-classic-list .pack-row-inline-compare,
+.shop-transaction-list .pack-row-inline-compare {
+  display: none;
+}
+
+.pack-inspector-card {
+  gap: 8px;
+  padding: 11px 12px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(22, 28, 30, 0.92), rgba(12, 17, 19, 0.95));
+  border: 1px solid rgba(214, 198, 157, 0.1);
+  box-shadow: none;
+}
+
+.pack-inspector-kicker {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pack-inspector-title {
+  font-size: 0.98rem;
+}
+
+.pack-inspector-note,
+.pack-hover-preview-note,
+.pack-hover-preview-copy {
+  font-size: 0.74rem;
+}
+
+.pack-comparison-row {
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+.pack-inspector-actions {
+  margin-top: 2px;
+}
+
+.pack-side-rail .pack-inspector-card {
+  border-color: rgba(214, 198, 157, 0.08);
+  background: linear-gradient(180deg, rgba(19, 24, 27, 0.84), rgba(11, 15, 18, 0.9));
+}
+
+.pack-column .pack-classic-list,
+.shop-transaction-list {
+  border-top: 1px solid rgba(214, 198, 157, 0.08);
+}
+
+@media (max-width: 760px) {
+  .pack-toolbar-meta {
+    gap: 3px;
+  }
+
+  .pack-toolbar-chip,
+  .pack-toolbar-detail {
+    padding: 2px 6px;
+    font-size: 0.62rem;
+  }
+
+  .pack-inspector-card {
+    padding: 10px 11px;
+  }
+
+  .pack-slot-row {
+    padding: 6px 1px;
+  }
 }
 
 .pack-loadout-disclosure {
@@ -8621,6 +9149,165 @@ body:has(#modal-root[data-surface-tier="reader"]:not(.hidden)) .mobile-app.modal
   }
 }
 
+.hub-window-pack .pack-equip-workspace {
+  display: grid;
+  gap: 12px;
+}
+
+#modal-root .modal:has(.hub-window-pack-equip) .modal-interaction-feedback {
+  display: none;
+}
+
+.hub-window-pack-equip .hub-tabs {
+  gap: 6px;
+  padding-bottom: 2px;
+  background: linear-gradient(180deg, rgba(18, 22, 25, 0.88), rgba(18, 22, 25, 0.4), transparent);
+}
+
+.hub-window-pack-equip .hub-tab {
+  min-height: 36px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  opacity: 0.78;
+}
+
+.hub-window-pack-equip .hub-tab.active {
+  opacity: 1;
+}
+
+.hub-window-pack .pack-equip-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.hub-window-pack .pack-equip-controls [data-pack-filter-host] {
+  margin-bottom: 0;
+}
+
+.hub-window-pack .pack-slot-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hub-window-pack .pack-slot-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hub-window-pack .pack-slot-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid rgba(214, 198, 157, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(232, 221, 199, 0.86);
+  text-align: left;
+}
+
+.hub-window-pack .pack-slot-tab.active,
+.hub-window-pack .pack-slot-tab:focus-visible {
+  border-color: rgba(214, 170, 88, 0.28);
+  background: linear-gradient(180deg, rgba(104, 74, 27, 0.24), rgba(104, 74, 27, 0.08));
+  box-shadow: inset 0 0 0 1px rgba(214, 170, 88, 0.08);
+}
+
+.hub-window-pack .pack-slot-tab-label {
+  font-size: 0.72rem;
+  font-family: var(--font-display);
+  color: #f2dfbb;
+}
+
+.hub-window-pack .pack-slot-tab-badge,
+.hub-window-pack .pack-slot-tab-state {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(214, 198, 157, 0.08);
+  color: rgba(214, 221, 212, 0.78);
+  font-size: 0.62rem;
+}
+
+.hub-window-pack .pack-slot-subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid rgba(214, 198, 157, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.015);
+  color: rgba(214, 221, 212, 0.78);
+}
+
+.hub-window-pack .pack-slot-subtab.active,
+.hub-window-pack .pack-slot-subtab:focus-visible {
+  border-color: rgba(214, 170, 88, 0.22);
+  background: linear-gradient(180deg, rgba(104, 74, 27, 0.16), rgba(104, 74, 27, 0.05));
+}
+
+.hub-window-pack .pack-slot-subtab-label {
+  font-size: 0.66rem;
+  font-family: var(--font-display);
+  color: #f2dfbb;
+}
+
+.hub-window-pack .pack-slot-subtab-state {
+  color: rgba(214, 221, 212, 0.68);
+  font-size: 0.6rem;
+}
+
+.hub-window-pack .pack-layout.pack-layout-equip {
+  grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.82fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.hub-window-pack .pack-layout.pack-layout-equip .pack-inventory-panel {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-width: 0;
+}
+
+.hub-window-pack .pack-layout.pack-layout-equip .pack-side-rail {
+  min-width: 0;
+}
+
+.hub-window-pack .pack-equip-list-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 2px 2px;
+}
+
+.hub-window-pack .pack-equip-list-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: #f2dfbb;
+}
+
+.hub-window-pack .pack-equip-list-note {
+  color: rgba(214, 221, 212, 0.7);
+  font-size: 0.68rem;
+}
+
+.hub-window-pack .pack-layout.pack-layout-equip .pack-list-panel {
+  max-height: min(58vh, 620px);
+}
+
+.pack-group-list,
+.pack-classic-list,
+.pack-list-panel {
+  align-content: start;
+}
+
 @media (max-width: 760px) {
   .pack-loadout-disclosure .pack-paperdoll {
     margin-top: 2px;
@@ -8640,6 +9327,647 @@ body:has(#modal-root[data-surface-tier="reader"]:not(.hidden)) .mobile-app.modal
 
   .pack-toolbar-focus {
     flex-basis: 100%;
+  }
+
+  .hub-window-pack .pack-slot-tabs {
+    flex-wrap: wrap;
+    padding-bottom: 2px;
+  }
+
+  .hub-window-pack .pack-slot-subtabs {
+    flex-wrap: wrap;
+    padding-bottom: 2px;
+  }
+
+  .hub-window-pack .pack-slot-tab {
+    flex: 1 1 auto;
+    min-width: 88px;
+    justify-content: center;
+  }
+
+  .hub-window-pack .pack-layout.pack-layout-equip {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .hub-window-pack .pack-layout.pack-layout-equip .pack-side-rail {
+    order: 2;
+  }
+
+  .hub-window-pack .pack-layout.pack-layout-equip .pack-inventory-panel {
+    order: 1;
+  }
+
+  .hub-window-pack-equip .hub-tabs {
+    gap: 4px;
+  }
+
+  .hub-window-pack-equip .hub-tab {
+    min-height: 34px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+}
+
+.hub-window-magic .hub-tabs {
+  gap: 6px;
+  padding-bottom: 2px;
+  background: linear-gradient(180deg, rgba(18, 22, 25, 0.88), rgba(18, 22, 25, 0.4), transparent);
+}
+
+#modal-root .modal:has(.hub-window-magic) .modal-interaction-feedback {
+  display: none;
+}
+
+.hub-window-magic .hub-tab {
+  min-height: 36px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+}
+
+.hub-window-magic .hub-body-magic-classic {
+  display: grid;
+  gap: 12px;
+}
+
+.hub-window-magic .magic-workspace {
+  display: grid;
+  gap: 12px;
+}
+
+.hub-window-magic .magic-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.hub-window-magic .magic-layout {
+  grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.82fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.hub-window-magic .magic-book-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+}
+
+.hub-window-magic .magic-book-list {
+  gap: 0;
+  align-content: start;
+  max-height: min(58vh, 620px);
+}
+
+.hub-window-magic .magic-book-list .magic-card {
+  padding: 8px 2px;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid rgba(214, 198, 157, 0.1);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.hub-window-magic .magic-book-list .magic-card:first-child {
+  border-top: 1px solid rgba(214, 198, 157, 0.08);
+}
+
+.hub-window-magic .magic-book-list .magic-card.pack-item-row-good,
+.hub-window-magic .magic-book-list .magic-card.pack-item-row-neutral,
+.hub-window-magic .magic-book-list .magic-card.pack-item-row-bad {
+  background: transparent;
+}
+
+.hub-window-magic .magic-book-list .magic-card.active,
+.hub-window-magic .magic-book-list .magic-card:focus-visible {
+  border-color: rgba(214, 170, 88, 0.24);
+  background: linear-gradient(90deg, rgba(104, 74, 27, 0.22), rgba(104, 74, 27, 0.06));
+  box-shadow: inset 4px 0 0 rgba(214, 170, 88, 0.9);
+  transform: none;
+}
+
+.hub-window-magic .magic-book-list:has(.magic-card.active) .magic-card:not(.active) {
+  opacity: 0.82;
+  filter: saturate(0.92);
+}
+
+.hub-window-magic .magic-book-list .pack-item-head {
+  gap: 8px;
+  align-items: baseline;
+}
+
+.hub-window-magic .magic-book-list .pack-item-head-main {
+  gap: 1px;
+}
+
+.hub-window-magic .magic-book-list .pack-item-head-side {
+  gap: 2px;
+}
+
+.hub-window-magic .magic-book-list .pack-item-name {
+  font-size: 0.86rem;
+}
+
+.hub-window-magic .magic-book-list .pack-item-meta-compact,
+.hub-window-magic .magic-list-row-note {
+  font-size: 0.68rem;
+  line-height: 1.2;
+  color: rgba(214, 221, 212, 0.68);
+}
+
+.hub-window-magic .magic-book-list .pack-row-chip {
+  padding: 1px 6px;
+  font-size: 0.62rem;
+}
+
+.hub-window-magic .magic-result-panel .pack-inspector-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.magic-result-copy {
+  color: rgba(223, 230, 244, 0.84);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.magic-result-rows {
+  display: grid;
+  gap: 6px;
+}
+
+.magic-result-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 0.76rem;
+}
+
+.magic-result-row span {
+  color: rgba(214, 221, 212, 0.68);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.64rem;
+}
+
+.magic-result-row strong {
+  justify-self: end;
+  text-align: right;
+}
+
+.magic-result-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.magic-result-actions .menu-button {
+  min-height: 40px;
+}
+
+@media (max-width: 760px) {
+  .hub-window-magic .hub-tabs {
+    gap: 4px;
+  }
+
+  .hub-window-magic .hub-tab {
+    min-height: 34px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .hub-window-magic .magic-layout {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .hub-window-magic .magic-side-rail {
+    order: 2;
+  }
+
+  .hub-window-magic .magic-book-panel {
+    order: 1;
+  }
+}
+
+/* Menu readability pass */
+.hub-window-pack .panel-title,
+.hub-window-magic .panel-title,
+.shop-workspace .panel-title {
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+}
+
+.hub-window-pack .hub-tab,
+.hub-window-magic .hub-tab,
+.shop-workspace .hub-filter-chip {
+  font-size: 0.92rem;
+}
+
+.hub-window-pack .hub-filter-chip,
+.hub-window-magic .hub-filter-chip {
+  font-size: 0.84rem;
+}
+
+.hub-window-pack .pack-toolbar-chip,
+.hub-window-pack .pack-toolbar-detail,
+.hub-window-pack .pack-toolbar-focus,
+.hub-window-magic .pack-toolbar-chip,
+.hub-window-magic .pack-toolbar-detail,
+.hub-window-magic .pack-toolbar-focus,
+.shop-workspace .pack-toolbar-chip,
+.shop-workspace .pack-toolbar-detail {
+  font-size: 0.76rem;
+}
+
+.hub-window-pack .pack-item-name,
+.hub-window-magic .magic-book-list .pack-item-name,
+.shop-transaction-list .pack-item-name {
+  font-size: 0.96rem;
+}
+
+.hub-window-pack .pack-item-meta-compact,
+.hub-window-pack .pack-slot-row-note,
+.hub-window-magic .magic-book-list .pack-item-meta-compact,
+.hub-window-magic .magic-list-row-note,
+.shop-transaction-list .pack-item-meta-compact,
+.shop-transaction-list .pack-slot-row-note {
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.hub-window-pack .pack-row-chip,
+.hub-window-magic .magic-book-list .pack-row-chip,
+.shop-transaction-list .pack-row-chip {
+  font-size: 0.72rem;
+  padding: 2px 7px;
+}
+
+.hub-window-pack .pack-inspector-kicker,
+.hub-window-magic .pack-inspector-kicker,
+.shop-result-panel .pack-inspector-kicker {
+  font-size: 0.74rem;
+}
+
+.hub-window-pack .pack-inspector-title,
+.hub-window-magic .pack-inspector-title,
+.shop-result-panel .pack-inspector-title {
+  font-size: 1.08rem;
+}
+
+.hub-window-pack .pack-inspector-note,
+.hub-window-pack .pack-inspector-copy,
+.hub-window-pack .pack-hover-preview-note,
+.hub-window-pack .pack-hover-preview-copy,
+.hub-window-magic .pack-inspector-note,
+.hub-window-magic .magic-result-copy,
+.shop-result-panel .pack-inspector-note,
+.shop-result-panel .pack-inspector-copy {
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.hub-window-pack .pack-comparison-row,
+.hub-window-magic .magic-result-row,
+.shop-result-panel .pack-comparison-row {
+  font-size: 0.82rem;
+}
+
+.hub-window-magic .magic-result-row span {
+  font-size: 0.68rem;
+}
+
+.hub-window-pack .pack-slot-tab-label {
+  font-size: 0.8rem;
+}
+
+.hub-window-pack .pack-slot-tab-badge,
+.hub-window-pack .pack-slot-tab-state,
+.hub-window-pack .pack-slot-subtab-label,
+.hub-window-pack .pack-slot-subtab-state {
+  font-size: 0.68rem;
+}
+
+.hub-window-pack .pack-equip-list-note,
+.hub-window-magic .pack-equip-list-note {
+  font-size: 0.78rem;
+}
+
+@media (max-width: 760px) {
+  .hub-window-pack .panel-title,
+  .hub-window-magic .panel-title,
+  .shop-workspace .panel-title {
+    font-size: 0.78rem;
+  }
+
+  .hub-window-pack .hub-tab,
+  .hub-window-magic .hub-tab,
+  .shop-workspace .hub-filter-chip {
+    font-size: 0.86rem;
+  }
+
+  .hub-window-pack .hub-filter-chip,
+  .hub-window-magic .hub-filter-chip {
+    font-size: 0.8rem;
+  }
+
+  .hub-window-pack .pack-toolbar-chip,
+  .hub-window-pack .pack-toolbar-detail,
+  .hub-window-magic .pack-toolbar-chip,
+  .hub-window-magic .pack-toolbar-detail,
+  .shop-workspace .pack-toolbar-chip,
+  .shop-workspace .pack-toolbar-detail {
+    font-size: 0.72rem;
+    padding: 3px 7px;
+  }
+
+  .hub-window-pack .pack-item-name,
+  .hub-window-magic .magic-book-list .pack-item-name,
+  .shop-transaction-list .pack-item-name {
+    font-size: 0.9rem;
+  }
+
+  .hub-window-pack .pack-item-meta-compact,
+  .hub-window-pack .pack-slot-row-note,
+  .hub-window-magic .magic-book-list .pack-item-meta-compact,
+  .hub-window-magic .magic-list-row-note,
+  .shop-transaction-list .pack-item-meta-compact,
+  .shop-transaction-list .pack-slot-row-note {
+    font-size: 0.74rem;
+  }
+
+  .hub-window-pack .pack-row-chip,
+  .hub-window-magic .magic-book-list .pack-row-chip,
+  .shop-transaction-list .pack-row-chip {
+    font-size: 0.68rem;
+  }
+
+  .hub-window-pack .pack-inspector-title,
+  .hub-window-magic .pack-inspector-title,
+  .shop-result-panel .pack-inspector-title {
+    font-size: 1rem;
+  }
+
+  .hub-window-pack .pack-inspector-note,
+  .hub-window-pack .pack-inspector-copy,
+  .hub-window-magic .pack-inspector-note,
+  .hub-window-magic .magic-result-copy,
+  .shop-result-panel .pack-inspector-note,
+  .shop-result-panel .pack-inspector-copy {
+    font-size: 0.8rem;
+  }
+}
+
+/* Let workspace menus use the screen */
+#modal-root .modal.modal-frame.modal-surface-workspace:not(.title-screen):not(.creation-sheet) {
+  width: min(1480px, calc(100vw - 10px));
+  height: calc(100vh - 10px);
+  max-height: calc(100vh - 10px);
+}
+
+#modal-root .modal:has(.hub-window-pack),
+#modal-root .modal:has(.hub-window-journal),
+#modal-root .modal:has(.hub-window-magic),
+#modal-root .modal:has(.shop-workspace) {
+  width: min(1480px, calc(100vw - 10px));
+  height: calc(100vh - 10px);
+  max-height: calc(100vh - 10px);
+}
+
+@media (min-width: 920px) {
+  #modal-root .modal:has(.hub-window-pack),
+  #modal-root .modal:has(.hub-window-journal),
+  #modal-root .modal:has(.hub-window-magic),
+  #modal-root .modal:has(.shop-workspace) {
+    width: min(1560px, calc(100vw - 20px));
+    height: calc(100vh - 20px);
+    max-height: calc(100vh - 20px);
+  }
+}
+
+@media (max-width: 760px) {
+  #modal-root .modal.modal-frame.modal-surface-workspace:not(.title-screen):not(.creation-sheet),
+  #modal-root .modal:has(.hub-window-pack),
+  #modal-root .modal:has(.hub-window-journal),
+  #modal-root .modal:has(.hub-window-magic),
+  #modal-root .modal:has(.shop-workspace) {
+    width: calc(100vw - 6px);
+    height: calc(100vh - 6px);
+    max-height: calc(100vh - 6px);
+    border-radius: 18px;
+  }
+}
+
+@media (min-width: 920px) {
+  #modal-root .modal:has(.hub-window-pack) .modal-interaction-feedback,
+  #modal-root .modal:has(.hub-window-magic) .modal-interaction-feedback,
+  #modal-root .modal:has(.shop-workspace) .modal-interaction-feedback {
+    display: none;
+  }
+
+  #modal-root .modal:has(.hub-window-pack) .modal-title,
+  #modal-root .modal:has(.hub-window-magic) .modal-title,
+  #modal-root .modal:has(.shop-workspace) .modal-title {
+    padding: 16px 18px 12px;
+    font-size: 1.7rem;
+    line-height: 1.05;
+    letter-spacing: 0;
+  }
+
+  #modal-root .modal:has(.hub-window-pack) .modal-body,
+  #modal-root .modal:has(.hub-window-magic) .modal-body,
+  #modal-root .modal:has(.shop-workspace) .modal-body,
+  #modal-root .modal:has(.hub-window-pack) > .modal-actions,
+  #modal-root .modal:has(.hub-window-magic) > .modal-actions,
+  #modal-root .modal:has(.shop-workspace) > .modal-actions {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .hub-window-pack,
+  .hub-window-magic,
+  .shop-workspace {
+    gap: 16px;
+  }
+
+  .hub-window-pack .panel-title,
+  .hub-window-magic .panel-title,
+  .shop-workspace .panel-title {
+    margin-bottom: 6px;
+    font-size: 0.98rem;
+    letter-spacing: 0;
+  }
+
+  .hub-window-pack .hub-tab,
+  .hub-window-magic .hub-tab,
+  .shop-workspace .hub-filter-chip {
+    min-height: 40px;
+    padding: 8px 14px;
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+
+  .hub-window-pack .hub-filter-chip,
+  .hub-window-magic .hub-filter-chip {
+    min-height: 34px;
+    padding: 6px 12px;
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  .hub-window-pack .pack-toolbar-chip,
+  .hub-window-pack .pack-toolbar-detail,
+  .hub-window-pack .pack-toolbar-focus,
+  .hub-window-magic .pack-toolbar-chip,
+  .hub-window-magic .pack-toolbar-detail,
+  .hub-window-magic .pack-toolbar-focus,
+  .shop-workspace .pack-toolbar-chip,
+  .shop-workspace .pack-toolbar-detail {
+    font-family: var(--font-ui);
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+
+  .hub-window-pack .pack-layout.pack-layout-equip,
+  .hub-window-magic .magic-layout,
+  .shop-transaction-shell {
+    gap: 20px;
+  }
+
+  .hub-window-pack .pack-layout.pack-layout-equip {
+    grid-template-columns: minmax(0, 1.18fr) minmax(430px, 0.88fr);
+  }
+
+  .hub-window-magic .magic-layout {
+    grid-template-columns: minmax(0, 1.12fr) minmax(430px, 0.88fr);
+  }
+
+  .shop-transaction-shell {
+    grid-template-columns: minmax(0, 1.04fr) minmax(440px, 0.96fr);
+  }
+
+  .hub-window-pack .pack-equip-list-title,
+  .hub-window-magic .pack-equip-list-title {
+    font-size: 1.12rem;
+    letter-spacing: 0;
+  }
+
+  .hub-window-pack .pack-equip-list-note,
+  .hub-window-magic .pack-equip-list-note {
+    font-size: 0.84rem;
+  }
+
+  .hub-window-pack .pack-layout.pack-layout-equip .pack-list-panel,
+  .hub-window-magic .magic-book-list,
+  .shop-transaction-list-panel .shop-transaction-list {
+    max-height: min(71vh, 860px);
+  }
+
+  .hub-window-pack .pack-group-list .pack-item-row,
+  .pack-classic-list .pack-item-row,
+  .shop-transaction-list .pack-item-row,
+  .hub-window-magic .magic-book-list .magic-card {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .hub-window-pack .pack-item-name,
+  .hub-window-magic .magic-book-list .pack-item-name,
+  .shop-transaction-list .pack-item-name {
+    font-family: var(--font-ui);
+    font-size: 1.08rem;
+    font-weight: 800;
+    line-height: 1.15;
+  }
+
+  .hub-window-pack .pack-item-meta-compact,
+  .hub-window-pack .pack-slot-row-note,
+  .hub-window-magic .magic-book-list .pack-item-meta-compact,
+  .hub-window-magic .magic-list-row-note,
+  .shop-transaction-list .pack-item-meta-compact,
+  .shop-transaction-list .pack-slot-row-note {
+    font-family: var(--font-ui);
+    font-size: 0.86rem;
+    line-height: 1.35;
+  }
+
+  .hub-window-pack .pack-row-chip,
+  .hub-window-magic .magic-book-list .pack-row-chip,
+  .shop-transaction-list .pack-row-chip {
+    border-radius: 8px;
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 2px 7px;
+  }
+
+  .hub-window-pack .pack-inspector-card,
+  .hub-window-magic .pack-inspector-card,
+  .shop-result-panel .pack-inspector-card {
+    gap: 10px;
+    padding: 16px 18px;
+  }
+
+  .hub-window-pack .pack-inspector-kicker,
+  .hub-window-magic .pack-inspector-kicker,
+  .shop-result-panel .pack-inspector-kicker {
+    font-size: 0.8rem;
+    letter-spacing: 0;
+  }
+
+  .hub-window-pack .pack-inspector-title,
+  .hub-window-magic .pack-inspector-title,
+  .shop-result-panel .pack-inspector-title {
+    font-family: var(--font-ui);
+    font-size: 1.34rem;
+    font-weight: 800;
+    line-height: 1.12;
+  }
+
+  .hub-window-pack .pack-inspector-note,
+  .hub-window-pack .pack-inspector-copy,
+  .hub-window-pack .pack-hover-preview-note,
+  .hub-window-pack .pack-hover-preview-copy,
+  .hub-window-magic .pack-inspector-note,
+  .hub-window-magic .magic-result-copy,
+  .shop-result-panel .pack-inspector-note,
+  .shop-result-panel .pack-inspector-copy {
+    font-family: var(--font-ui);
+    font-size: 0.96rem;
+    line-height: 1.45;
+  }
+
+  .hub-window-pack .pack-comparison-row,
+  .hub-window-magic .magic-result-row,
+  .shop-result-panel .pack-comparison-row {
+    font-family: var(--font-ui);
+    font-size: 0.94rem;
+    line-height: 1.35;
+  }
+
+  .hub-window-magic .magic-result-row span {
+    font-size: 0.82rem;
+  }
+
+  .hub-window-pack .pack-slot-tab-label {
+    font-size: 0.94rem;
+  }
+
+  .hub-window-pack .pack-slot-tab-badge,
+  .hub-window-pack .pack-slot-tab-state,
+  .hub-window-pack .pack-slot-subtab-label,
+  .hub-window-pack .pack-slot-subtab-state {
+    font-size: 0.76rem;
   }
 }
 
@@ -9019,7 +10347,2685 @@ body:has(#modal-root[data-surface-tier="reader"]:not(.hidden)) .mobile-app.modal
     display: none !important;
   }
 
-  .mobile-app[data-layout="desktop"] .bottom-band {
-    display: none;
+.mobile-app[data-layout="desktop"] .bottom-band {
+  display: none;
+  }
+}
+
+#modal-root .modal-interaction-feedback[hidden],
+#modal-root .modal-interaction-feedback:not(.visible) {
+  display: none !important;
+}
+
+.workspace-summary-strip {
+  display: grid;
+  gap: 8px;
+}
+
+.workspace-summary-chip {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(214, 198, 157, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.workspace-summary-label {
+  color: rgba(214, 221, 212, 0.68);
+  font-size: 0.74rem;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.workspace-summary-chip strong,
+.workspace-detail-title {
+  color: #f4ebd5;
+  font-family: var(--font-ui);
+  font-weight: 800;
+}
+
+.workspace-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.workspace-rail,
+.workspace-rail-detail,
+.save-slot-detail-stack,
+.character-resource-stack {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  align-content: start;
+}
+
+.workspace-detail-card,
+.workspace-ledger-group {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(214, 198, 157, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.workspace-plain-copy {
+  color: rgba(224, 228, 220, 0.84);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.workspace-ledger {
+  display: grid;
+  gap: 0;
+}
+
+.workspace-ledger-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 10px 0;
+  border-top: 1px solid rgba(214, 198, 157, 0.08);
+}
+
+.workspace-ledger-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.workspace-ledger-row:last-child {
+  padding-bottom: 0;
+}
+
+.workspace-ledger-row strong {
+  color: #f0e7d2;
+  font-family: var(--font-ui);
+}
+
+.save-slot-ledger {
+  display: grid;
+  gap: 0;
+}
+
+.save-slot-select {
+  width: 100%;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 0;
+  border-top: 1px solid rgba(214, 198, 157, 0.08);
+  background: transparent;
+  text-align: left;
+}
+
+.save-slot-select:first-child {
+  border-top: 0;
+}
+
+.save-slot-select-head,
+.save-slot-select-badges {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.save-slot-select-name {
+  color: #f3ead6;
+  font-family: var(--font-ui);
+  font-weight: 800;
+}
+
+.save-slot-select-meta {
+  color: rgba(214, 221, 212, 0.7);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.save-slot-select.active,
+.save-slot-select:focus-visible {
+  background: linear-gradient(90deg, rgba(104, 74, 27, 0.2), rgba(104, 74, 27, 0.05));
+  box-shadow: inset 4px 0 0 rgba(214, 170, 88, 0.9);
+}
+
+.save-slot-detail-actions,
+.service-ledger-actions,
+.save-slot-title-music-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.service-ledger-row .muted,
+.settings-ledger-row .muted,
+.workspace-ledger-row .muted {
+  line-height: 1.35;
+}
+
+.settings-ledger-row .menu-button,
+.service-ledger-actions .menu-button,
+.save-slot-detail-actions .menu-button {
+  min-width: 120px;
+}
+
+.field-guide-reader-detail .field-guide-rail {
+  display: none;
+}
+
+.field-guide-reader-detail .field-guide-shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.field-guide-reader-detail .field-guide-main.field-guide-layout {
+  display: grid;
+  gap: 12px;
+}
+
+.utility-menu-detail-grid {
+  display: grid;
+  gap: 8px;
+}
+
+@media (min-width: 920px) {
+  .workspace-summary-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .workspace-shell {
+    grid-template-columns: minmax(320px, 0.92fr) minmax(0, 1.08fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .utility-workspace-shell {
+    grid-template-columns: minmax(360px, 0.94fr) minmax(0, 1.06fr);
+  }
+
+  .save-slot-shell {
+    grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 0.88fr);
+  }
+
+  .settings-shell,
+  .character-sheet-shell,
+  .service-shell,
+  .bank-shell {
+    grid-template-columns: minmax(360px, 0.92fr) minmax(0, 1.08fr);
+  }
+
+  .field-guide-reader-shell {
+    grid-template-columns: minmax(310px, 0.78fr) minmax(0, 1.22fr);
+  }
+
+  .utility-menu-sheet {
+    width: min(1560px, calc(100vw - 20px));
+    height: calc(100vh - 20px);
+    max-height: calc(100vh - 20px);
+  }
+
+  .utility-menu-body,
+  .save-slot-workspace,
+  .settings-sheet,
+  .character-sheet-workspace,
+  .town-workspace,
+  .field-guide-reader-workspace {
+    gap: 16px;
+  }
+
+  .utility-launch-grid,
+  .save-slot-ledger {
+    align-content: start;
+  }
+
+  .save-slot-ledger,
+  .field-guide-reader-detail,
+  .bank-detail-rail,
+  .service-detail-rail,
+  .settings-detail-rail,
+  .character-sheet-detail-rail {
+    min-height: 0;
+  }
+
+  .save-slot-ledger,
+  .utility-launch-grid,
+  .field-guide-reader-detail {
+    max-height: min(68vh, 760px);
+    overflow: auto;
+  }
+
+  .workspace-summary-chip {
+    min-height: 74px;
+    padding: 12px 14px;
+  }
+
+  .workspace-summary-label {
+    font-size: 0.78rem;
+  }
+
+  .workspace-summary-chip strong,
+  .workspace-detail-title {
+    font-size: 1.14rem;
+    line-height: 1.2;
+  }
+
+  .workspace-detail-card,
+  .workspace-ledger-group {
+    padding: 14px 16px;
+  }
+
+  .workspace-plain-copy {
+    font-size: 0.94rem;
+  }
+
+  .workspace-ledger-row {
+    padding: 12px 0;
+  }
+
+  .save-slot-select {
+    padding: 12px 14px;
+  }
+
+  .save-slot-select-name {
+    font-size: 1.02rem;
+  }
+
+  .save-slot-select-meta {
+    font-size: 0.86rem;
+  }
+
+  .settings-overview-rail .menu-quick-state,
+  .field-guide-index-rail .menu-quick-state {
+    min-height: 0;
+  }
+
+  .character-resource-stack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .character-sheet-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 12px;
+    align-items: center;
+    font-size: 0.92rem;
+    padding: 10px 0;
+    border-top: 1px solid rgba(214, 198, 157, 0.08);
+  }
+
+  .character-sheet-row:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .character-sheet-row:last-child {
+    padding-bottom: 0;
+  }
+
+  .field-guide-reader-detail .field-guide-main.field-guide-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .field-guide-reader-detail .field-guide-main.field-guide-layout .field-guide-card:has(.journal-log),
+  .field-guide-reader-detail .field-guide-main.field-guide-layout .field-guide-card:has(.section-block) {
+    grid-column: 1 / -1;
+  }
+
+  .field-guide-reader-shell .journal-section-row {
+    grid-template-columns: 1fr;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  .field-guide-reader-shell .journal-section-row .hub-filter-chip {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 919px) {
+  .workspace-summary-strip,
+  .workspace-shell,
+  .character-resource-stack,
+  .utility-menu-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 920px) {
+  #modal-root .modal.utility-menu-sheet.modal-frame.modal-surface-quick:not(.title-screen):not(.creation-sheet) {
+    width: min(1560px, calc(100vw - 20px)) !important;
+    height: calc(100vh - 20px) !important;
+    max-height: calc(100vh - 20px) !important;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  #modal-root .modal.utility-menu-sheet .utility-menu-body {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    overflow: auto;
+    align-content: start;
+  }
+
+  #modal-root .modal.utility-menu-sheet .utility-workspace-shell {
+    grid-template-columns: minmax(360px, 0.94fr) minmax(0, 1.06fr);
+    min-height: min(68vh, 780px);
+  }
+
+  #modal-root .modal.modal-large.modal-frame.modal-surface-reader {
+    width: min(1560px, calc(100vw - 20px));
+    height: calc(100vh - 20px);
+    max-height: calc(100vh - 20px);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  #modal-root .modal.modal-large.modal-frame.modal-surface-reader .modal-body {
+    min-height: 0;
+    overflow: auto;
+  }
+
+  #modal-root .modal:has(.utility-workspace-shell),
+  #modal-root .modal:has(.save-slot-workspace),
+  #modal-root .modal:has(.settings-sheet),
+  #modal-root .modal:has(.character-sheet-workspace),
+  #modal-root .modal:has(.field-guide-reader-workspace),
+  #modal-root .modal:has(.town-workspace) {
+    width: min(1560px, calc(100vw - 20px));
+    height: calc(100vh - 20px);
+    max-height: calc(100vh - 20px);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  #modal-root .modal:has(.utility-workspace-shell) .modal-body,
+  #modal-root .modal:has(.save-slot-workspace) .modal-body,
+  #modal-root .modal:has(.settings-sheet) .modal-body,
+  #modal-root .modal:has(.character-sheet-workspace) .modal-body,
+  #modal-root .modal:has(.field-guide-reader-workspace) .modal-body,
+  #modal-root .modal:has(.town-workspace) .modal-body {
+    min-height: 0;
+    overflow: auto;
+  }
+
+  #modal-root .modal:has(.utility-workspace-shell) .modal-title,
+  #modal-root .modal:has(.save-slot-workspace) .modal-title,
+  #modal-root .modal:has(.settings-sheet) .modal-title,
+  #modal-root .modal:has(.character-sheet-workspace) .modal-title,
+  #modal-root .modal:has(.field-guide-reader-workspace) .modal-title,
+  #modal-root .modal:has(.town-workspace) .modal-title {
+    padding: 16px 18px 12px;
+    font-size: 1.7rem;
+    line-height: 1.05;
+    letter-spacing: 0;
+  }
+
+  #modal-root .modal:has(.utility-workspace-shell) .modal-body,
+  #modal-root .modal:has(.save-slot-workspace) .modal-body,
+  #modal-root .modal:has(.settings-sheet) .modal-body,
+  #modal-root .modal:has(.character-sheet-workspace) .modal-body,
+  #modal-root .modal:has(.field-guide-reader-workspace) .modal-body,
+  #modal-root .modal:has(.town-workspace) .modal-body,
+  #modal-root .modal:has(.utility-workspace-shell) > .modal-actions,
+  #modal-root .modal:has(.save-slot-workspace) > .modal-actions,
+  #modal-root .modal:has(.settings-sheet) > .modal-actions,
+  #modal-root .modal:has(.character-sheet-workspace) > .modal-actions,
+  #modal-root .modal:has(.field-guide-reader-workspace) > .modal-actions,
+  #modal-root .modal:has(.town-workspace) > .modal-actions {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .workspace-summary-strip {
+    grid-auto-rows: min-content;
+    align-items: start;
+  }
+
+  .workspace-summary-chip {
+    min-height: 0;
+    align-content: start;
+  }
+
+  .utility-menu-summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .utility-workspace-shell,
+  .save-slot-shell,
+  .settings-shell,
+  .character-sheet-shell,
+  .field-guide-reader-shell,
+  .service-shell,
+  .bank-shell {
+    min-height: min(68vh, 780px);
+  }
+}
+
+@media (min-width: 920px) {
+  .utility-destination-list {
+    grid-template-columns: 1fr;
+  }
+
+  .utility-destination-list .action-button {
+    min-height: 48px;
+    justify-content: flex-start;
+    padding-inline: 14px;
+  }
+
+  .utility-menu-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .utility-command-chip {
+    min-height: 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+  }
+
+  .utility-command-summary,
+  .utility-menu-group-disclosure {
+    align-content: start;
+  }
+
+  .utility-menu-secondary-links {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .utility-menu-secondary-links .action-button {
+    min-height: 44px;
+  }
+
+  .utility-menu-summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .utility-menu-body,
+  .save-slot-workspace,
+  .settings-sheet,
+  .character-sheet-workspace,
+  .field-guide-reader-workspace,
+  .town-workspace {
+    min-height: calc(100vh - 168px);
+  }
+
+  .workspace-shell,
+  .shop-transaction-shell,
+  .hub-window-pack .pack-layout.pack-layout-equip,
+  .hub-window-pack .pack-layout:not(.pack-layout-equip),
+  .hub-window-magic .magic-layout {
+    min-height: min(76vh, 980px);
+    align-items: stretch;
+  }
+
+  .workspace-rail,
+  .workspace-rail-detail,
+  .hub-window-pack .hub-section,
+  .hub-window-magic .hub-section,
+  .pack-side-rail {
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    min-height: 0;
+  }
+
+  .workspace-rail .workspace-ledger,
+  .workspace-rail-detail .workspace-ledger,
+  .save-slot-ledger,
+  .pack-classic-list,
+  .magic-book-list,
+  .shop-transaction-list,
+  .field-guide-reader-detail,
+  .utility-launch-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .workspace-summary-chip {
+    min-height: 88px;
+    padding: 14px 16px;
+  }
+
+  .workspace-summary-label,
+  .panel-title {
+    font-size: 0.84rem;
+  }
+
+  .workspace-summary-chip strong,
+  .workspace-detail-title {
+    font-size: 1.26rem;
+  }
+
+  .workspace-plain-copy,
+  .workspace-ledger-row,
+  .save-slot-select-meta,
+  .hub-window-pack .mini-panel-note,
+  .hub-window-magic .mini-panel-note,
+  .shop-sell-note {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .menu-button,
+  .hub-filter-chip,
+  .action-button {
+    font-size: 1rem;
+  }
+
+  .settings-shell {
+    grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
+  }
+
+  .save-slot-shell {
+    grid-template-columns: minmax(420px, 0.96fr) minmax(0, 1.04fr);
+  }
+
+  .save-slot-select {
+    gap: 6px;
+    padding: 16px 18px;
+  }
+
+  .save-slot-select-name {
+    font-size: 1.12rem;
+  }
+
+  .save-slot-select-meta {
+    font-size: 0.94rem;
+  }
+
+  .field-guide-reader-shell {
+    grid-template-columns: minmax(250px, 280px) minmax(0, 1fr);
+    min-height: min(78vh, 980px);
+  }
+
+  .field-guide-index-rail {
+    gap: 14px;
+    padding-right: 14px;
+    border-right: 1px solid rgba(214, 198, 157, 0.08);
+  }
+
+  .field-guide-reader-shell .journal-section-row {
+    display: grid;
+    gap: 8px;
+  }
+
+  .field-guide-reader-shell .journal-section-row .hub-filter-chip {
+    width: 100%;
+    min-height: 42px;
+    justify-content: flex-start;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: var(--font-ui);
+    font-size: 0.92rem;
+    letter-spacing: 0;
+  }
+
+  .field-guide-reader-detail {
+    overflow: auto;
+    padding-right: 8px;
+  }
+
+  .field-guide-article {
+    display: grid;
+    gap: 16px;
+    align-content: start;
+    max-width: 1100px;
+    padding-bottom: 24px;
+  }
+
+  .field-guide-article .workspace-detail-card,
+  .field-guide-article .workspace-ledger-group {
+    gap: 14px;
+    padding: 18px 20px;
+    background: rgba(255, 255, 255, 0.015);
+  }
+
+  .field-guide-article .field-guide-copy,
+  .field-guide-article .field-guide-list {
+    max-width: 78ch;
+    font-size: 1rem;
+    line-height: 1.65;
+  }
+
+  .field-guide-article .field-guide-fact-list {
+    display: grid;
+    gap: 0;
+    max-width: 88ch;
+  }
+
+  .field-guide-article .field-guide-fact-row {
+    display: grid;
+    grid-template-columns: minmax(170px, 220px) minmax(0, 1fr);
+    gap: 16px;
+    padding: 10px 0;
+    border-top: 1px solid rgba(214, 198, 157, 0.08);
+  }
+
+  .field-guide-article .field-guide-fact-row:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .field-guide-article .field-guide-fact-label,
+  .field-guide-article .field-guide-fact-value {
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  .field-guide-article-actions {
+    justify-content: flex-start;
+  }
+
+  .field-guide-article-actions .menu-button {
+    min-width: 140px;
+  }
+
+  .hub-window-pack .hub-summary-compact,
+  .hub-window-magic .hub-summary-compact {
+    gap: 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(214, 198, 157, 0.08);
+  }
+
+  .hub-window-pack .mini-panel,
+  .hub-window-magic .mini-panel {
+    min-height: 0;
+    padding: 0 14px 0 0;
+    border: 0;
+    border-right: 1px solid rgba(214, 198, 157, 0.08);
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .hub-window-pack .mini-panel:last-child,
+  .hub-window-magic .mini-panel:last-child {
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  .hub-window-pack .mini-panel strong,
+  .hub-window-magic .mini-panel strong {
+    font-family: var(--font-ui);
+    font-size: 1rem;
+  }
+
+  .hub-window-pack .mini-panel-note,
+  .hub-window-magic .mini-panel-note {
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+
+  .hub-window-pack .pack-toolbar,
+  .hub-window-magic .pack-toolbar,
+  .shop-transaction-toolbar {
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(214, 198, 157, 0.08);
+  }
+
+  .hub-window-pack .pack-toolbar-chip,
+  .hub-window-pack .pack-toolbar-detail,
+  .hub-window-pack .pack-toolbar-focus,
+  .hub-window-magic .pack-toolbar-chip,
+  .hub-window-magic .pack-toolbar-detail,
+  .hub-window-magic .pack-toolbar-focus,
+  .shop-workspace .pack-toolbar-chip,
+  .shop-workspace .pack-toolbar-detail {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  .hub-window-pack .pack-filter-row,
+  .hub-window-magic .pack-filter-row,
+  .shop-panel-row {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .hub-window-pack .pack-list-panel,
+  .hub-window-magic .magic-book-list,
+  .shop-transaction-list-panel .shop-transaction-list {
+    max-height: min(80vh, 1000px);
+  }
+
+  .shop-sell-note {
+    margin-top: 12px;
+  }
+
+  .bank-investment-ledger {
+    gap: 0;
+  }
+
+  .bank-investment-row {
+    align-items: center;
+  }
+
+  .bank-investment-actions .menu-button {
+    min-width: 96px;
+  }
+
+  .service-ledger-row {
+    align-items: center;
+    gap: 14px;
+    padding-block: 14px;
+  }
+
+  .service-ledger-actions {
+    justify-content: flex-end;
+  }
+
+  .service-ledger-actions .menu-button,
+  .save-slot-detail-actions .menu-button,
+  .bank-investment-actions .menu-button {
+    min-height: 44px;
+    min-width: 112px;
+  }
+
+  .bank-workspace .bank-disclosure {
+    display: none !important;
+  }
+}
+
+/* ------------------------------------------------------------
+   JRPG window skin — step 1 of the classic-JRPG UI redesign.
+   Aesthetic target: FFVI / FFVII / Chrono Trigger / Dragon Quest.
+   Navy-gradient windows with a double white border, a gold
+   triangle cursor on the active option, and a pixel-era display
+   font for titles and stat labels.
+   These styles are additive; legacy chrome keeps rendering until
+   step 2 (play-screen recompose) migrates elements over.
+   See: C:\Users\pzgam\.claude\plans\staged-conjuring-shell.md
+   ------------------------------------------------------------ */
+
+:root {
+  --jrpg-navy-deep: #0c1a3a;
+  --jrpg-navy-royal: #1f3a78;
+  --jrpg-text: #ffffff;
+  --jrpg-text-dim: #bac7e8;
+  --jrpg-border: #ffffff;
+  --jrpg-cursor: #f5c560;
+  --jrpg-alert: #d94a3a;
+  --jrpg-mp: #8fb3ff;
+  --jrpg-hp: #e56a5a;
+  --jrpg-load: #f5c560;
+  --jrpg-disabled: #7a7f92;
+  --jrpg-window-fill:
+    linear-gradient(180deg, var(--jrpg-navy-royal) 0%, var(--jrpg-navy-deep) 100%);
+  --jrpg-window-glow: 0 0 0 1px rgba(0, 0, 0, 0.85), 0 0 18px rgba(255, 255, 255, 0.08);
+  --jrpg-font-display: "VT323", "Menlo", "Consolas", monospace;
+  --jrpg-font-body: "Alegreya Sans", system-ui, sans-serif;
+}
+
+.jrpg-window {
+  display: block;
+  position: relative;
+  padding: 12px 14px;
+  background: var(--jrpg-window-fill);
+  color: var(--jrpg-text);
+  font-family: var(--jrpg-font-body);
+  font-size: 15px;
+  line-height: 1.35;
+  border: 3px double var(--jrpg-border);
+  border-radius: 4px;
+  box-shadow: var(--jrpg-window-glow);
+}
+
+.jrpg-window + .jrpg-window {
+  margin-top: 8px;
+}
+
+.jrpg-window-title {
+  font-family: var(--jrpg-font-display);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--jrpg-text);
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.jrpg-window-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.jrpg-window-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 5px 8px 5px 24px;
+  background: transparent;
+  border: 0;
+  color: var(--jrpg-text);
+  font-family: var(--jrpg-font-body);
+  font-size: 16px;
+  text-align: left;
+  position: relative;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.jrpg-window-option::before {
+  content: "\25B6";
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--jrpg-cursor);
+  opacity: 0;
+  transition: opacity 90ms ease-out;
+  font-size: 14px;
+}
+
+.jrpg-window-option.is-active,
+.jrpg-window-option:focus-visible,
+.jrpg-window-option:hover {
+  color: var(--jrpg-cursor);
+  outline: none;
+}
+
+.jrpg-window-option.is-active::before,
+.jrpg-window-option:focus-visible::before,
+.jrpg-window-option:hover::before {
+  opacity: 1;
+}
+
+.jrpg-window-option:disabled,
+.jrpg-window-option.is-disabled {
+  color: var(--jrpg-disabled);
+  cursor: not-allowed;
+}
+
+.jrpg-window-option:disabled:hover,
+.jrpg-window-option.is-disabled:hover {
+  color: var(--jrpg-disabled);
+}
+
+.jrpg-window-option:disabled::before,
+.jrpg-window-option.is-disabled::before {
+  display: none;
+}
+
+.jrpg-window-option-value {
+  margin-left: auto;
+  color: var(--jrpg-text-dim);
+  font-family: var(--jrpg-font-display);
+  font-size: 16px;
+  letter-spacing: 0.04em;
+}
+
+/* Horizontal verb row (USE / EQUIP / DROP / BACK) inside a window. */
+.jrpg-window-verbs {
+  display: flex;
+  gap: 4px;
+}
+
+.jrpg-window-verbs .jrpg-window-option {
+  width: auto;
+  flex: 1 1 0;
+  justify-content: center;
+  padding: 6px 10px 6px 26px;
+}
+
+/* State variants for the window frame itself — used for pressure. */
+.jrpg-window.is-warning {
+  --jrpg-border: var(--jrpg-cursor);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.85), 0 0 18px rgba(245, 197, 96, 0.25);
+}
+
+.jrpg-window.is-alert {
+  --jrpg-border: var(--jrpg-alert);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.85), 0 0 18px rgba(217, 74, 58, 0.35);
+  animation: jrpg-alert-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes jrpg-alert-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.85), 0 0 18px rgba(217, 74, 58, 0.25); }
+  50%      { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.85), 0 0 28px rgba(217, 74, 58, 0.6); }
+}
+
+/* Frame-tint utilities. Apply on a container to cascade --jrpg-border
+   into any .jrpg-window descendants. Used by the pressure director. */
+.jrpg-frame-tint-calm    { --jrpg-border: #ffffff; }
+.jrpg-frame-tint-rising  { --jrpg-border: var(--jrpg-cursor); }
+.jrpg-frame-tint-leave   { --jrpg-border: var(--jrpg-alert); }
+
+/* Segmented HP / MP / Load / XP bars used inside status windows. */
+.jrpg-bar {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  font-family: var(--jrpg-font-display);
+  font-size: 16px;
+  letter-spacing: 0.04em;
+}
+
+.jrpg-bar-label {
+  color: var(--jrpg-text-dim);
+  text-transform: uppercase;
+}
+
+.jrpg-bar-track {
+  position: relative;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.jrpg-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 100%;
+  background: var(--jrpg-hp);
+  transition: width 180ms ease-out, background-color 180ms ease-out;
+}
+
+.jrpg-bar.is-hp   .jrpg-bar-fill { background: var(--jrpg-hp); }
+.jrpg-bar.is-mp   .jrpg-bar-fill { background: var(--jrpg-mp); }
+.jrpg-bar.is-load .jrpg-bar-fill { background: var(--jrpg-load); }
+.jrpg-bar.is-xp   .jrpg-bar-fill { background: var(--jrpg-cursor); }
+
+.jrpg-bar.is-hp.is-critical .jrpg-bar-fill { background: var(--jrpg-alert); }
+
+.jrpg-bar-value {
+  color: var(--jrpg-text);
+  font-variant-numeric: tabular-nums;
+  min-width: 4ch;
+  text-align: right;
+}
+
+/* Dialog variant with a Dragon-Quest-style speaker tab and blinking
+   advance indicator in the bottom-right. */
+.jrpg-dialog { position: relative; }
+
+.jrpg-dialog-speaker {
+  position: absolute;
+  top: -12px;
+  left: 16px;
+  padding: 2px 10px;
+  background: var(--jrpg-navy-deep);
+  border: 2px solid var(--jrpg-border);
+  border-radius: 3px;
+  font-family: var(--jrpg-font-display);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jrpg-cursor);
+}
+
+.jrpg-dialog-advance {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  color: var(--jrpg-cursor);
+  animation: jrpg-blink 900ms steps(2, start) infinite;
+  font-family: var(--jrpg-font-display);
+}
+
+@keyframes jrpg-blink {
+  0%, 50%   { opacity: 1; }
+  51%, 100% { opacity: 0.15; }
+}
+
+/* Respect the global accessibility scale toggle. */
+html[data-ui-scale="large"] .jrpg-window          { font-size: 17px; }
+html[data-ui-scale="large"] .jrpg-window-option   { font-size: 18px; padding-top: 7px; padding-bottom: 7px; }
+html[data-ui-scale="large"] .jrpg-window-title    { font-size: 17px; }
+html[data-ui-scale="large"] .jrpg-bar             { font-size: 17px; }
+
+/* Reduced motion — disable the pulse and blink animations. */
+@media (prefers-reduced-motion: reduce) {
+  .jrpg-window.is-alert,
+  .jrpg-dialog-advance {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------
+   Step 2 — play-screen recompose.
+   When the advisor emits .jrpg-window content into #player-capsule
+   and #action-bar, strip the legacy panel chrome from those
+   containers, hide the always-on floor-survey minimap, and lay the
+   two windows out side-by-side above the touch pad. Scoped via
+   :has() so non-migrated screens still render the legacy shell.
+   ------------------------------------------------------------ */
+
+.bottom-band:has(.jrpg-window) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "status command"
+    "touch  touch";
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.bottom-band:has(.jrpg-window) > .status-band {
+  grid-area: status;
+  display: contents; /* let #player-capsule participate in the bottom-band grid */
+}
+
+.bottom-band:has(.jrpg-window) > .status-band > #map-panel {
+  display: none;
+}
+
+.mobile-app.mobile-map-open[data-layout="mobile"] .bottom-band:has(.jrpg-window) > .status-band > #map-panel {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-row: auto;
+  order: -1;
+  margin-bottom: 6px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(214, 198, 157, 0.24);
+  background: rgba(12, 16, 20, 0.94);
+}
+
+.mobile-app.mobile-map-open[data-layout="mobile"] .bottom-band:has(.jrpg-window) > .status-band > #map-panel #map-canvas {
+  max-height: min(240px, 30vh);
+}
+
+.bottom-band:has(.jrpg-window) > .status-band > #player-capsule {
+  grid-area: status;
+  background: transparent !important;
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+  min-height: 0;
+  display: block;
+}
+
+.bottom-band:has(.jrpg-window) > #action-bar {
+  grid-area: command;
+  background: transparent !important;
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+  min-height: 0;
+  display: block;
+}
+
+.bottom-band:has(.jrpg-window) > #touch-controls {
+  grid-area: touch;
+}
+
+/* Status window — tight 3-bar stack. */
+.jrpg-status-window {
+  padding: 10px 12px;
+  min-height: 100%;
+}
+
+.jrpg-status-window .jrpg-bar {
+  padding-block: 2px;
+}
+
+.jrpg-status-window .jrpg-window-title {
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+}
+
+/* Command window — vertical verb list with ► cursor. Each button carries
+   both .jrpg-window-option (for the JRPG cursor) and the legacy
+   .action-button.dock-slot classes (kept for focus + test selectors).
+   Override the legacy .action-button visuals so only the JRPG skin shows. */
+.jrpg-command-window {
+  padding: 10px 12px;
+  min-height: 100%;
+}
+
+.jrpg-command-window .jrpg-window-title {
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+}
+
+.jrpg-command-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.jrpg-command-option.action-button,
+.jrpg-command-option.dock-slot {
+  /* Wipe the legacy dock-button chrome — the .jrpg-window-option rules win. */
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  min-height: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+  color: var(--jrpg-text);
+}
+
+.jrpg-command-option.action-button.is-active,
+.jrpg-command-option.dock-slot.is-active,
+.jrpg-command-option.action-button:hover,
+.jrpg-command-option.dock-slot:hover,
+.jrpg-command-option.action-button:focus-visible,
+.jrpg-command-option.dock-slot:focus-visible {
+  color: var(--jrpg-cursor);
+  background: transparent !important;
+}
+
+.jrpg-command-option.is-active.recommended .jrpg-command-label {
+  font-weight: 600;
+}
+
+.jrpg-command-label {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.jrpg-command-note {
+  font-size: 12px;
+  color: var(--jrpg-text-dim);
+  margin-left: auto;
+  max-width: 60%;
+  text-align: right;
+  line-height: 1.1;
+}
+
+/* A/B/X/Y prompt glyphs — hidden on touch builds, revealed only when a
+   gamepad is detected. No-op until step 2.5 wires up the flag. */
+.jrpg-command-prompt {
+  display: none;
+  font-family: var(--jrpg-font-display);
+  font-size: 13px;
+  color: var(--jrpg-text-dim);
+  min-width: 16px;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.mobile-app[data-gamepad-active="true"] .jrpg-command-prompt {
+  display: inline-block;
+}
+
+/* Narrow phones (360px): stack status on top of command so neither squeezes. */
+@media (max-width: 400px) {
+  .bottom-band:has(.jrpg-window) {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "status"
+      "command"
+      "touch";
+  }
+  .jrpg-command-note {
+    display: none; /* too cramped to include the hint line */
+  }
+}
+
+/* ------------------------------------------------------------
+   Step 3 — pressure state visuals.
+   The game adds .jrpg-frame-tint-rising / -leave to .board-stage and
+   .mobile-app whenever dungeon pressure crosses a threshold. These
+   classes:
+     • tint any descendant .jrpg-window border via the --jrpg-border
+       custom property cascade (already defined above)
+     • halo the board canvas itself so the shift is felt in the play
+       area, not just in the chrome
+     • pulse on the "leave" bucket as an urgent signal
+   The warning/alert banner is injected on top of .board-overlays as
+   a .jrpg-pressure-banner element.
+   ------------------------------------------------------------ */
+
+.board-stage.jrpg-frame-tint-rising .board-frame {
+  box-shadow: 0 0 0 2px var(--jrpg-cursor), 0 0 18px rgba(245, 197, 96, 0.3);
+  transition: box-shadow 240ms ease-out;
+}
+
+.board-stage.jrpg-frame-tint-leave .board-frame {
+  box-shadow: 0 0 0 2px var(--jrpg-alert), 0 0 22px rgba(217, 74, 58, 0.5);
+  transition: box-shadow 240ms ease-out;
+  animation: jrpg-board-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes jrpg-board-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--jrpg-alert), 0 0 18px rgba(217, 74, 58, 0.35); }
+  50%      { box-shadow: 0 0 0 2px var(--jrpg-alert), 0 0 34px rgba(217, 74, 58, 0.8); }
+}
+
+/* The warning / alert banner window. Sits across the top of the board
+   overlays. Title is centered and uppercase for readability. */
+.jrpg-pressure-banner {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(92%, 420px);
+  padding: 8px 14px;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.jrpg-pressure-banner .jrpg-window-title {
+  text-align: center;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom-color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+  letter-spacing: 0.1em;
+}
+
+.jrpg-pressure-banner .jrpg-window-row {
+  justify-content: center;
+  text-align: center;
+  font-size: 13px;
+  padding: 0;
+}
+
+/* Urgent primary verb — when pressure is bad, the first command option
+   relabels to Ascend!/Flee! and gets a red pulse. Higher specificity
+   overrides both the JRPG cursor gold and the legacy dock-tone-primary
+   amber, so "urgent" always wins. */
+.jrpg-command-option.is-urgent,
+.jrpg-command-option.is-urgent:hover,
+.jrpg-command-option.is-urgent:focus-visible,
+.jrpg-command-option.is-urgent.is-active {
+  color: var(--jrpg-alert) !important;
+  font-weight: 600;
+}
+
+.jrpg-command-option.is-urgent::before {
+  color: var(--jrpg-alert);
+  opacity: 1;
+  animation: jrpg-urgent-blink 700ms steps(2, start) infinite;
+}
+
+@keyframes jrpg-urgent-blink {
+  0%, 50%   { opacity: 1; }
+  51%, 100% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-stage.jrpg-frame-tint-leave .board-frame,
+  .jrpg-command-option.is-urgent::before {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------
+   Step 4a — utility menu (main pause menu) in JRPG skin.
+   Two windows side-by-side: "Right Now" (current run summary) on
+   the left, "Menu" (verb list) on the right. Legacy action-button
+   chrome is stripped off any option that also carries
+   .jrpg-window-option so the JRPG cursor treatment wins.
+   ------------------------------------------------------------ */
+
+.jrpg-utility-sheet {
+  background: linear-gradient(180deg, rgba(4, 10, 24, 0.95), rgba(2, 6, 18, 0.98));
+  border: 2px solid rgba(255, 255, 255, 0.18);
+}
+
+.jrpg-utility-sheet .modal-title {
+  font-family: var(--jrpg-font-display);
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jrpg-text);
+  text-align: center;
+  padding: 12px 16px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 0;
+}
+
+.jrpg-utility-body {
+  padding: 14px 16px;
+  background: transparent !important;
+}
+
+.jrpg-utility-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 10px;
+}
+
+.jrpg-utility-party .jrpg-window-title,
+.jrpg-utility-verbs .jrpg-window-title {
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+}
+
+.jrpg-utility-run-line {
+  font-family: var(--jrpg-font-body);
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--jrpg-text);
+  margin-bottom: 8px;
+}
+
+.jrpg-utility-meta-line {
+  font-family: var(--jrpg-font-body);
+  font-size: 12px;
+  color: var(--jrpg-text-dim);
+  line-height: 1.35;
+  padding: 2px 0;
+}
+
+.jrpg-utility-meta-line:empty {
+  display: none;
+}
+
+.jrpg-utility-verb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jrpg-utility-verb-divider {
+  height: 1px;
+  margin: 10px 0 6px;
+  background: linear-gradient(90deg, transparent, rgba(214, 198, 157, 0.28), transparent);
+}
+
+.jrpg-utility-verb-label {
+  padding: 0 10px;
+  color: rgba(214, 198, 157, 0.56);
+  font-family: var(--jrpg-font-body);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.jrpg-utility-verb-tools .jrpg-window-option.action-button {
+  opacity: 0.82;
+}
+
+.jrpg-utility-verb-tools .utility-trace-button {
+  opacity: 0.6;
+  font-size: 14px;
+}
+
+/* Strip legacy .action-button visuals off options inside the utility menu
+   so only the JRPG skin styles the verbs. Specificity beats the legacy
+   .action-button rules earlier in the file. */
+.jrpg-utility-verbs .jrpg-window-option.action-button {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  min-height: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 5px 10px 5px 24px;
+  font-family: var(--jrpg-font-body);
+  font-size: 16px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--jrpg-text);
+  justify-content: flex-start;
+}
+
+.jrpg-utility-verbs .jrpg-window-option.action-button:hover,
+.jrpg-utility-verbs .jrpg-window-option.action-button:focus-visible,
+.jrpg-utility-verbs .jrpg-window-option.action-button.is-active {
+  color: var(--jrpg-cursor);
+  background: transparent !important;
+}
+
+.jrpg-utility-verbs .jrpg-window-option.action-button:disabled {
+  color: var(--jrpg-disabled);
+  opacity: 1;
+}
+
+.jrpg-utility-actions {
+  padding: 8px 16px 16px;
+  justify-content: flex-end;
+  display: flex;
+  gap: 8px;
+  background: transparent;
+}
+
+.jrpg-utility-sheet .utility-menu-primary-action {
+  font-family: var(--jrpg-font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Narrow viewports: stack the two windows vertically. */
+@media (max-width: 520px) {
+  .jrpg-utility-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------
+   Step 4b/c — Pack and Magic hubs in JRPG skin (CSS-only pass).
+   The hub markup is large and threaded through focus/nav selectors,
+   so we reskin via CSS rather than rewriting HTML. The existing
+   .hub-window becomes a JRPG window, tabs become plain options with
+   a ► cursor on the active tab, and filter chips drop to minimal
+   text buttons. Item/spell rows gain the ► cursor on .active.
+   ------------------------------------------------------------ */
+
+.hub-window {
+  background: var(--jrpg-window-fill) !important;
+  border: 3px double var(--jrpg-border) !important;
+  border-radius: 4px !important;
+  box-shadow: var(--jrpg-window-glow) !important;
+  color: var(--jrpg-text) !important;
+}
+
+.hub-window,
+.hub-window * {
+  font-family: var(--jrpg-font-body);
+}
+
+.hub-window .panel-title,
+.hub-window .hub-section-title,
+.hub-window .pack-section-title,
+.hub-window .magic-section-title,
+.hub-window .loadout-heading {
+  font-family: var(--jrpg-font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jrpg-text);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+
+/* Top-level tabs (Pack / Magic / Guide) — JRPG cursor on active. */
+.hub-window .hub-tabs {
+  display: flex;
+  gap: 14px;
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+}
+
+.hub-window .hub-tab {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--jrpg-text-dim) !important;
+  font-family: var(--jrpg-font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 15px;
+  padding: 4px 8px 4px 20px !important;
+  position: relative;
+  min-height: 0 !important;
+  min-width: 0 !important;
+}
+
+.hub-window .hub-tab::before {
+  content: "\25B6";
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--jrpg-cursor);
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 90ms ease-out;
+}
+
+.hub-window .hub-tab.active,
+.hub-window .hub-tab:focus-visible,
+.hub-window .hub-tab:hover {
+  color: var(--jrpg-cursor) !important;
+}
+
+.hub-window .hub-tab.active::before,
+.hub-window .hub-tab:focus-visible::before,
+.hub-window .hub-tab:hover::before {
+  opacity: 1;
+}
+
+/* Filter chip strip — minimal: small inline text options, not colored pills. */
+.hub-window .hub-filter-chip {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  color: var(--jrpg-text-dim) !important;
+  font-family: var(--jrpg-font-body);
+  font-size: 13px;
+  padding: 3px 10px !important;
+  text-transform: none;
+  letter-spacing: normal;
+  min-height: 0 !important;
+  font-weight: 400;
+}
+
+.hub-window .hub-filter-chip.active,
+.hub-window .hub-filter-chip:hover,
+.hub-window .hub-filter-chip:focus-visible {
+  color: var(--jrpg-cursor) !important;
+  border-color: var(--jrpg-cursor) !important;
+  background: transparent !important;
+}
+
+/* Item / spell rows — ► cursor on the active row. */
+.hub-window .pack-item-row,
+.hub-window .magic-card-select {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  padding: 6px 8px 6px 24px !important;
+  color: var(--jrpg-text) !important;
+  font-family: var(--jrpg-font-body);
+  font-size: 15px !important;
+  position: relative;
+  min-height: 0 !important;
+  text-align: left;
+}
+
+.hub-window .pack-item-row::before,
+.hub-window .magic-card-select::before {
+  content: "\25B6";
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--jrpg-cursor);
+  opacity: 0;
+  font-size: 12px;
+  transition: opacity 90ms ease-out;
+}
+
+.hub-window .pack-item-row.active,
+.hub-window .pack-item-row:hover,
+.hub-window .pack-item-row:focus-visible,
+.hub-window .magic-card-select.active,
+.hub-window .magic-card-select:hover,
+.hub-window .magic-card-select:focus-visible {
+  color: var(--jrpg-cursor) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.hub-window .pack-item-row.active::before,
+.hub-window .pack-item-row:hover::before,
+.hub-window .pack-item-row:focus-visible::before,
+.hub-window .magic-card-select.active::before,
+.hub-window .magic-card-select:hover::before,
+.hub-window .magic-card-select:focus-visible::before {
+  opacity: 1;
+}
+
+/* Kill italic on item names — only the focused detail card gets italic. */
+.hub-window .pack-item-row em,
+.hub-window .pack-item-row .item-name {
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* Detail panels (loadout card, selected-item card, magic detail) — sub-windows. */
+.hub-window .loadout-panel,
+.hub-window .pack-focus-panel,
+.hub-window .pack-focus-card,
+.hub-window .selected-item-card,
+.hub-window .magic-detail-card,
+.hub-window .spell-result-card {
+  background: rgba(12, 26, 58, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  color: var(--jrpg-text) !important;
+}
+
+/* Verb row at the bottom of item detail (Use / Equip / Drop / Back) — these
+   already render as .action-button inside the detail card; give them the
+   JRPG ► treatment without !importanting everything. */
+.hub-window .pack-focus-panel .action-button,
+.hub-window .selected-item-card .action-button,
+.hub-window .magic-detail-card .action-button,
+.hub-window .spell-result-card .action-button {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  color: var(--jrpg-text);
+  font-family: var(--jrpg-font-body);
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+  min-height: 36px;
+  box-shadow: none;
+}
+
+.hub-window .pack-focus-panel .action-button.primary,
+.hub-window .selected-item-card .action-button.primary,
+.hub-window .magic-detail-card .action-button.primary {
+  background: transparent;
+  color: var(--jrpg-cursor);
+  border-color: var(--jrpg-cursor);
+}
+
+.hub-window .pack-focus-panel .action-button:hover,
+.hub-window .selected-item-card .action-button:hover,
+.hub-window .magic-detail-card .action-button:hover {
+  color: var(--jrpg-cursor);
+  border-color: var(--jrpg-cursor);
+}
+
+/* Right-align MP cost in the magic list with the pixel display font. */
+.hub-window .magic-card-select .magic-card-cost,
+.hub-window .magic-card-select .mp-cost {
+  font-family: var(--jrpg-font-display);
+  font-size: 15px;
+  color: var(--jrpg-text-dim);
+  letter-spacing: 0.04em;
+}
+
+/* ------------------------------------------------------------
+   Step 5 — event ticker as a JRPG message window.
+   The existing #event-ticker.message-log already auto-hides when
+   empty. We reskin it to the navy gradient / double-border look
+   and convert the leading chip ("T1", "Next", "Pressure", etc.)
+   into a small icon glyph so it reads as severity, not as a
+   clickable pill.
+   ------------------------------------------------------------ */
+
+#event-ticker.message-log {
+  background: var(--jrpg-window-fill) !important;
+  border: 3px double var(--jrpg-border) !important;
+  border-radius: 4px !important;
+  box-shadow: var(--jrpg-window-glow) !important;
+  color: var(--jrpg-text);
+  padding: 8px 12px !important;
+  font-family: var(--jrpg-font-body);
+}
+
+#event-ticker .event-ticker-line {
+  display: flex;
+  gap: 10px;
+  padding: 2px 0;
+  font-size: 14px;
+  line-height: 1.3;
+  color: var(--jrpg-text);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+#event-ticker .event-ticker-turn {
+  font-family: var(--jrpg-font-display);
+  font-size: 13px;
+  color: var(--jrpg-text-dim);
+  min-width: 44px;
+  letter-spacing: 0.05em;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: left;
+}
+
+#event-ticker .event-ticker-text {
+  color: var(--jrpg-text);
+}
+
+/* Severity tones: leading color dot via pseudo-element instead of chip. */
+#event-ticker .event-ticker-line.ticker-bad .event-ticker-turn {
+  color: var(--jrpg-alert);
+}
+#event-ticker .event-ticker-line.ticker-bad .event-ticker-text {
+  color: var(--jrpg-alert);
+}
+#event-ticker .event-ticker-line.ticker-warning .event-ticker-turn {
+  color: var(--jrpg-cursor);
+}
+#event-ticker .event-ticker-line.ticker-warning .event-ticker-text {
+  color: var(--jrpg-cursor);
+}
+#event-ticker .event-ticker-line.ticker-good .event-ticker-turn {
+  color: var(--jrpg-mp);
+}
+
+/* ------------------------------------------------------------
+   Step 6 — title screen refresh.
+   Full-bleed cinematic, one windowed menu with the \u25ba cursor.
+   Legacy title-showcase / audio banner / hero-footer collapse.
+   ------------------------------------------------------------ */
+
+.title-screen .title-showcase-content {
+  gap: 18px;
+}
+
+.title-screen .title-launcher-copy-hero {
+  text-align: center;
+}
+
+.title-screen .title-screen-kicker {
+  font-family: var(--jrpg-font-display);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--jrpg-cursor);
+  opacity: 0.85;
+}
+
+.title-screen .title-screen-heading {
+  font-family: "Cinzel", var(--jrpg-font-display), serif;
+  font-size: clamp(40px, 11vw, 72px);
+  letter-spacing: 0.04em;
+  color: var(--jrpg-text);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.7), 0 0 24px rgba(255, 255, 255, 0.18);
+  margin: 4px 0;
+}
+
+.title-screen .title-screen-copy {
+  font-family: var(--jrpg-font-body);
+  font-size: 15px;
+  color: var(--jrpg-text-dim);
+  letter-spacing: 0.02em;
+}
+
+.title-screen .title-audio-banner {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  opacity: 0.6;
+}
+
+.title-screen .title-audio-banner .title-audio-toggle {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  color: var(--jrpg-text-dim);
+  font-family: var(--jrpg-font-body);
+  font-size: 13px;
+  padding: 4px 10px;
+  text-transform: none;
+  letter-spacing: normal;
+  min-height: 28px;
+}
+
+.title-screen .title-actions {
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--jrpg-window-fill);
+  border: 3px double var(--jrpg-border);
+  border-radius: 4px;
+  box-shadow: var(--jrpg-window-glow);
+  align-items: stretch;
+}
+
+.title-screen .title-actions .action-button {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  color: var(--jrpg-text);
+  font-family: var(--jrpg-font-body);
+  font-size: 17px;
+  padding: 6px 12px 6px 26px !important;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  min-height: 36px !important;
+  position: relative;
+}
+
+.title-screen .title-actions .action-button::before {
+  content: "\25B6";
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--jrpg-cursor);
+  opacity: 0;
+  font-size: 13px;
+  transition: opacity 90ms ease-out;
+}
+
+.title-screen .title-actions .action-button.primary,
+.title-screen .title-actions .action-button:hover,
+.title-screen .title-actions .action-button:focus-visible {
+  color: var(--jrpg-cursor) !important;
+  background: transparent !important;
+}
+
+.title-screen .title-actions .action-button.primary::before,
+.title-screen .title-actions .action-button:hover::before,
+.title-screen .title-actions .action-button:focus-visible::before {
+  opacity: 1;
+}
+
+/* ------------------------------------------------------------
+   Step 7 — character creation, level-up, and dialog modals in
+   JRPG skin. We reskin via CSS; the creation sheet preserves its
+   two-column layout on desktop and stacks on narrow phones.
+   ------------------------------------------------------------ */
+
+.creation-sheet {
+  background: linear-gradient(180deg, rgba(4, 10, 24, 0.97), rgba(2, 6, 18, 0.98));
+  border: 2px solid rgba(255, 255, 255, 0.18);
+}
+
+.creation-sheet .creation-sheet-heading {
+  font-family: var(--jrpg-font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jrpg-text);
+}
+
+.creation-sheet .creation-sheet-subheading {
+  font-family: var(--jrpg-font-body);
+  color: var(--jrpg-text-dim);
+  font-size: 14px;
+}
+
+.creation-sheet .field-label,
+.creation-sheet .creation-label {
+  font-family: var(--jrpg-font-display);
+  color: var(--jrpg-text-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+.creation-sheet .creation-preview-panel {
+  background: var(--jrpg-window-fill) !important;
+  border: 3px double var(--jrpg-border) !important;
+  border-radius: 4px !important;
+  box-shadow: var(--jrpg-window-glow) !important;
+  color: var(--jrpg-text);
+}
+
+.creation-sheet .creation-preview-title {
+  font-family: "Cinzel", var(--jrpg-font-display), serif;
+  color: var(--jrpg-text);
+}
+
+.creation-sheet .creation-preview-subtitle {
+  font-family: var(--jrpg-font-display);
+  color: var(--jrpg-cursor);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+/* Level-up modal — when the game renders its level-up sheet, give it
+   the JRPG window feel. Uses the existing .mobile-sheet base class. */
+.mobile-sheet[data-mode="levelup"],
+.modal.mobile-sheet .modal-title:has(+ * .spell-learn-group) {
+  /* Targeted further via the parent modal chrome below. */
+}
+
+/* Modal chrome — any .modal-frame inherits the navy/double-border look
+   automatically via the :root tokens. This rule gently lifts the panel
+   background so the content (already restyled above) sits correctly. */
+.modal-frame.jrpg-utility-sheet,
+.modal-frame.creation-sheet,
+.modal-frame.title-screen {
+  /* Handled above per-sheet; this is documentation. */
+}
+
+/* ============================================================
+   POLISH + PERFORMANCE + RESPONSIVE PASS
+   Scopes everything below via [data-jrpg-ui="true"] on the shell
+   (set once at Game boot). Attribute selectors are cheaper than
+   the :has() rules used earlier in this file, and they let us
+   opt specific legacy elements out of the JRPG treatment by
+   dropping the attribute — useful for A/B or debugging.
+   ============================================================ */
+
+/* ---- performance: containment ---- */
+
+.jrpg-window,
+#event-ticker.message-log {
+  contain: layout style;              /* prevent descendants from reflowing the tree */
+}
+
+.jrpg-pressure-banner {
+  contain: layout style paint;        /* also paint-contain since it's absolutely positioned */
+  will-change: opacity;
+}
+
+/* ---- pressure state via dataset attribute (replaces class toggles) ---- */
+
+[data-jrpg-pressure="calm"]   { --jrpg-border: #ffffff; }
+[data-jrpg-pressure="rising"] { --jrpg-border: var(--jrpg-cursor); }
+[data-jrpg-pressure="leave"]  { --jrpg-border: var(--jrpg-alert); }
+
+.board-stage[data-jrpg-pressure="rising"] .board-frame {
+  box-shadow: 0 0 0 2px var(--jrpg-cursor), 0 0 18px rgba(245, 197, 96, 0.3);
+  transition: box-shadow 240ms ease-out;
+}
+
+.board-stage[data-jrpg-pressure="leave"] .board-frame {
+  box-shadow: 0 0 0 2px var(--jrpg-alert), 0 0 22px rgba(217, 74, 58, 0.5);
+  transition: box-shadow 240ms ease-out;
+  animation: jrpg-board-pulse 1.6s ease-in-out infinite;
+  will-change: box-shadow;
+}
+
+.board-stage[data-jrpg-pressure="calm"] .board-frame {
+  transition: box-shadow 240ms ease-out;
+}
+
+/* Smooth border-color transition when pressure bucket changes. */
+.mobile-app[data-jrpg-ui="true"] .jrpg-window {
+  transition: border-color 240ms ease-out, box-shadow 240ms ease-out;
+}
+
+/* ---- polish: unify primary/secondary modal buttons ---- */
+
+/* Any .action-button.primary that lives inside a JRPG-flavored modal sheet
+   collapses to the JRPG ghost-outline treatment with the \u25ba cursor. No more
+   solid gold fills for Return to Run / Start Run / Use / Cast / etc.
+   Buttons that already carry .jrpg-window-option are excluded — those are
+   menu items inside a window and should stay borderless (the window frames
+   them; individual borders would be visual clutter). */
+[data-jrpg-ui="true"] .jrpg-utility-sheet .action-button.primary:not(.jrpg-window-option),
+[data-jrpg-ui="true"] .jrpg-utility-sheet .action-button:not(.primary):not(.jrpg-window-option),
+[data-jrpg-ui="true"] .creation-sheet .creation-actions .action-button:not(.jrpg-window-option),
+[data-jrpg-ui="true"] .title-screen .title-actions .action-button:not(.jrpg-window-option),
+[data-jrpg-ui="true"] .modal-frame .modal-actions .action-button:not(.jrpg-window-option) {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  color: var(--jrpg-text) !important;
+  font-family: var(--jrpg-font-body) !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  padding: 6px 14px !important;
+  min-height: 38px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  text-shadow: none !important;
+}
+
+[data-jrpg-ui="true"] .jrpg-utility-sheet .action-button.primary,
+[data-jrpg-ui="true"] .creation-sheet .creation-actions .action-button.primary,
+[data-jrpg-ui="true"] .title-screen .title-actions .action-button.primary,
+[data-jrpg-ui="true"] .modal-frame .modal-actions .action-button.primary {
+  color: var(--jrpg-cursor) !important;
+  border-color: var(--jrpg-cursor) !important;
+}
+
+[data-jrpg-ui="true"] .modal-frame .modal-actions .action-button:hover,
+[data-jrpg-ui="true"] .modal-frame .modal-actions .action-button:focus-visible {
+  color: var(--jrpg-cursor) !important;
+  border-color: var(--jrpg-cursor) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* ---- polish: top-band chips (run-status, pressure-status, music, menu) ---- */
+
+[data-jrpg-ui="true"] .top-band.panel {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 4px 8px;
+}
+
+[data-jrpg-ui="true"] .top-band .utility-chip {
+  background: var(--jrpg-window-fill) !important;
+  border: 2px double var(--jrpg-border) !important;
+  border-radius: 3px !important;
+  color: var(--jrpg-text) !important;
+  font-family: var(--jrpg-font-body);
+  font-size: 13px !important;
+  padding: 4px 10px !important;
+  box-shadow: none !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+}
+
+[data-jrpg-ui="true"] .top-band .utility-chip.utility-pressure-status.tone-warning {
+  color: var(--jrpg-cursor) !important;
+  --jrpg-border: var(--jrpg-cursor);
+}
+
+[data-jrpg-ui="true"] .top-band .utility-chip.utility-pressure-status.tone-bad {
+  color: var(--jrpg-alert) !important;
+  --jrpg-border: var(--jrpg-alert);
+}
+
+[data-jrpg-ui="true"] .top-band .utility-menu-button {
+  background: var(--jrpg-window-fill) !important;
+  border: 2px double var(--jrpg-border) !important;
+  border-radius: 3px !important;
+  color: var(--jrpg-text) !important;
+  font-family: var(--jrpg-font-body) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 4px 12px !important;
+  min-height: 30px !important;
+  box-shadow: none !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+}
+
+[data-jrpg-ui="true"] .top-band .utility-menu-button:hover,
+[data-jrpg-ui="true"] .top-band .utility-menu-button:focus-visible {
+  color: var(--jrpg-cursor) !important;
+  --jrpg-border: var(--jrpg-cursor);
+}
+
+/* ---- polish: board-overlay chips (Magic, map, spell tray) ---- */
+
+[data-jrpg-ui="true"] .board-overlays .map-chip-button,
+[data-jrpg-ui="true"] .board-overlays .spell-chip-button,
+[data-jrpg-ui="true"] .board-overlays .utility-menu-button {
+  background: var(--jrpg-window-fill) !important;
+  border: 2px double var(--jrpg-border) !important;
+  border-radius: 3px !important;
+  color: var(--jrpg-text) !important;
+  font-family: var(--jrpg-font-body) !important;
+  font-size: 13px !important;
+  padding: 4px 10px !important;
+  box-shadow: none !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  min-height: auto !important;
+}
+
+/* ---- polish: d-pad buttons ---- */
+
+[data-jrpg-ui="true"] .touch-pad .pad-button {
+  background: var(--jrpg-window-fill) !important;
+  border: 2px double var(--jrpg-border) !important;
+  border-radius: 3px !important;
+  color: var(--jrpg-text) !important;
+  font-family: var(--jrpg-font-display) !important;
+  font-size: 16px !important;
+  box-shadow: none !important;
+  min-height: 44px !important;
+  min-width: 44px !important;
+}
+
+[data-jrpg-ui="true"] .touch-pad .pad-button:hover,
+[data-jrpg-ui="true"] .touch-pad .pad-button:focus-visible {
+  color: var(--jrpg-cursor) !important;
+  --jrpg-border: var(--jrpg-cursor);
+}
+
+[data-jrpg-ui="true"] .touch-pad .pad-center {
+  --jrpg-border: var(--jrpg-cursor);
+  color: var(--jrpg-cursor) !important;
+}
+
+/* ---- polish: kill blue-fill filter chip active state ---- */
+
+[data-jrpg-ui="true"] .hub-window .hub-filter-chip.active {
+  background: transparent !important;
+  color: var(--jrpg-cursor) !important;
+  border-color: var(--jrpg-cursor) !important;
+}
+
+/* ---- polish: pack focus panel - kill legacy gold Use and dark Drop ---- */
+
+[data-jrpg-ui="true"] .hub-window .pack-focus-panel .action-button,
+[data-jrpg-ui="true"] .hub-window .selected-item-card .action-button,
+[data-jrpg-ui="true"] .hub-window .magic-detail-card .action-button,
+[data-jrpg-ui="true"] .hub-window .spell-result-card .action-button {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  color: var(--jrpg-text) !important;
+  font-family: var(--jrpg-font-body) !important;
+  font-weight: 500 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 5px 12px !important;
+  min-height: 34px !important;
+}
+
+[data-jrpg-ui="true"] .hub-window .pack-focus-panel .action-button.primary,
+[data-jrpg-ui="true"] .hub-window .selected-item-card .action-button.primary,
+[data-jrpg-ui="true"] .hub-window .magic-detail-card .action-button.primary {
+  color: var(--jrpg-cursor) !important;
+  border-color: var(--jrpg-cursor) !important;
+}
+
+[data-jrpg-ui="true"] .hub-window .pack-focus-panel .action-button:hover,
+[data-jrpg-ui="true"] .hub-window .selected-item-card .action-button:hover,
+[data-jrpg-ui="true"] .hub-window .magic-detail-card .action-button:hover,
+[data-jrpg-ui="true"] .hub-window .spell-result-card .action-button:hover {
+  color: var(--jrpg-cursor) !important;
+  border-color: var(--jrpg-cursor) !important;
+}
+
+/* ---- polish: small inline pills (Potion or Scroll, Tray 1 selected, etc.) ---- */
+
+[data-jrpg-ui="true"] .hub-window .item-category-pill,
+[data-jrpg-ui="true"] .hub-window .pack-focus-panel .chip,
+[data-jrpg-ui="true"] .hub-window .pack-focus-panel .pill,
+[data-jrpg-ui="true"] .hub-window .selected-item-card .chip,
+[data-jrpg-ui="true"] .hub-window .selected-item-card .pill,
+[data-jrpg-ui="true"] .hub-window .magic-detail-card .chip,
+[data-jrpg-ui="true"] .hub-window .spell-result-card .chip {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 2px !important;
+  color: var(--jrpg-text-dim) !important;
+  font-family: var(--jrpg-font-display) !important;
+  font-size: 12px !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  padding: 2px 8px !important;
+  font-weight: 400 !important;
+}
+
+/* ---- polish: "Do Not Sell" checkbox row ---- */
+
+[data-jrpg-ui="true"] .hub-window .pack-sell-toggle,
+[data-jrpg-ui="true"] .hub-window .inline-checkbox {
+  color: var(--jrpg-text-dim) !important;
+  font-family: var(--jrpg-font-body) !important;
+  font-size: 13px !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+/* ---- polish: modal-actions row — push to the right and uppercase ---- */
+
+[data-jrpg-ui="true"] .modal-frame .modal-actions {
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px 16px;
+  background: transparent !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ---- responsive: tablet breakpoint (768px+) ---- */
+
+@media (min-width: 768px) {
+  [data-jrpg-ui="true"] .bottom-band:has(.jrpg-window) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "status command"
+      "touch  touch";
+    gap: 12px;
+  }
+  [data-jrpg-ui="true"] .jrpg-command-note {
+    display: inline-block !important;   /* tablets have room for the hint */
+  }
+  [data-jrpg-ui="true"] .jrpg-utility-sheet,
+  [data-jrpg-ui="true"] .creation-sheet,
+  [data-jrpg-ui="true"] .modal-frame {
+    max-width: 640px;
+    margin-inline: auto;
+  }
+  [data-jrpg-ui="true"] .jrpg-utility-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  }
+  [data-jrpg-ui="true"] .jrpg-window {
+    font-size: 16px;
+  }
+  [data-jrpg-ui="true"] .jrpg-window-title {
+    font-size: 16px;
+  }
+  [data-jrpg-ui="true"] .jrpg-bar {
+    font-size: 17px;
+  }
+}
+
+/* ---- responsive: desktop breakpoint (1280px+) ---- */
+
+@media (min-width: 1280px) {
+  [data-jrpg-ui="true"] .jrpg-utility-sheet,
+  [data-jrpg-ui="true"] .creation-sheet,
+  [data-jrpg-ui="true"] .modal-frame {
+    max-width: 720px;
+  }
+  [data-jrpg-ui="true"] .jrpg-utility-sheet .modal-title {
+    font-size: 26px;
+  }
+  /* Main-menu verb list gets slightly taller targets on a mouse build. */
+  [data-jrpg-ui="true"] .jrpg-utility-verbs .jrpg-window-option.action-button {
+    padding-top: 7px;
+    padding-bottom: 7px;
+    font-size: 17px;
+  }
+  /* Pack/Magic hub content panels stretch. */
+  [data-jrpg-ui="true"] .hub-window {
+    max-width: 900px;
+    margin-inline: auto;
+  }
+}
+
+/* ---- responsive: ultra-wide guard (1600px+) ---- */
+
+@media (min-width: 1600px) {
+  [data-jrpg-ui="true"] .jrpg-utility-sheet,
+  [data-jrpg-ui="true"] .creation-sheet,
+  [data-jrpg-ui="true"] .modal-frame {
+    max-width: 820px;
+  }
+  [data-jrpg-ui="true"] .hub-window {
+    max-width: 1080px;
+  }
+}
+
+/* ---- reduced-motion final sweep ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  [data-jrpg-ui="true"] .jrpg-window,
+  [data-jrpg-ui="true"] .board-stage[data-jrpg-pressure] .board-frame {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ---- polish: missed-class cleanup ---- */
+/* The pack-inspector hierarchy uses different class names than I anticipated.
+   Catch them here with the same ghost-outline treatment. */
+
+[data-jrpg-ui="true"] .hub-window .pack-inspector-panel,
+[data-jrpg-ui="true"] .hub-window .pack-inspector-card,
+[data-jrpg-ui="true"] .hub-window .pack-decision-panel,
+[data-jrpg-ui="true"] .hub-window .pack-decision-result-card,
+[data-jrpg-ui="true"] .hub-window .pack-classic-list,
+[data-jrpg-ui="true"] .hub-window .pack-group-list {
+  background: rgba(12, 26, 58, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  color: var(--jrpg-text) !important;
+}
+
+[data-jrpg-ui="true"] .hub-window .pack-inspector-panel .action-button,
+[data-jrpg-ui="true"] .hub-window .pack-inspector-card .action-button,
+[data-jrpg-ui="true"] .hub-window .pack-decision-panel .action-button,
+[data-jrpg-ui="true"] .hub-window .pack-decision-result-card .action-button,
+[data-jrpg-ui="true"] .hub-window .pack-inspector-actions .action-button {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  color: var(--jrpg-text) !important;
+  font-family: var(--jrpg-font-body) !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  padding: 5px 12px !important;
+  min-height: 34px !important;
+}
+
+[data-jrpg-ui="true"] .hub-window .pack-inspector-panel .action-button.primary,
+[data-jrpg-ui="true"] .hub-window .pack-inspector-card .action-button.primary,
+[data-jrpg-ui="true"] .hub-window .pack-decision-panel .action-button.primary,
+[data-jrpg-ui="true"] .hub-window .pack-decision-result-card .action-button.primary,
+[data-jrpg-ui="true"] .hub-window .pack-inspector-actions .action-button.primary {
+  color: var(--jrpg-cursor) !important;
+  border-color: var(--jrpg-cursor) !important;
+}
+
+/* Strong override for the Return to Run button in the utility menu. The
+   legacy .action-button.primary gradient at styles.css:706 was still
+   winning on this one because .utility-command-actions has its own
+   background rule at :7405. Force ghost outline here. */
+
+[data-jrpg-ui="true"] .jrpg-utility-sheet .utility-command-actions,
+[data-jrpg-ui="true"] .jrpg-utility-sheet .jrpg-utility-actions {
+  background: transparent !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 12px 16px 16px !important;
+}
+
+[data-jrpg-ui="true"] .jrpg-utility-sheet .utility-menu-primary-action.action-button,
+[data-jrpg-ui="true"] .jrpg-utility-sheet .utility-menu-primary-action.action-button.primary {
+  background: transparent !important;
+  background-image: none !important;
+  border: 2px solid var(--jrpg-cursor) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  color: var(--jrpg-cursor) !important;
+  font-family: var(--jrpg-font-body) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  text-shadow: none !important;
+  padding: 8px 18px !important;
+  min-height: 42px !important;
+  width: auto !important;
+  margin-inline: auto !important;
+}
+
+[data-jrpg-ui="true"] .jrpg-utility-sheet .utility-menu-primary-action.action-button:hover,
+[data-jrpg-ui="true"] .jrpg-utility-sheet .utility-menu-primary-action.action-button:focus-visible {
+  background: rgba(245, 197, 96, 0.08) !important;
+}
+
+/* Same treatment for the Begin Adventure / Continue / Start Run buttons. */
+[data-jrpg-ui="true"] .creation-sheet .creation-actions .action-button.primary,
+[data-jrpg-ui="true"] .title-screen .title-actions .action-button.primary {
+  background: transparent !important;
+  background-image: none !important;
+  border: 2px solid var(--jrpg-cursor) !important;
+  border-radius: 2px !important;
+  color: var(--jrpg-cursor) !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+/* ============================================================
+   SMART INVENTORY — glyph badges + noise dim + shop affordability.
+
+   Motivation: filters are a retreat. A smart-sorted list with
+   single-char signal glyphs lets players scan the pack at a
+   glance without changing filter chips every time they open it.
+
+   Visual contract:
+     • Each .pack-item-row gets a fixed 22px glyph column on the left
+     • .glyph-upgrade  → gold \u2191    (upgrade over equipped)
+     • .glyph-urgent   → red  !     (use me now — matches recommendation)
+     • .glyph-unknown  → blue ?     (unidentified)
+     • .glyph-cursed   → red  \u00D7    (cursed, usually also .is-noise)
+     • .glyph-damaged  → dim  ~     (charges spent / low durability)
+     • .is-noise       → opacity .55 (cursed, spent, duplicate spellbook)
+     • .is-unaffordable → can't-buy treatment in shops
+   ============================================================ */
+
+[data-jrpg-ui="true"] .hub-window .pack-item-row {
+  display: grid !important;
+  grid-template-columns: 22px minmax(0, 1fr) !important;
+  column-gap: 8px;
+  align-items: center;
+  padding-left: 8px !important;         /* remove the 24px ::before cursor pad */
+}
+
+[data-jrpg-ui="true"] .hub-window .pack-item-row::before {
+  /* The existing ► cursor now lives in the glyph column instead of its
+     own pseudo, so we don't double up. Still shown via class on active. */
+  display: none;
+}
+
+[data-jrpg-ui="true"] .hub-window .pack-item-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  min-height: 22px;
+  font-family: var(--jrpg-font-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--jrpg-text-dim);
+  line-height: 1;
+  user-select: none;
+}
+
+[data-jrpg-ui="true"] .hub-window .pack-item-row .pack-item-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The active row's \u25ba cursor moves into the glyph column. */
+[data-jrpg-ui="true"] .hub-window .pack-item-row.active .pack-item-glyph::after {
+  content: "\25B6";
+  color: var(--jrpg-cursor);
+  font-size: 13px;
+  margin-left: 2px;
+}
+
+/* Glyph color variants. */
+[data-jrpg-ui="true"] .hub-window .pack-item-row.glyph-upgrade .pack-item-glyph { color: var(--jrpg-cursor); }
+[data-jrpg-ui="true"] .hub-window .pack-item-row.glyph-urgent  .pack-item-glyph { color: var(--jrpg-alert); }
+[data-jrpg-ui="true"] .hub-window .pack-item-row.glyph-unknown .pack-item-glyph { color: var(--jrpg-mp); }
+[data-jrpg-ui="true"] .hub-window .pack-item-row.glyph-cursed  .pack-item-glyph { color: var(--jrpg-alert); }
+[data-jrpg-ui="true"] .hub-window .pack-item-row.glyph-damaged .pack-item-glyph { color: var(--jrpg-text-dim); }
+
+/* Noise dim — applied to cursed / already-learned / spent items so signal pops. */
+[data-jrpg-ui="true"] .hub-window .pack-item-row.is-noise {
+  opacity: 0.55;
+}
+
+[data-jrpg-ui="true"] .hub-window .pack-item-row.is-noise:hover,
+[data-jrpg-ui="true"] .hub-window .pack-item-row.is-noise:focus-visible,
+[data-jrpg-ui="true"] .hub-window .pack-item-row.is-noise.active {
+  opacity: 1; /* when the player actively engages with a noise item, show it full */
+}
+
+/* Shop: can't-afford treatment. The row stays scannable but dims and the
+   inline meta already surfaces the cost — player sees the price they can't
+   pay without a secondary warning. */
+[data-jrpg-ui="true"] .hub-window .pack-item-row.is-unaffordable {
+  opacity: 0.45;
+}
+
+[data-jrpg-ui="true"] .hub-window .pack-item-row.is-unaffordable .pack-item-meta {
+  color: var(--jrpg-alert) !important;
+}
+
+[data-jrpg-ui="true"] .hub-window .pack-item-row.is-unaffordable:hover,
+[data-jrpg-ui="true"] .hub-window .pack-item-row.is-unaffordable:focus-visible {
+  opacity: 0.7; /* still visually distinct, but readable when engaged */
+}
+
+/* Upgrade rows get a subtle amber left-edge underline even when not active,
+   so the "this beats what you have" signal survives when the eye is scanning. */
+[data-jrpg-ui="true"] .hub-window .pack-item-row.glyph-upgrade:not(.active) {
+  box-shadow: inset 2px 0 0 var(--jrpg-cursor);
+}
+
+[data-jrpg-ui="true"] .hub-window .pack-item-row.glyph-urgent:not(.active) {
+  box-shadow: inset 2px 0 0 var(--jrpg-alert);
+}
+
+/* ============================================================
+   SHOP "SELL ALL UNMARKED" HERO ROW
+   Pinned at the top of the sell list. Treated as a gold-bordered
+   window option so it reads as the primary action without hiding
+   the individual-item rows below. The star glyph + concrete gold
+   preview ("+88 gp") makes the outcome obvious before the tap.
+   ============================================================ */
+
+[data-jrpg-ui="true"] .hub-window .shop-transaction-row-bulk.is-hero {
+  background: linear-gradient(180deg, rgba(245, 197, 96, 0.08), rgba(245, 197, 96, 0.02)) !important;
+  border: 2px solid var(--jrpg-cursor) !important;
+  border-radius: 3px !important;
+  margin-bottom: 10px;
+  padding: 10px 8px !important;
+  opacity: 1 !important;    /* override .is-noise / .is-unaffordable if they ever apply */
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-jrpg-ui="true"] .hub-window .shop-transaction-row-bulk.is-hero:hover,
+[data-jrpg-ui="true"] .hub-window .shop-transaction-row-bulk.is-hero:focus-visible {
+  background: linear-gradient(180deg, rgba(245, 197, 96, 0.18), rgba(245, 197, 96, 0.06)) !important;
+}
+
+[data-jrpg-ui="true"] .hub-window .shop-transaction-row-bulk.is-hero .pack-item-glyph {
+  color: var(--jrpg-cursor) !important;
+  font-size: 18px;
+}
+
+[data-jrpg-ui="true"] .hub-window .shop-transaction-row-bulk.is-hero .pack-item-name {
+  color: var(--jrpg-cursor) !important;
+  font-family: var(--jrpg-font-display);
+  font-size: 16px !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+[data-jrpg-ui="true"] .hub-window .shop-transaction-row-bulk.is-hero .pack-item-meta {
+  color: #9ae67a !important;   /* soft "profit green" for the gold preview line */
+  font-family: var(--jrpg-font-display);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+}
+
+[data-jrpg-ui="true"] .hub-window .shop-transaction-row-bulk.is-hero .pack-row-chip {
+  background: var(--jrpg-cursor) !important;
+  color: var(--jrpg-navy-deep) !important;
+  font-family: var(--jrpg-font-display);
+  font-size: 11px !important;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  padding: 2px 6px !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+}
+
+[data-jrpg-ui="true"] .hub-window .shop-transaction-row-bulk.is-hero .pack-slot-row-note {
+  color: var(--jrpg-text-dim);
+  font-size: 12px;
+}
+
+[data-jrpg-ui="true"] .hub-window .shop-transaction-row-bulk.is-hero:disabled {
+  opacity: 0.45 !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: transparent !important;
+}
+
+[data-jrpg-ui="true"] .hub-window .shop-transaction-row-bulk.is-hero:disabled .pack-item-name,
+[data-jrpg-ui="true"] .hub-window .shop-transaction-row-bulk.is-hero:disabled .pack-item-glyph {
+  color: var(--jrpg-text-dim) !important;
+}
+
+/* ============================================================
+   MAIN PLAY SCREEN \u2014 aesthetic match to the menus.
+   The board stage becomes a proper JRPG window: double border,
+   navy-tinted outer frame, subtle glow. The top location chip
+   becomes a name-plate banner. All three surfaces (top-band,
+   board, bottom-band) share the same double-border language so
+   the play screen reads as one cohesive JRPG UI.
+   ============================================================ */
+
+[data-jrpg-ui="true"] .board-stage.panel {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+[data-jrpg-ui="true"] .board-frame {
+  background: var(--jrpg-navy-deep);
+  border: 3px double var(--jrpg-border);
+  border-radius: 4px;
+  padding: 2px;
+  box-shadow:
+    var(--jrpg-window-glow),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+[data-jrpg-ui="true"] .board-frame #game-canvas {
+  display: block;
+  border-radius: 2px;
+}
+
+/* Top band — location chip becomes a JRPG name-plate banner:
+   a wide window fragment pinned to the left with uppercase pixel
+   typography. Music/Menu stay as small utility chips on the right. */
+
+[data-jrpg-ui="true"] .top-band {
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+}
+
+[data-jrpg-ui="true"] .top-band .top-band-status {
+  display: flex;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+[data-jrpg-ui="true"] .top-band .utility-run-status {
+  font-family: var(--jrpg-font-display) !important;
+  font-size: 14px !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 14px !important;
+  border-width: 3px !important;
+  border-style: double !important;
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-jrpg-ui="true"] .top-band .utility-pressure-status {
+  font-family: var(--jrpg-font-display) !important;
+  font-size: 12px !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px !important;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+[data-jrpg-ui="true"] .top-band-actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+/* Ensure consistent vertical rhythm between the three play-screen bands. */
+[data-jrpg-ui="true"] .mobile-app {
+  gap: 10px;
+}
+
+[data-jrpg-ui="true"] .board-cluster {
+  display: block;
+}
+
+/* The message log / event ticker is positioned over the board. Give it a
+   tighter top offset so it reads as a classic battle dialog window. */
+[data-jrpg-ui="true"] .board-overlays #event-ticker.message-log {
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  width: auto;
+  max-height: 34%;
+}
+
+/* The "Magic" side chip gets a vertical ribbon-tab treatment so it reads
+   as an anchored JRPG side-panel rather than a floating button. */
+[data-jrpg-ui="true"] .board-overlays .spell-chip-button,
+[data-jrpg-ui="true"] .board-overlays .map-chip-button {
+  writing-mode: initial;       /* explicit reset in case a legacy rule rotated it */
+  font-family: var(--jrpg-font-display) !important;
+  font-size: 13px !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 10px !important;
+}
+
+/* Tablet+ — the play screen can breathe: wider status/command windows,
+   louder name plate. Also keeps the board from getting overly wide. */
+@media (min-width: 768px) {
+  [data-jrpg-ui="true"] .board-frame {
+    max-width: 720px;
+    margin-inline: auto;
+  }
+  [data-jrpg-ui="true"] .top-band .utility-run-status {
+    font-size: 16px !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  [data-jrpg-ui="true"] .board-frame {
+    max-width: 860px;
   }
 }

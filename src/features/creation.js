@@ -133,6 +133,95 @@ function buildChoiceArtMarkup(type, entry) {
   };
 }
 
+function pluralize(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function buildCreationPortraitMarkup(game) {
+  const raceId = resolveRaceId(game.selectedRace);
+  const classId = resolveClassId(game.selectedClass);
+  const raceArt = getRaceArt(raceId);
+  const classArt = getClassArt(classId);
+  const accents = getIdentityAccent(raceId, classId);
+  return `
+    <div class="creation-portrait-frame" style="${styleMap([`--creation-accent:${accents.outer}`, `--creation-accent-soft:${accents.inner}`])}">
+      <div class="creation-portrait-runes" aria-hidden="true"></div>
+      ${renderPixelSprite(classArt.sprite, "creation-portrait-sprite", 7)}
+      <div class="creation-portrait-badge">
+        ${renderPixelSprite(raceArt.sprite, "creation-race-sprite", 2)}
+        <span>${escapeHtml(raceArt.title)}</span>
+      </div>
+    </div>
+  `;
+}
+
+function getContractPresentation(game, contractId = "") {
+  if (!contractId || typeof game.getAvailableContracts !== "function") {
+    return null;
+  }
+  return game.getAvailableContracts().find((contract) => contract.id === contractId) || null;
+}
+
+function populateCreationPreview(fragment, game, stats) {
+  const previewPortrait = fragment.getElementById("creation-preview-portrait");
+  const previewTitle = fragment.getElementById("creation-preview-title");
+  const previewSubtitle = fragment.getElementById("creation-preview-subtitle");
+  const previewSummary = fragment.getElementById("creation-preview-summary");
+  const previewFacts = fragment.getElementById("creation-preview-facts");
+  const previewActions = fragment.getElementById("creation-preview-actions");
+  const race = getRace(game.selectedRace);
+  const role = getClass(game.selectedClass);
+  const creationPreview = typeof game.getCreationPersistencePreview === "function"
+    ? game.getCreationPersistencePreview(role.id)
+    : {};
+  const activeContract = creationPreview.activeContract || getContractPresentation(game, game.getActiveContract?.(false)?.id || "");
+  const recommendedModel = typeof game.getRecommendedContract === "function" ? game.getRecommendedContract() : null;
+  const recommendedContract = getContractPresentation(game, recommendedModel?.id || "") || recommendedModel;
+  const previewFactsMarkup = [
+    ["Bloodline", race.name],
+    ["Calling", role.name],
+    ["Attributes", `${stats.str}/${stats.dex}/${stats.con}/${stats.int}`],
+    ["Starting kit", pluralize(role.startItems.length, "item")],
+    ["Known spells", role.spells.length > 0 ? pluralize(role.spells.length, "spell") : "None"],
+    ["Contract", activeContract?.name || "None armed"]
+  ].map(([label, value]) => `
+    <div class="creation-preview-fact">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>
+  `).join("");
+  const summaryParts = [
+    race.summary,
+    role.summary,
+    activeContract ? `Next run contract armed: ${activeContract.name}.` : "No contract armed for the next run.",
+    creationPreview.mastery?.summary || ""
+  ].filter(Boolean);
+
+  if (previewPortrait) {
+    previewPortrait.innerHTML = buildCreationPortraitMarkup(game);
+  }
+  if (previewTitle) {
+    previewTitle.textContent = game.creationName || "Morgan";
+  }
+  if (previewSubtitle) {
+    previewSubtitle.textContent = `${race.name} ${role.name}`;
+  }
+  if (previewSummary) {
+    previewSummary.textContent = summaryParts.join(" ");
+  }
+  if (previewFacts) {
+    previewFacts.innerHTML = previewFactsMarkup;
+  }
+  if (previewActions) {
+    previewActions.innerHTML = recommendedContract?.id
+      ? `
+        <button class="action-button primary creation-preview-contract" data-action="contract-arm-recommended" data-focus-key="creation:contract:recommended" type="button">${escapeHtml(`Arm ${recommendedContract.name || recommendedContract.id}`)}</button>
+        ${recommendedModel?.reason ? `<div class="muted">${escapeHtml(recommendedModel.reason)}</div>` : ""}
+      `
+      : "";
+  }
+}
+
 function getRaceName(raceRef) {
   const race = RACES.find((entry) => entry.id === resolveRaceId(raceRef));
   return race ? race.name : RACES[0].name;
@@ -383,6 +472,7 @@ export function showCreationModal(game, options = {}) {
       </div>
     </div>
   `).join("");
+  populateCreationPreview(fragment, game, stats);
 
   game.modalRoot.innerHTML = "";
   game.modalRoot.appendChild(fragment);
