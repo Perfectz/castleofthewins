@@ -14511,6 +14511,482 @@ function renderBankModal(game, options = {}) {
   });
 }
 
+// src/features/screens/settings-modal.js
+/**
+ * @module screens/settings-modal
+ * @owns Device Settings modal presentation
+ * @reads game.settings, game.gamepadInput
+ * @mutates game.mode (via game.showSimpleModal)
+ *
+ * Extracted from src/game.js. Each row's value button emits a
+ * setting-toggle action with data-setting=<id>. Keep those selectors
+ * stable so the harness and keyboard nav continue to work.
+ */
+
+function renderSettingsModal(game, options = {}) {
+  game.syncAdaptiveLayout();
+  game.clearModalInteractionFeedback();
+  const {
+    preserveScroll = false,
+    focusTarget = null,
+    fallbackFocus = true,
+    closeLabel = "Close",
+    modalReturnContext = null
+  } = options;
+  const settingsGroups = [
+    {
+      title: "Controls",
+      rows: [
+        {
+          label: "Touch Controls",
+          detail: "Show the on-screen movement pad when not hidden.",
+          setting: "touchControlsEnabled",
+          value: game.settings.touchControlsEnabled ? "On" : "Off"
+        },
+        {
+          label: "Hide Touch When Controller Connected",
+          detail: "Cleaner screen for paired joypads.",
+          setting: "controllerHintsEnabled",
+          value: game.settings.controllerHintsEnabled ? "On" : "Off"
+        }
+      ]
+    },
+    {
+      title: "Audio",
+      rows: [
+        {
+          label: "Sound Effects",
+          detail: "Combat, movement, and UI feedback.",
+          setting: "soundEnabled",
+          value: game.settings.soundEnabled ? "On" : "Off"
+        },
+        {
+          label: "Music",
+          detail: "Optional soundtrack with title, town, and dungeon themes.",
+          setting: "musicEnabled",
+          value: game.settings.musicEnabled ? "On" : "Off"
+        }
+      ]
+    },
+    {
+      title: "Display & Accessibility",
+      rows: [
+        {
+          label: "Effect Intensity",
+          detail: "Choose how animated combat and board effects should feel.",
+          setting: "effectIntensity",
+          value: game.settings.effectIntensity
+        },
+        {
+          label: "Reduced Motion",
+          detail: "Prefer simpler flashes over animated travel and pulsing effects.",
+          setting: "reducedMotionEnabled",
+          value: game.settings.reducedMotionEnabled ? "On" : "Off"
+        },
+        {
+          label: "UI Scale",
+          detail: "Alternate between compact and large mobile spacing.",
+          setting: "uiScale",
+          value: game.settings.uiScale
+        }
+      ]
+    }
+  ];
+  game.mode = "modal";
+  game.showSimpleModal("Device Settings", `
+    <div class="workspace-stack settings-sheet">
+      <div class="workspace-summary-strip">
+        <div class="workspace-summary-chip">
+          <span class="workspace-summary-label">Settings</span>
+          <strong>Changes apply instantly in this browser.</strong>
+        </div>
+        <div class="workspace-summary-chip">
+          <span class="workspace-summary-label">Audio</span>
+          <strong>${escapeHtml(`Music ${game.settings.musicEnabled ? "On" : "Off"} | SFX ${game.settings.soundEnabled ? "On" : "Off"}`)}</strong>
+        </div>
+        <div class="workspace-summary-chip">
+          <span class="workspace-summary-label">Display</span>
+          <strong>${escapeHtml(`UI ${game.settings.uiScale} | Motion ${game.settings.reducedMotionEnabled ? "Reduced" : game.settings.effectIntensity}`)}</strong>
+        </div>
+      </div>
+      <div class="workspace-shell settings-shell">
+        <section class="workspace-rail settings-overview-rail">
+          ${game.getMenuQuickStateMarkup({
+            eyebrow: "Device Settings",
+            title: "Tune controls, audio, and display without leaving the run.",
+            detail: "Use the value buttons on the right to cycle each setting."
+          })}
+          <section class="workspace-detail-card">
+            <div class="panel-title">Current Input</div>
+            <div class="workspace-plain-copy">${escapeHtml(game.gamepadInput.isConnected() ? `${game.gamepadInput.getControllerName()} connected. Controller hints can stay hidden when a pad is present.` : "Touch and keyboard remain available. Touch controls can stay visible or hide when a controller connects.")}</div>
+          </section>
+        </section>
+        <section class="workspace-rail-detail settings-detail-rail">
+          ${settingsGroups.map((group) => `
+            <section class="workspace-ledger-group">
+              <div class="panel-title">${escapeHtml(group.title)}</div>
+              <div class="workspace-ledger">
+                ${group.rows.map((row) => `
+                  <div class="workspace-ledger-row settings-ledger-row">
+                    <div>
+                      <strong>${escapeHtml(row.label)}</strong>
+                      <div class="muted">${escapeHtml(row.detail)}</div>
+                    </div>
+                    <button class="menu-button" data-action="setting-toggle" data-setting="${row.setting}" data-focus-key="setting-toggle:${row.setting}" type="button">${escapeHtml(row.value)}</button>
+                  </div>
+                `).join("")}
+              </div>
+            </section>
+          `).join("")}
+        </section>
+      </div>
+    </div>
+  `, {
+    surfaceKey: "settings",
+    preserveScroll,
+    focusTarget,
+    fallbackFocus,
+    closeLabel,
+    modalReturnContext
+  });
+}
+
+// src/features/screens/journal-chronicle-section.js
+/**
+ * @module screens/journal-chronicle-section
+ * @owns Journal "Chronicle" section body markup
+ * @reads game.player.classId, town cycle state, telemetry review, run summary history
+ * @mutates none (pure renderer)
+ *
+ * Extracted from src/game.js. Returns the full HTML body for the
+ * Chronicle tab inside the Journal hub. Selectors (field-guide-*,
+ * workspace-*, message-log classes) and disclosure structure are
+ * preserved byte-for-byte.
+ */
+
+function renderJournalChronicleSection(game) {
+  const townCycle = game.getTownCycleState();
+  const reactions = game.getTownReactionLines();
+  const discoverySummary = game.getKnownDiscoveryLines();
+  const namedLootSummary = game.getNamedLootLines();
+  const featuredStockSummary = Object.entries(townCycle.featuredStock || {})
+    .map(([shopId, itemIds]) => {
+      const label = SHOPS[shopId]?.name;
+      const names = (itemIds || []).map((itemId) => ITEM_DEFS[itemId]?.name).filter(Boolean).join(", ");
+      return label && names ? `${label}: ${names}` : "";
+    })
+    .filter(Boolean)
+    .join(" | ");
+  const telemetrySummary = game.getTelemetrySummary();
+  const telemetryReview = game.getTelemetryReviewSnapshot();
+  const latestSummary = (game.runSummaryHistory || []).at(-1) || game.lastRunSummary;
+  const activeContract = game.getActiveContract(true) || game.getActiveContract(false);
+  const masterySummary = game.getClassMasterySummary(game.player.classId);
+  const archiveMarkup = game.getRunSummaryArchiveMarkup(3);
+  const masteryMarkup = game.getMasteryReviewMarkup(game.player.classId);
+  const contractMarkup = game.getContractReviewMarkup({ interactive: false });
+  const metaReview = telemetryReview.meta || {};
+  const telemetryRecent = telemetryReview.recentEvents.length > 0
+    ? telemetryReview.recentEvents.map((entry) => `<div class="log-line">[T${entry.turn} D${entry.depth}] ${escapeHtml(entry.text)}</div>`).join("")
+    : "<div class='muted'>No run telemetry captured yet.</div>";
+  const latestDigest = latestSummary
+    ? `${latestSummary.outcome} at depth ${latestSummary.extractedDepth}. Greed rooms: ${latestSummary.greedCount}.`
+    : "No completed extraction or death summary is recorded yet.";
+  const townDigest = [
+    game.getTownCycleLabel(),
+    townCycle.turnsUntilRefresh === 1 ? "Next market turnover in 1 turn." : `Next market turnover in ${townCycle.turnsUntilRefresh} turns.`,
+    townCycle.stockSummary,
+    townCycle.rumorSummary
+  ].join(" ");
+  return `
+    <div class="field-guide-article field-guide-article-chronicle">
+      <section class="workspace-detail-card field-guide-article-hero field-guide-article-priority">
+        <div class="panel-title">Digest</div>
+        <div class="workspace-detail-title">${escapeHtml(latestSummary ? (latestSummary.outcome || "Latest run") : "No completed run yet")}</div>
+        <div class="workspace-plain-copy">${escapeHtml(latestDigest)}</div>
+        <div class="workspace-plain-copy muted">${escapeHtml(reactions.lines[0] || townDigest)}</div>
+      </section>
+      <section class="workspace-ledger-group">
+        <div class="panel-title">Discoveries</div>
+        ${game.getFieldGuideBulletListMarkup(
+          discoverySummary.length > 0 ? discoverySummary : ["No written fragments recovered yet."]
+        )}
+      </section>
+      <section class="workspace-ledger-group">
+        <div class="panel-title">Town Digest</div>
+        ${game.getFieldGuideFactListMarkup([
+          ["Cycle", game.getTownCycleLabel()],
+          ["Turnover", townCycle.turnsUntilRefresh === 1 ? "1 turn" : `${townCycle.turnsUntilRefresh} turns`],
+          ["Stock posture", townCycle.stockSummary],
+          ["Rumor posture", townCycle.rumorSummary],
+          ["Featured market", featuredStockSummary || "No featured market picks are posted yet."],
+          ["Town reaction", reactions.lines[0] || "The town has not shifted around your run yet."]
+        ])}
+      </section>
+      <section class="workspace-ledger-group">
+        <div class="panel-title">Named Loot</div>
+        ${game.getFieldGuideBulletListMarkup(
+          namedLootSummary.length > 0 ? namedLootSummary : ["No signature finds claimed yet."]
+        )}
+      </section>
+      <section class="workspace-ledger-group">
+        <div class="panel-title">Persistence</div>
+        ${game.getFieldGuideFactListMarkup([
+          ["Contract state", activeContract ? `${activeContract.name}. Next run only.` : "No contract armed for the next run."],
+          ["Mastery", masterySummary],
+          ["Contract adoption", `${Math.round((metaReview.armedRunStartRate || 0) * 100)}% of tracked runs started armed. Most armed: ${metaReview.mostArmedContract || "none yet"}.`]
+        ])}
+        ${game.getDisclosureMarkup({
+          title: "Contracts",
+          summary: activeContract ? activeContract.name : "None armed",
+          className: "field-guide-disclosure",
+          body: contractMarkup
+        })}
+        ${game.getDisclosureMarkup({
+          title: "Current Class Mastery",
+          summary: masterySummary,
+          className: "field-guide-disclosure",
+          body: masteryMarkup
+        })}
+        ${game.getDisclosureMarkup({
+          title: "Latest 3 Returns",
+          summary: latestSummary ? `${latestSummary.outcome} depth ${latestSummary.extractedDepth}` : "No return archive yet",
+          className: "field-guide-disclosure",
+          body: archiveMarkup
+        })}
+      </section>
+      <section class="workspace-ledger-group">
+        <div class="panel-title">Chronicle</div>
+        ${game.getDisclosureMarkup({
+          title: "Recent Chronicle",
+          summary: "Last 12 entries",
+          className: "field-guide-disclosure",
+          body: `<div class="message-log journal-log">${renderChronicleMarkup(game, 12)}</div>`
+        })}
+      </section>
+      <section class="workspace-ledger-group">
+        <div class="panel-title">Telemetry</div>
+        ${game.getFieldGuideFactListMarkup([
+          ["Events", telemetrySummary.eventCount],
+          ["Searches", telemetrySummary.searches],
+          ["Buys / Sells", `${telemetrySummary.shopBuys} / ${telemetrySummary.shopSells}`],
+          ["Spells / Items", `${telemetrySummary.spellsCast} / ${telemetrySummary.itemsUsed}`],
+          ["Returns", telemetrySummary.townReturns],
+          ["Latest", latestSummary
+            ? `${latestSummary.outcome} | first objective ${latestSummary.firstObjectiveType || "unknown"} | clear turn ${latestSummary.firstObjectiveClearTurn ?? "?"} | greed ${latestSummary.greedCount}`
+            : "No extraction or death summary recorded yet."]
+        ])}
+        ${game.getDisclosureMarkup({
+          title: "Recent Telemetry",
+          summary: `${telemetryReview.recentEvents.length} recent event${telemetryReview.recentEvents.length === 1 ? "" : "s"}`,
+          className: "field-guide-disclosure",
+          body: `<div class="message-log journal-log">${telemetryRecent}</div>`
+        })}
+      </section>
+    </div>
+  `;
+}
+
+// src/features/screens/pack-inspector.js
+/**
+ * @module screens/pack-inspector
+ * @owns Pack hub right-rail inspector markup
+ * @reads live game state via passed Game instance
+ * @mutates none (pure renderer)
+ *
+ * Extracted from src/game.js. All selectors (pack-inspector-*,
+ * pack-comparison-*, pack-compatible-list) and data-action hooks
+ * (inspect-pack-item, item-use, item-drop, unequip-slot, shop-sell,
+ * toggle-do-not-sell) are preserved byte-for-byte.
+ */
+
+function renderPackInspector(game, model, inventoryModel) {
+  const shopId = game.getCurrentPackShopContext();
+  const selectedEntry = model.selection.type === "inventory" ? inventoryModel.selectedEntry : null;
+  const hoverPreviewModel = game.hoveredPackSelection && !game.isSamePackSelection(game.hoveredPackSelection, model.selection)
+    ? game.getPackSelectionModelFor(game.hoveredPackSelection)
+    : null;
+  const hoverPreviewMarkup = game.getPackHoverPreviewMarkup(hoverPreviewModel, inventoryModel);
+  if (!model.item && model.selection.type === "slot") {
+    const slotSummary = buildEquipmentSlotSummary(game, model.slotDef, model.compatibleIndexes.length);
+    const compatibleRows = model.compatibleIndexes.length === 0
+      ? `<div class="muted">No carried item fits this slot right now.</div>`
+      : `
+        <div class="pack-compatible-list">
+          ${model.compatibleIndexes.map((index) => `
+            <button class="tiny-button pack-ready-chip" data-action="inspect-pack-item" data-index="${index}" data-focus-key="${game.getPackItemFocusKey(index)}" type="button">${escapeHtml(getItemName(game.player.inventory[index]))}</button>
+          `).join("")}
+        </div>
+      `;
+    return `
+      <section class="hub-section pack-inspector-panel">
+        <div class="panel-title">Selected Slot</div>
+        ${hoverPreviewMarkup}
+        <div class="pack-inspector-card">
+          <div class="pack-inspector-kicker">${escapeHtml(slotSummary.recommendation)}</div>
+          <div class="pack-inspector-title">Empty Slot</div>
+          <div class="pack-inspector-summary">
+            <span class="pack-decision-chip">${escapeHtml(model.slotDef.label)}</span>
+            <span class="pack-decision-reason">${escapeHtml(slotSummary.reason)}</span>
+          </div>
+          <div class="pack-inspector-copy">${escapeHtml(model.slotDef.emptyText)}</div>
+          <div class="pack-stat-grid">
+            <div class="pack-stat-pill">Burden ${escapeHtml(inventoryModel.burdenUi.label)}</div>
+            <div class="pack-stat-pill">${model.compatibleIndexes.length} ready</div>
+          </div>
+          <div class="pack-inspector-section">
+            <strong>Ready To Equip</strong>
+            ${compatibleRows}
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  if (!model.item) {
+    return "";
+  }
+
+  const item = model.item;
+  const detailEntry = selectedEntry || buildInventoryItemSemantics(game, item, -1, { shopId });
+  const slotSummary = model.selection.type === "slot" ? buildEquipmentSlotSummary(game, model.slotDef, model.compatibleIndexes.length) : null;
+  const recommendation = selectedEntry?.recommendation || slotSummary?.recommendation || "Keep";
+  const reason = selectedEntry?.reason || slotSummary?.reason || describeItem(item);
+  const riskCallout = game.getSemanticRiskCallout(item, detailEntry, model, slotSummary);
+  const statLines = [
+    item.kind === "weapon" ? `Attack ${getItemPower(item)}` : "",
+    item.kind === "armor" ? `Armor ${getItemArmor(item)}` : "",
+    getItemAccuracyBonus(item) ? `Accuracy ${getItemAccuracyBonus(item) > 0 ? `+${getItemAccuracyBonus(item)}` : getItemAccuracyBonus(item)}` : "",
+    getItemCritBonus(item) ? `Crit +${getItemCritBonus(item)}` : "",
+    getItemGuardBonus(item) ? `Guard ${getItemGuardBonus(item)}` : "",
+    getItemWardBonus(item) ? `Ward ${getItemWardBonus(item)}` : "",
+    getItemManaBonus(item) ? `Mana +${getItemManaBonus(item)}` : "",
+    getItemStrBonus(item) ? `Str +${getItemStrBonus(item)}` : "",
+    getItemDexBonus(item) ? `Dex +${getItemDexBonus(item)}` : "",
+    getItemConBonus(item) ? `Con +${getItemConBonus(item)}` : "",
+    getItemIntBonus(item) ? `Int +${getItemIntBonus(item)}` : "",
+    getItemLightBonus(item) ? `Sight +${getItemLightBonus(item)}` : "",
+    getItemSearchBonus(item) ? `Search +${getItemSearchBonus(item)}` : "",
+    getItemFireResist(item) ? `Fire Resist ${getItemFireResist(item)}` : "",
+    getItemColdResist(item) ? `Cold Resist ${getItemColdResist(item)}` : "",
+    item.kind === "charged" && item.identified ? `Charges ${item.charges}/${item.maxCharges || item.charges}` : "",
+    item.weight || item.weight === 0 ? `Weight ${item.weight || 0}` : "",
+    `Value ${Math.floor(getItemValue(item))} gp`,
+    canIdentify(item) && !item.identified ? "Unknown" : "Known",
+    item.cursed ? "Cursed" : ""
+  ].filter(Boolean);
+  const actions = model.selection.type === "inventory"
+    ? `
+      <button class="menu-button pack-action-primary is-active" data-action="item-use" data-index="${model.selection.value}" data-focus-key="${game.getPackActionFocusKey("use", model.selection.value)}" type="button">${game.getPackItemActionLabel(item)}</button>
+      ${shopId && selectedEntry?.sellHereTag
+        ? `<button class="menu-button" data-action="shop-sell" data-index="${model.selection.value}" data-focus-key="${game.getShopSellFocusKey(model.selection.value)}" type="button">Sell</button>`
+        : ""}
+      <label class="mark-sale-toggle inspector-mark-toggle"><input type="checkbox" data-action="toggle-do-not-sell" data-index="${model.selection.value}" data-focus-key="${game.getPackActionFocusKey("protect", model.selection.value)}" ${item.doNotSell ? "checked" : ""}><span>Do Not Sell</span></label>
+      <button class="menu-button" data-action="item-drop" data-index="${model.selection.value}" data-focus-key="${game.getPackActionFocusKey("drop", model.selection.value)}" type="button">Drop</button>
+    `
+    : `
+      <button class="menu-button pack-action-primary is-active" data-action="unequip-slot" data-slot="${model.selection.value}" data-focus-key="${game.getPackActionFocusKey("unequip", model.selection.value)}" type="button"${item.cursed ? " disabled" : ""}>Unequip</button>
+    `;
+
+  const equippedSwap = model.selection.type === "inventory" && item.slot
+    ? model.comparison?.fitsEmptySlot
+      ? `<div class="pack-inspector-note">Fits empty ${escapeHtml(game.getPackSlotDefinition(model.comparison.targetSlot).label)} slot.</div>`
+      : model.comparison?.equipped
+        ? `<div class="pack-inspector-note">Equips over ${escapeHtml(getItemName(model.comparison.equipped, true))}.</div>`
+        : ""
+    : "";
+
+  const cursedNote = model.selection.type === "slot" && item.cursed
+    ? `<div class="pack-inspector-note bad-note">${escapeHtml(getItemName(item, true))} is cursed and cannot be removed yet.</div>`
+    : "";
+
+  const comparisonBlock = model.selection.type === "inventory" && item.slot && (model.comparison?.comparisons?.length > 0 || model.comparison?.fitsEmptySlot || model.comparison?.blockedByCurse)
+    ? `
+      <div class="pack-comparison-card">
+        <div class="pack-comparison-title">${model.comparison.fitsEmptySlot ? `Fits ${escapeHtml(game.getPackSlotDefinition(model.comparison.targetSlot).label)}` : model.comparison.equipped ? `Compare vs ${escapeHtml(getItemName(model.comparison.equipped, true))}` : "Accessory Fit"}</div>
+        <div class="pack-comparison-list">
+          ${model.comparison.blockedByCurse
+            ? `<div class="pack-comparison-row value-bad">All ${escapeHtml(game.getPackSlotDefinition(item.slot).label.toLowerCase())} slots are locked by curses.</div>`
+            : model.comparison.fitsEmptySlot
+              ? `<div class="pack-comparison-row value-good">No swap needed. ${escapeHtml(game.getPackSlotDefinition(model.comparison.targetSlot).label)} is open.</div>`
+              : ""}
+          ${model.comparison.comparisons?.map((entry) => `
+            <div class="pack-comparison-row"><strong>${escapeHtml(entry.label)}</strong>${entry.slot === model.comparison.targetSlot ? " \u00b7 target" : ""}</div>
+            ${entry.deltas.length > 0
+              ? entry.deltas.map((delta) => `<div class="pack-comparison-row value-${delta.tone}">${escapeHtml(delta.text)}</div>`).join("")
+              : `<div class="pack-comparison-row muted">No practical change.</div>`}
+          `).join("") || ""}
+        </div>
+        <div class="pack-inspector-note ${model.encumbrancePreview.tone}">${escapeHtml(model.encumbrancePreview.text)}</div>
+      </div>
+    `
+    : item.slot
+      ? `<div class="pack-inspector-note ${model.encumbrancePreview.tone}">${escapeHtml(model.encumbrancePreview.text)}</div>`
+      : "";
+
+  const readyRows = model.selection.type === "slot" && model.compatibleIndexes.length > 0 && !item.cursed
+    ? `
+      <div class="pack-inspector-section">
+        <strong>Ready To Equip</strong>
+        <div class="pack-compatible-list">
+          ${model.compatibleIndexes.map((index) => `
+            <button class="tiny-button pack-ready-chip" data-action="inspect-pack-item" data-index="${index}" data-focus-key="${game.getPackItemFocusKey(index)}" type="button">${escapeHtml(getItemName(game.player.inventory[index]))}</button>
+          `).join("")}
+        </div>
+      </div>
+    `
+    : "";
+  const inspectorCopy = item.kind === "charged" && item.identified
+    ? `${item.charges || 0}/${item.maxCharges || item.charges || 0} charges ready.`
+    : item.kind === "spellbook" && item.identified
+      ? `Study to learn ${SPELLS[item.spell]?.name || capitalize(item.spell || "spell")}.`
+      : canIdentify(item) && !item.identified
+        ? "Identify before you commit this item to a swap or sale."
+        : "";
+  const visibleStatLines = statLines.slice(0, 4);
+  const extraStatLines = statLines.slice(4);
+  const inspectorDisclosure = game.getDisclosureMarkup({
+    title: "Deep Readout",
+    summary: model.selection.type === "slot"
+      ? `${model.compatibleIndexes.length} ready item${model.compatibleIndexes.length === 1 ? "" : "s"}`
+      : item.slot
+        ? "Comparison, burden, and fit"
+        : "Extended item detail",
+    className: "pack-inspector-disclosure",
+    open: model.selection.type === "slot" && model.compatibleIndexes.length > 0,
+    body: `
+      <div class="pack-item-badges">${game.getItemBadgeMarkup(item, detailEntry, model)}</div>
+      ${visibleStatLines.length > 0 ? `<div class="pack-stat-grid">${visibleStatLines.map((line) => `<div class="pack-stat-pill">${escapeHtml(line)}</div>`).join("")}</div>` : ""}
+      ${equippedSwap || ""}
+      ${extraStatLines.length > 0 ? `<div class="pack-stat-grid pack-stat-grid-secondary">${extraStatLines.map((line) => `<div class="pack-stat-pill">${escapeHtml(line)}</div>`).join("")}</div>` : ""}
+      ${comparisonBlock || ""}
+      ${readyRows || ""}
+    `
+  });
+
+  return `
+    <section class="hub-section pack-inspector-panel">
+      <div class="panel-title">${model.selection.type === "slot" ? "Equipped Detail" : "Selected Item"}</div>
+      ${hoverPreviewMarkup}
+      <div class="pack-inspector-card">
+        <div class="pack-inspector-kicker">${escapeHtml(recommendation)}</div>
+        <div class="pack-inspector-title">${escapeHtml(getItemName(item))}</div>
+        <div class="pack-inspector-summary">
+          <span class="pack-decision-chip">${escapeHtml(model.slotDef ? model.slotDef.label : selectedEntry?.kindLabel || classifyItem(item))}</span>
+          <span class="pack-decision-reason">${escapeHtml(reason)}</span>
+        </div>
+        ${riskCallout ? `<div class="pack-risk-callout">${escapeHtml(riskCallout)}</div>` : ""}
+        ${inspectorCopy ? `<div class="pack-inspector-copy">${escapeHtml(inspectorCopy)}</div>` : ""}
+        ${cursedNote}
+        ${inspectorDisclosure}
+        <div class="modal-actions pack-inspector-actions">
+          ${actions}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 // src/ui/render.js
 /**
  * @module render
@@ -22894,131 +23370,7 @@ class Game {
   }
 
   showSettingsModal(options = {}) {
-    this.syncAdaptiveLayout();
-    this.clearModalInteractionFeedback();
-    const {
-      preserveScroll = false,
-      focusTarget = null,
-      fallbackFocus = true,
-      closeLabel = "Close",
-      modalReturnContext = null
-    } = options;
-    const settingsGroups = [
-      {
-        title: "Controls",
-        rows: [
-          {
-            label: "Touch Controls",
-            detail: "Show the on-screen movement pad when not hidden.",
-            setting: "touchControlsEnabled",
-            value: this.settings.touchControlsEnabled ? "On" : "Off"
-          },
-          {
-            label: "Hide Touch When Controller Connected",
-            detail: "Cleaner screen for paired joypads.",
-            setting: "controllerHintsEnabled",
-            value: this.settings.controllerHintsEnabled ? "On" : "Off"
-          }
-        ]
-      },
-      {
-        title: "Audio",
-        rows: [
-          {
-            label: "Sound Effects",
-            detail: "Combat, movement, and UI feedback.",
-            setting: "soundEnabled",
-            value: this.settings.soundEnabled ? "On" : "Off"
-          },
-          {
-            label: "Music",
-            detail: "Optional soundtrack with title, town, and dungeon themes.",
-            setting: "musicEnabled",
-            value: this.settings.musicEnabled ? "On" : "Off"
-          }
-        ]
-      },
-      {
-        title: "Display & Accessibility",
-        rows: [
-          {
-            label: "Effect Intensity",
-            detail: "Choose how animated combat and board effects should feel.",
-            setting: "effectIntensity",
-            value: this.settings.effectIntensity
-          },
-          {
-            label: "Reduced Motion",
-            detail: "Prefer simpler flashes over animated travel and pulsing effects.",
-            setting: "reducedMotionEnabled",
-            value: this.settings.reducedMotionEnabled ? "On" : "Off"
-          },
-          {
-            label: "UI Scale",
-            detail: "Alternate between compact and large mobile spacing.",
-            setting: "uiScale",
-            value: this.settings.uiScale
-          }
-        ]
-      }
-    ];
-    this.mode = "modal";
-    this.showSimpleModal("Device Settings", `
-      <div class="workspace-stack settings-sheet">
-        <div class="workspace-summary-strip">
-          <div class="workspace-summary-chip">
-            <span class="workspace-summary-label">Settings</span>
-            <strong>Changes apply instantly in this browser.</strong>
-          </div>
-          <div class="workspace-summary-chip">
-            <span class="workspace-summary-label">Audio</span>
-            <strong>${escapeHtml(`Music ${this.settings.musicEnabled ? "On" : "Off"} | SFX ${this.settings.soundEnabled ? "On" : "Off"}`)}</strong>
-          </div>
-          <div class="workspace-summary-chip">
-            <span class="workspace-summary-label">Display</span>
-            <strong>${escapeHtml(`UI ${this.settings.uiScale} | Motion ${this.settings.reducedMotionEnabled ? "Reduced" : this.settings.effectIntensity}`)}</strong>
-          </div>
-        </div>
-        <div class="workspace-shell settings-shell">
-          <section class="workspace-rail settings-overview-rail">
-            ${this.getMenuQuickStateMarkup({
-              eyebrow: "Device Settings",
-              title: "Tune controls, audio, and display without leaving the run.",
-              detail: "Use the value buttons on the right to cycle each setting."
-            })}
-            <section class="workspace-detail-card">
-              <div class="panel-title">Current Input</div>
-              <div class="workspace-plain-copy">${escapeHtml(this.gamepadInput.isConnected() ? `${this.gamepadInput.getControllerName()} connected. Controller hints can stay hidden when a pad is present.` : "Touch and keyboard remain available. Touch controls can stay visible or hide when a controller connects.")}</div>
-            </section>
-          </section>
-          <section class="workspace-rail-detail settings-detail-rail">
-            ${settingsGroups.map((group) => `
-              <section class="workspace-ledger-group">
-                <div class="panel-title">${escapeHtml(group.title)}</div>
-                <div class="workspace-ledger">
-                  ${group.rows.map((row) => `
-                    <div class="workspace-ledger-row settings-ledger-row">
-                      <div>
-                        <strong>${escapeHtml(row.label)}</strong>
-                        <div class="muted">${escapeHtml(row.detail)}</div>
-                      </div>
-                      <button class="menu-button" data-action="setting-toggle" data-setting="${row.setting}" data-focus-key="setting-toggle:${row.setting}" type="button">${escapeHtml(row.value)}</button>
-                    </div>
-                  `).join("")}
-                </div>
-              </section>
-            `).join("")}
-          </section>
-        </div>
-      </div>
-    `, {
-      surfaceKey: "settings",
-      preserveScroll,
-      focusTarget,
-      fallbackFocus,
-      closeLabel,
-      modalReturnContext
-    });
+    return renderSettingsModal(this, options);
   }
 
   showCharacterSheet(options = {}) {
@@ -26952,190 +27304,7 @@ class Game {
   }
 
   getPackInspectorMarkup(model, inventoryModel) {
-    const shopId = this.getCurrentPackShopContext();
-    const selectedEntry = model.selection.type === "inventory" ? inventoryModel.selectedEntry : null;
-    const hoverPreviewModel = this.hoveredPackSelection && !this.isSamePackSelection(this.hoveredPackSelection, model.selection)
-      ? this.getPackSelectionModelFor(this.hoveredPackSelection)
-      : null;
-    const hoverPreviewMarkup = this.getPackHoverPreviewMarkup(hoverPreviewModel, inventoryModel);
-    if (!model.item && model.selection.type === "slot") {
-      const slotSummary = buildEquipmentSlotSummary(this, model.slotDef, model.compatibleIndexes.length);
-      const compatibleRows = model.compatibleIndexes.length === 0
-        ? `<div class="muted">No carried item fits this slot right now.</div>`
-        : `
-          <div class="pack-compatible-list">
-            ${model.compatibleIndexes.map((index) => `
-              <button class="tiny-button pack-ready-chip" data-action="inspect-pack-item" data-index="${index}" data-focus-key="${this.getPackItemFocusKey(index)}" type="button">${escapeHtml(getItemName(this.player.inventory[index]))}</button>
-            `).join("")}
-          </div>
-        `;
-      return `
-        <section class="hub-section pack-inspector-panel">
-          <div class="panel-title">Selected Slot</div>
-          ${hoverPreviewMarkup}
-          <div class="pack-inspector-card">
-            <div class="pack-inspector-kicker">${escapeHtml(slotSummary.recommendation)}</div>
-            <div class="pack-inspector-title">Empty Slot</div>
-            <div class="pack-inspector-summary">
-              <span class="pack-decision-chip">${escapeHtml(model.slotDef.label)}</span>
-              <span class="pack-decision-reason">${escapeHtml(slotSummary.reason)}</span>
-            </div>
-            <div class="pack-inspector-copy">${escapeHtml(model.slotDef.emptyText)}</div>
-            <div class="pack-stat-grid">
-              <div class="pack-stat-pill">Burden ${escapeHtml(inventoryModel.burdenUi.label)}</div>
-              <div class="pack-stat-pill">${model.compatibleIndexes.length} ready</div>
-            </div>
-            <div class="pack-inspector-section">
-              <strong>Ready To Equip</strong>
-              ${compatibleRows}
-            </div>
-          </div>
-        </section>
-      `;
-    }
-
-    if (!model.item) {
-      return "";
-    }
-
-    const item = model.item;
-    const detailEntry = selectedEntry || buildInventoryItemSemantics(this, item, -1, { shopId });
-    const slotSummary = model.selection.type === "slot" ? buildEquipmentSlotSummary(this, model.slotDef, model.compatibleIndexes.length) : null;
-    const recommendation = selectedEntry?.recommendation || slotSummary?.recommendation || "Keep";
-    const reason = selectedEntry?.reason || slotSummary?.reason || describeItem(item);
-    const riskCallout = this.getSemanticRiskCallout(item, detailEntry, model, slotSummary);
-    const statLines = [
-      item.kind === "weapon" ? `Attack ${getItemPower(item)}` : "",
-      item.kind === "armor" ? `Armor ${getItemArmor(item)}` : "",
-      getItemAccuracyBonus(item) ? `Accuracy ${getItemAccuracyBonus(item) > 0 ? `+${getItemAccuracyBonus(item)}` : getItemAccuracyBonus(item)}` : "",
-      getItemCritBonus(item) ? `Crit +${getItemCritBonus(item)}` : "",
-      getItemGuardBonus(item) ? `Guard ${getItemGuardBonus(item)}` : "",
-      getItemWardBonus(item) ? `Ward ${getItemWardBonus(item)}` : "",
-      getItemManaBonus(item) ? `Mana +${getItemManaBonus(item)}` : "",
-      getItemStrBonus(item) ? `Str +${getItemStrBonus(item)}` : "",
-      getItemDexBonus(item) ? `Dex +${getItemDexBonus(item)}` : "",
-      getItemConBonus(item) ? `Con +${getItemConBonus(item)}` : "",
-      getItemIntBonus(item) ? `Int +${getItemIntBonus(item)}` : "",
-      getItemLightBonus(item) ? `Sight +${getItemLightBonus(item)}` : "",
-      getItemSearchBonus(item) ? `Search +${getItemSearchBonus(item)}` : "",
-      getItemFireResist(item) ? `Fire Resist ${getItemFireResist(item)}` : "",
-      getItemColdResist(item) ? `Cold Resist ${getItemColdResist(item)}` : "",
-      item.kind === "charged" && item.identified ? `Charges ${item.charges}/${item.maxCharges || item.charges}` : "",
-      item.weight || item.weight === 0 ? `Weight ${item.weight || 0}` : "",
-      `Value ${Math.floor(getItemValue(item))} gp`,
-      canIdentify(item) && !item.identified ? "Unknown" : "Known",
-      item.cursed ? "Cursed" : ""
-    ].filter(Boolean);
-    const actions = model.selection.type === "inventory"
-      ? `
-        <button class="menu-button pack-action-primary is-active" data-action="item-use" data-index="${model.selection.value}" data-focus-key="${this.getPackActionFocusKey("use", model.selection.value)}" type="button">${this.getPackItemActionLabel(item)}</button>
-        ${shopId && selectedEntry?.sellHereTag
-          ? `<button class="menu-button" data-action="shop-sell" data-index="${model.selection.value}" data-focus-key="${this.getShopSellFocusKey(model.selection.value)}" type="button">Sell</button>`
-          : ""}
-        <label class="mark-sale-toggle inspector-mark-toggle"><input type="checkbox" data-action="toggle-do-not-sell" data-index="${model.selection.value}" data-focus-key="${this.getPackActionFocusKey("protect", model.selection.value)}" ${item.doNotSell ? "checked" : ""}><span>Do Not Sell</span></label>
-        <button class="menu-button" data-action="item-drop" data-index="${model.selection.value}" data-focus-key="${this.getPackActionFocusKey("drop", model.selection.value)}" type="button">Drop</button>
-      `
-      : `
-        <button class="menu-button pack-action-primary is-active" data-action="unequip-slot" data-slot="${model.selection.value}" data-focus-key="${this.getPackActionFocusKey("unequip", model.selection.value)}" type="button"${item.cursed ? " disabled" : ""}>Unequip</button>
-      `;
-
-    const equippedSwap = model.selection.type === "inventory" && item.slot
-      ? model.comparison?.fitsEmptySlot
-        ? `<div class="pack-inspector-note">Fits empty ${escapeHtml(this.getPackSlotDefinition(model.comparison.targetSlot).label)} slot.</div>`
-        : model.comparison?.equipped
-          ? `<div class="pack-inspector-note">Equips over ${escapeHtml(getItemName(model.comparison.equipped, true))}.</div>`
-          : ""
-      : "";
-
-    const cursedNote = model.selection.type === "slot" && item.cursed
-      ? `<div class="pack-inspector-note bad-note">${escapeHtml(getItemName(item, true))} is cursed and cannot be removed yet.</div>`
-      : "";
-
-    const comparisonBlock = model.selection.type === "inventory" && item.slot && (model.comparison?.comparisons?.length > 0 || model.comparison?.fitsEmptySlot || model.comparison?.blockedByCurse)
-      ? `
-        <div class="pack-comparison-card">
-          <div class="pack-comparison-title">${model.comparison.fitsEmptySlot ? `Fits ${escapeHtml(this.getPackSlotDefinition(model.comparison.targetSlot).label)}` : model.comparison.equipped ? `Compare vs ${escapeHtml(getItemName(model.comparison.equipped, true))}` : "Accessory Fit"}</div>
-          <div class="pack-comparison-list">
-            ${model.comparison.blockedByCurse
-              ? `<div class="pack-comparison-row value-bad">All ${escapeHtml(this.getPackSlotDefinition(item.slot).label.toLowerCase())} slots are locked by curses.</div>`
-              : model.comparison.fitsEmptySlot
-                ? `<div class="pack-comparison-row value-good">No swap needed. ${escapeHtml(this.getPackSlotDefinition(model.comparison.targetSlot).label)} is open.</div>`
-                : ""}
-            ${model.comparison.comparisons?.map((entry) => `
-              <div class="pack-comparison-row"><strong>${escapeHtml(entry.label)}</strong>${entry.slot === model.comparison.targetSlot ? " · target" : ""}</div>
-              ${entry.deltas.length > 0
-                ? entry.deltas.map((delta) => `<div class="pack-comparison-row value-${delta.tone}">${escapeHtml(delta.text)}</div>`).join("")
-                : `<div class="pack-comparison-row muted">No practical change.</div>`}
-            `).join("") || ""}
-          </div>
-          <div class="pack-inspector-note ${model.encumbrancePreview.tone}">${escapeHtml(model.encumbrancePreview.text)}</div>
-        </div>
-      `
-      : item.slot
-        ? `<div class="pack-inspector-note ${model.encumbrancePreview.tone}">${escapeHtml(model.encumbrancePreview.text)}</div>`
-        : "";
-
-    const readyRows = model.selection.type === "slot" && model.compatibleIndexes.length > 0 && !item.cursed
-      ? `
-        <div class="pack-inspector-section">
-          <strong>Ready To Equip</strong>
-          <div class="pack-compatible-list">
-            ${model.compatibleIndexes.map((index) => `
-              <button class="tiny-button pack-ready-chip" data-action="inspect-pack-item" data-index="${index}" data-focus-key="${this.getPackItemFocusKey(index)}" type="button">${escapeHtml(getItemName(this.player.inventory[index]))}</button>
-            `).join("")}
-          </div>
-        </div>
-      `
-      : "";
-    const inspectorCopy = item.kind === "charged" && item.identified
-      ? `${item.charges || 0}/${item.maxCharges || item.charges || 0} charges ready.`
-      : item.kind === "spellbook" && item.identified
-        ? `Study to learn ${SPELLS[item.spell]?.name || capitalize(item.spell || "spell")}.`
-        : canIdentify(item) && !item.identified
-          ? "Identify before you commit this item to a swap or sale."
-          : "";
-    const visibleStatLines = statLines.slice(0, 4);
-    const extraStatLines = statLines.slice(4);
-    const inspectorDisclosure = this.getDisclosureMarkup({
-      title: "Deep Readout",
-      summary: model.selection.type === "slot"
-        ? `${model.compatibleIndexes.length} ready item${model.compatibleIndexes.length === 1 ? "" : "s"}`
-        : item.slot
-          ? "Comparison, burden, and fit"
-          : "Extended item detail",
-      className: "pack-inspector-disclosure",
-      open: model.selection.type === "slot" && model.compatibleIndexes.length > 0,
-      body: `
-        <div class="pack-item-badges">${this.getItemBadgeMarkup(item, detailEntry, model)}</div>
-        ${visibleStatLines.length > 0 ? `<div class="pack-stat-grid">${visibleStatLines.map((line) => `<div class="pack-stat-pill">${escapeHtml(line)}</div>`).join("")}</div>` : ""}
-        ${equippedSwap || ""}
-        ${extraStatLines.length > 0 ? `<div class="pack-stat-grid pack-stat-grid-secondary">${extraStatLines.map((line) => `<div class="pack-stat-pill">${escapeHtml(line)}</div>`).join("")}</div>` : ""}
-        ${comparisonBlock || ""}
-        ${readyRows || ""}
-      `
-    });
-
-    return `
-      <section class="hub-section pack-inspector-panel">
-        <div class="panel-title">${model.selection.type === "slot" ? "Equipped Detail" : "Selected Item"}</div>
-        ${hoverPreviewMarkup}
-        <div class="pack-inspector-card">
-          <div class="pack-inspector-kicker">${escapeHtml(recommendation)}</div>
-          <div class="pack-inspector-title">${escapeHtml(getItemName(item))}</div>
-          <div class="pack-inspector-summary">
-            <span class="pack-decision-chip">${escapeHtml(model.slotDef ? model.slotDef.label : selectedEntry?.kindLabel || classifyItem(item))}</span>
-            <span class="pack-decision-reason">${escapeHtml(reason)}</span>
-          </div>
-          ${riskCallout ? `<div class="pack-risk-callout">${escapeHtml(riskCallout)}</div>` : ""}
-          ${inspectorCopy ? `<div class="pack-inspector-copy">${escapeHtml(inspectorCopy)}</div>` : ""}
-          ${cursedNote}
-          ${inspectorDisclosure}
-          <div class="modal-actions pack-inspector-actions">
-            ${actions}
-          </div>
-        </div>
-      </section>
-    `;
+    return renderPackInspector(this, model, inventoryModel);
   }
 
   getHubTabsMarkup(activeTab) {
@@ -28114,126 +28283,7 @@ class Game {
   }
 
   getJournalChronicleSectionMarkup() {
-    const townCycle = this.getTownCycleState();
-    const reactions = this.getTownReactionLines();
-    const discoverySummary = this.getKnownDiscoveryLines();
-    const namedLootSummary = this.getNamedLootLines();
-    const featuredStockSummary = Object.entries(townCycle.featuredStock || {})
-      .map(([shopId, itemIds]) => {
-        const label = SHOPS[shopId]?.name;
-        const names = (itemIds || []).map((itemId) => ITEM_DEFS[itemId]?.name).filter(Boolean).join(", ");
-        return label && names ? `${label}: ${names}` : "";
-      })
-      .filter(Boolean)
-      .join(" | ");
-    const telemetrySummary = this.getTelemetrySummary();
-    const telemetryReview = this.getTelemetryReviewSnapshot();
-    const latestSummary = (this.runSummaryHistory || []).at(-1) || this.lastRunSummary;
-    const activeContract = this.getActiveContract(true) || this.getActiveContract(false);
-    const masterySummary = this.getClassMasterySummary(this.player.classId);
-    const archiveMarkup = this.getRunSummaryArchiveMarkup(3);
-    const masteryMarkup = this.getMasteryReviewMarkup(this.player.classId);
-    const contractMarkup = this.getContractReviewMarkup({ interactive: false });
-    const metaReview = telemetryReview.meta || {};
-    const telemetryRecent = telemetryReview.recentEvents.length > 0
-      ? telemetryReview.recentEvents.map((entry) => `<div class="log-line">[T${entry.turn} D${entry.depth}] ${escapeHtml(entry.text)}</div>`).join("")
-      : "<div class='muted'>No run telemetry captured yet.</div>";
-    const latestDigest = latestSummary
-      ? `${latestSummary.outcome} at depth ${latestSummary.extractedDepth}. Greed rooms: ${latestSummary.greedCount}.`
-      : "No completed extraction or death summary is recorded yet.";
-    const townDigest = [
-      this.getTownCycleLabel(),
-      townCycle.turnsUntilRefresh === 1 ? "Next market turnover in 1 turn." : `Next market turnover in ${townCycle.turnsUntilRefresh} turns.`,
-      townCycle.stockSummary,
-      townCycle.rumorSummary
-    ].join(" ");
-    return `
-      <div class="field-guide-article field-guide-article-chronicle">
-        <section class="workspace-detail-card field-guide-article-hero field-guide-article-priority">
-          <div class="panel-title">Digest</div>
-          <div class="workspace-detail-title">${escapeHtml(latestSummary ? (latestSummary.outcome || "Latest run") : "No completed run yet")}</div>
-          <div class="workspace-plain-copy">${escapeHtml(latestDigest)}</div>
-          <div class="workspace-plain-copy muted">${escapeHtml(reactions.lines[0] || townDigest)}</div>
-        </section>
-        <section class="workspace-ledger-group">
-          <div class="panel-title">Discoveries</div>
-          ${this.getFieldGuideBulletListMarkup(
-            discoverySummary.length > 0 ? discoverySummary : ["No written fragments recovered yet."]
-          )}
-        </section>
-        <section class="workspace-ledger-group">
-          <div class="panel-title">Town Digest</div>
-          ${this.getFieldGuideFactListMarkup([
-            ["Cycle", this.getTownCycleLabel()],
-            ["Turnover", townCycle.turnsUntilRefresh === 1 ? "1 turn" : `${townCycle.turnsUntilRefresh} turns`],
-            ["Stock posture", townCycle.stockSummary],
-            ["Rumor posture", townCycle.rumorSummary],
-            ["Featured market", featuredStockSummary || "No featured market picks are posted yet."],
-            ["Town reaction", reactions.lines[0] || "The town has not shifted around your run yet."]
-          ])}
-        </section>
-        <section class="workspace-ledger-group">
-          <div class="panel-title">Named Loot</div>
-          ${this.getFieldGuideBulletListMarkup(
-            namedLootSummary.length > 0 ? namedLootSummary : ["No signature finds claimed yet."]
-          )}
-        </section>
-        <section class="workspace-ledger-group">
-          <div class="panel-title">Persistence</div>
-          ${this.getFieldGuideFactListMarkup([
-            ["Contract state", activeContract ? `${activeContract.name}. Next run only.` : "No contract armed for the next run."],
-            ["Mastery", masterySummary],
-            ["Contract adoption", `${Math.round((metaReview.armedRunStartRate || 0) * 100)}% of tracked runs started armed. Most armed: ${metaReview.mostArmedContract || "none yet"}.`]
-          ])}
-          ${this.getDisclosureMarkup({
-            title: "Contracts",
-            summary: activeContract ? activeContract.name : "None armed",
-            className: "field-guide-disclosure",
-            body: contractMarkup
-          })}
-          ${this.getDisclosureMarkup({
-            title: "Current Class Mastery",
-            summary: masterySummary,
-            className: "field-guide-disclosure",
-            body: masteryMarkup
-          })}
-          ${this.getDisclosureMarkup({
-            title: "Latest 3 Returns",
-            summary: latestSummary ? `${latestSummary.outcome} depth ${latestSummary.extractedDepth}` : "No return archive yet",
-            className: "field-guide-disclosure",
-            body: archiveMarkup
-          })}
-        </section>
-        <section class="workspace-ledger-group">
-          <div class="panel-title">Chronicle</div>
-          ${this.getDisclosureMarkup({
-            title: "Recent Chronicle",
-            summary: "Last 12 entries",
-            className: "field-guide-disclosure",
-            body: `<div class="message-log journal-log">${renderChronicleMarkup(this, 12)}</div>`
-          })}
-        </section>
-        <section class="workspace-ledger-group">
-          <div class="panel-title">Telemetry</div>
-          ${this.getFieldGuideFactListMarkup([
-            ["Events", telemetrySummary.eventCount],
-            ["Searches", telemetrySummary.searches],
-            ["Buys / Sells", `${telemetrySummary.shopBuys} / ${telemetrySummary.shopSells}`],
-            ["Spells / Items", `${telemetrySummary.spellsCast} / ${telemetrySummary.itemsUsed}`],
-            ["Returns", telemetrySummary.townReturns],
-            ["Latest", latestSummary
-              ? `${latestSummary.outcome} | first objective ${latestSummary.firstObjectiveType || "unknown"} | clear turn ${latestSummary.firstObjectiveClearTurn ?? "?"} | greed ${latestSummary.greedCount}`
-              : "No extraction or death summary recorded yet."]
-          ])}
-          ${this.getDisclosureMarkup({
-            title: "Recent Telemetry",
-            summary: `${telemetryReview.recentEvents.length} recent event${telemetryReview.recentEvents.length === 1 ? "" : "s"}`,
-            className: "field-guide-disclosure",
-            body: `<div class="message-log journal-log">${telemetryRecent}</div>`
-          })}
-        </section>
-      </div>
-    `;
+    return renderJournalChronicleSection(this);
   }
 
   getJournalActiveSectionMarkup(activeSection = this.getResolvedJournalSection()) {
