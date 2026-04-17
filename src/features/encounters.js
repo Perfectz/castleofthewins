@@ -7,7 +7,7 @@
 import { DEPTH_THEMES, ENCOUNTER_TEMPLATES, MONSTER_DEFS, MONSTER_ROLES } from "../data/content.js";
 import { createMonster, weightedMonster } from "../core/entities.js";
 import { actorAt, isWalkable, randomRoomTile } from "../core/world.js";
-import { choice, randInt, shuffle } from "../core/utils.js";
+import { choice, shuffle } from "../core/utils.js";
 
 const FLOOR_SPECIAL_DEFS = {
   hunting_party: {

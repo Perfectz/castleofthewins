@@ -10,19 +10,22 @@
 import { SHOPS, SPELLS } from "../data/content.js";
 import {
   classifyItem,
-  countUnknownItems,
   createTownItem,
-  curseRandomCarriedItem,
   describeItem,
   getCarryCapacity,
   getCarryWeight,
   getEncumbranceTier,
   getItemName,
-  getItemValue,
   canIdentify
 } from "../core/entities.js";
 import { itemsAt, revealAll, revealAllSecrets } from "../core/world.js";
-import { escapeHtml, removeAt, removeFromArray, removeOne, roll } from "../core/utils.js";
+import {
+  escapeHtml,
+  removeAt,
+  removeFromArray,
+  removeOne,
+  roll
+} from "../core/utils.js";
 import { buildInventoryItemSemantics } from "./inventory-ui.js";
 import { handleObjectivePickup } from "./objectives.js";
 import { getShopBuyPrice, getShopSellPrice } from "./town-meta.js";

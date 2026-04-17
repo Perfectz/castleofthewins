@@ -49,6 +49,7 @@ const orderedFiles = [
   "features/screens/pack-hub.js",
   "features/screens/magic-hub.js",
   "ui/render.js",
+  "ui/board-renderer.js",
   "audio/soundboard.js",
   "input/gamepad.js",
   "game.js",

@@ -6,9 +6,18 @@
  *          level.items, level.actors, level.tiles
  * @emits game.log, game.emitReadout
  */
-import { BOON_DEFS, OBJECTIVE_DEFS, OPTIONAL_ENCOUNTER_DEFS, RELIC_DEFS, RUMOR_DEFS } from "../data/content.js";
+import { OBJECTIVE_DEFS, OPTIONAL_ENCOUNTER_DEFS, RUMOR_DEFS } from "../data/content.js";
 import { createItem, rollTreasure } from "../core/entities.js";
-import { actorAt, addLevelProp, centerOf, itemsAt, randomRoomTile, revealCircle, setTile, tileDef } from "../core/world.js";
+import {
+  actorAt,
+  addLevelProp,
+  centerOf,
+  itemsAt,
+  randomRoomTile,
+  revealCircle,
+  setTile,
+  tileDef
+} from "../core/world.js";
 import { choice, distance, randInt, shuffle } from "../core/utils.js";
 import { spawnObjectiveGuard } from "./encounters.js";
 

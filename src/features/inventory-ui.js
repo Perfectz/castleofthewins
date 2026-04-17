@@ -7,7 +7,6 @@
 import {
   canIdentify,
   classifyItem,
-  describeItem,
   getItemAccuracyBonus,
   getItemArmor,
   getItemBonusVsUndead,
@@ -25,11 +24,9 @@ import {
   getItemStrBonus,
   getItemSearchBonus,
   getItemConBonus,
-  getItemValue,
   getItemWardBonus,
   shopAcceptsItem
 } from "../core/entities.js";
-import { capitalize, escapeHtml } from "../core/utils.js";
 import { SPELLS } from "../data/content.js";
 
 const GROUP_DEFS = [

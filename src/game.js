@@ -1,14 +1,37 @@
-import { APP_VERSION, BOARD_CANVAS_SIZE, DIRECTIONS, DUNGEON_DEPTH, FOV_RADIUS, SAVE_KEY, TILE_SIZE, VIEW_SIZE } from "./core/constants.js";
-import { BOON_DEFS, CLASSES, COMMENDATION_DEFS, DISCOVERY_DEFS, ENEMY_BEHAVIOR_KITS, ITEM_DEFS, LOOT_AFFIX_DEFS, MILESTONE_DEFS, MONSTER_DEFS, OBJECTIVE_DEFS, PERK_DEFS, RACES, RELIC_DEFS, ROOM_EVENT_DEFS, SHOPS, SPELLS, STORY_BEATS, STORY_NPCS, TEMPLE_SERVICES, TOWN_REACTION_DEFS, TOWN_UNLOCK_DEFS } from "./data/content.js";
+import {
+  BOARD_CANVAS_SIZE,
+  DUNGEON_DEPTH,
+  FOV_RADIUS,
+  TILE_SIZE,
+  VIEW_SIZE
+} from "./core/constants.js";
+import {
+  BOON_DEFS,
+  CLASSES,
+  COMMENDATION_DEFS,
+  DISCOVERY_DEFS,
+  ENEMY_BEHAVIOR_KITS,
+  ITEM_DEFS,
+  LOOT_AFFIX_DEFS,
+  MILESTONE_DEFS,
+  MONSTER_DEFS,
+  OBJECTIVE_DEFS,
+  PERK_DEFS,
+  RACES,
+  RELIC_DEFS,
+  ROOM_EVENT_DEFS,
+  SHOPS,
+  SPELLS,
+  STORY_BEATS,
+  STORY_NPCS,
+  TEMPLE_SERVICES,
+  TOWN_REACTION_DEFS,
+  TOWN_UNLOCK_DEFS
+} from "./data/content.js";
 import { AMBIENT_MUSIC_ASSETS, TITLE_SCREEN_ASSETS } from "./data/assets.js";
 import {
   createInitialShopState,
   createEmptyEquipment,
-  normalizeItem,
-  normalizeLevels,
-  normalizeKnownSpellIds,
-  normalizePlayer,
-  normalizeShopState,
   createItem,
   createMonster,
   createTownItem,
@@ -17,7 +40,6 @@ import {
   getClass,
   getEncumbranceTier,
   getExploredPercent,
-  getHealthRatio,
   getItemAccuracyBonus,
   getItemArmor,
   getItemBonusVsUndead,
@@ -49,30 +71,232 @@ import {
   shopAcceptsItem,
   curseRandomCarriedItem
 } from "./core/entities.js";
-import { actorAt, addLevelProp, addSecretVault, addSetPiece, blankLevel, bresenhamLine, carveRoom, carveTunnel, centerOf, clearVisibility, fillRect, getTile, hasLineOfSight, inBounds, intersects, isExplored, isOccupied, isVisible, isWalkable, itemsAt, placeBuilding, randomRoomTile, revealAll, revealAllSecrets, revealCircle, revealNearbySecrets, revealSecretTile, setExplored, setTile, setVisible, summonMonsterNear, tileDef, findInitialTargetCursor, carveHorizontal, carveVertical } from "./core/world.js";
-import { capitalize, choice, choiceCard, clamp, distance, escapeHtml, nowTime, randInt, removeAt, removeFromArray, removeOne, roll, shuffle, valueTone } from "./core/utils.js";
-import { defaultSettings, loadSettings, saveSettings } from "./core/settings.js";
-import { drawBoardAtmosphere, drawBoardBurdenVignette, drawBoardProps, drawBoardVignette, drawCenteredText, drawEffect, drawItem, drawMonster, drawMonsterHealthBar, drawMonsterIntent, drawPlayer, drawTargetCursor, drawTile, drawTownBuildings } from "./ui/render.js";
+import {
+  actorAt,
+  addLevelProp,
+  addSecretVault,
+  addSetPiece,
+  blankLevel,
+  carveRoom,
+  carveTunnel,
+  centerOf,
+  clearVisibility,
+  fillRect,
+  getTile,
+  hasLineOfSight,
+  inBounds,
+  intersects,
+  isExplored,
+  isOccupied,
+  isVisible,
+  isWalkable,
+  itemsAt,
+  placeBuilding,
+  randomRoomTile,
+  revealAll,
+  revealCircle,
+  revealNearbySecrets,
+  setExplored,
+  setTile,
+  setVisible,
+  summonMonsterNear,
+  tileDef
+} from "./core/world.js";
+import {
+  capitalize,
+  choice,
+  clamp,
+  distance,
+  escapeHtml,
+  nowTime,
+  randInt,
+  removeAt,
+  roll
+} from "./core/utils.js";
+import { loadSettings, saveSettings } from "./core/settings.js";
+import {
+  drawBoardAtmosphere,
+  drawBoardBurdenVignette,
+  drawBoardProps,
+  drawBoardVignette,
+  drawCenteredText,
+  drawEffect,
+  drawItem,
+  drawMonster,
+  drawMonsterHealthBar,
+  drawMonsterIntent,
+  drawPlayer,
+  drawTargetCursor,
+  drawTile,
+  drawTownBuildings
+} from "./ui/render.js";
 import { SoundBoard } from "./audio/soundboard.js";
 import { GamepadInput } from "./input/gamepad.js";
 import { applyCommandResult } from "./core/command-result.js";
 import { applyEffects } from "./core/effect-bus.js";
 import { createPlayerState } from "./core/player-state.js";
-import { actorStats, armorValueForStats, attackValueForStats, burdenUiState, damageRangeForStats, equipmentStatBonuses, evadeValueForStats, levelProgress, maxHpForStats, maxManaForStats, moveSpeedForStats, playerClassTemplate, playerHpBase, playerManaBase, playerRaceTemplate, searchPowerForStats, searchRadiusForStats } from "./core/stat-helpers.js";
-import { addSpellToTrayIfSpace as addSpellToTray, cancelTargetMode as cancelSpellTarget, closeSpellTray as closeSpellTrayFn, confirmTargetSelection as confirmSpellTarget, getActiveSpellTargetPreview as getSpellPreview, getDamageEffectColor as getDmgColor, getLearnableSpellOptions as getLearnableSpells, getPinnedSpellIds as getPinnedSpells, getSpellFilterDefs as spellFilterDefs, getSpellFilterDefsForEntries as spellFilterDefsForEntries, getSpellProjectileStyle as getSpellProjStyle, getSpellRoleLabel as getSpellRole, getSpellTargetingLabel as getSpellTargetLabel, getSpellTargetingMode as getSpellTargetMode, getSpellTrayLimit as spellTrayLimit, getSpellTraySelectionId as spellTraySelection, getSortedKnownSpellIds as sortedSpellIds, moveTargetCursor as moveSpellCursor, moveTraySpell as moveTraySpellFn, openSpellTray as openSpellTrayFn, pinSpellToTray as pinSpellFn, prepareSpell as prepareSpellFn, resolveSpellTargetPreview as resolveSpellPreview, selectSpell as selectSpellFn, startTargetMode as startSpellTarget, syncSpellTray, unpinSpellFromTray as unpinSpellFn } from "./features/spell-manager.js";
-import { addItemToInventory as addItemToInventoryFn, buyShopItem as buyShopItemFn, cancelPendingPickup as cancelPendingPickupFn, confirmPendingPickup as confirmPendingPickupFn, dropInventoryItem as dropInventoryItemFn, equipInventoryItem as equipInventoryItemFn, finishPickupTurn as finishPickupTurnFn, getPickupBurdenPreview as getPickupBurdenPreviewFn, identifyInventoryAndEquipment as identifyInventoryAndEquipmentFn, pickupHere as pickupHereFn, removeCurses as removeCursesFn, resolvePickupItem as resolvePickupItemFn, sellMarkedItems as sellMarkedItemsFn, sellShopItem as sellShopItemFn, showPickupPrompt as showPickupPromptFn, toggleInventorySaleMark as toggleInventorySaleMarkFn, unequipSlot as unequipSlotFn, useChargedItem as useChargedItemFn, useInventoryItem as useInventoryItemFn, useRuneOfReturn as useRuneOfReturnFn } from "./features/inventory-manager.js";
-import { adjustCreationStat as adjustCreationStatDraft, captureCreationDraft as captureCreationDraftState, getCreationPointsRemaining as getCreationDraftPointsRemaining, getCreationStats as getCreationDraftStats, resetCreationDraft as resetCreationState, showCreationModal as showCreationScreen, showTitleScreen as showTitleModal } from "./features/creation.js";
-import { getAllSavedRunMeta as loadAllSavedRunMeta, getSavedRunMeta as loadSavedRunMeta, formatSaveStamp as formatSavedRunStamp, loadGame as loadGameState, saveGame as saveGameState, syncSaveChrome } from "./features/persistence.js";
+import {
+  actorStats,
+  armorValueForStats,
+  attackValueForStats,
+  damageRangeForStats,
+  equipmentStatBonuses,
+  evadeValueForStats,
+  levelProgress,
+  maxHpForStats,
+  maxManaForStats,
+  moveSpeedForStats,
+  playerClassTemplate,
+  playerHpBase,
+  playerManaBase,
+  playerRaceTemplate,
+  searchPowerForStats,
+  searchRadiusForStats
+} from "./core/stat-helpers.js";
+import {
+  addSpellToTrayIfSpace as addSpellToTray,
+  cancelTargetMode as cancelSpellTarget,
+  closeSpellTray as closeSpellTrayFn,
+  confirmTargetSelection as confirmSpellTarget,
+  getActiveSpellTargetPreview as getSpellPreview,
+  getDamageEffectColor as getDmgColor,
+  getLearnableSpellOptions as getLearnableSpells,
+  getPinnedSpellIds as getPinnedSpells,
+  getSpellFilterDefs as spellFilterDefs,
+  getSpellProjectileStyle as getSpellProjStyle,
+  getSpellRoleLabel as getSpellRole,
+  getSpellTargetingLabel as getSpellTargetLabel,
+  getSpellTargetingMode as getSpellTargetMode,
+  getSpellTrayLimit as spellTrayLimit,
+  getSortedKnownSpellIds as sortedSpellIds,
+  moveTargetCursor as moveSpellCursor,
+  moveTraySpell as moveTraySpellFn,
+  openSpellTray as openSpellTrayFn,
+  pinSpellToTray as pinSpellFn,
+  prepareSpell as prepareSpellFn,
+  resolveSpellTargetPreview as resolveSpellPreview,
+  selectSpell as selectSpellFn,
+  startTargetMode as startSpellTarget,
+  syncSpellTray,
+  unpinSpellFromTray as unpinSpellFn
+} from "./features/spell-manager.js";
+import {
+  addItemToInventory as addItemToInventoryFn,
+  buyShopItem as buyShopItemFn,
+  cancelPendingPickup as cancelPendingPickupFn,
+  confirmPendingPickup as confirmPendingPickupFn,
+  dropInventoryItem as dropInventoryItemFn,
+  equipInventoryItem as equipInventoryItemFn,
+  finishPickupTurn as finishPickupTurnFn,
+  getPickupBurdenPreview as getPickupBurdenPreviewFn,
+  identifyInventoryAndEquipment as identifyInventoryAndEquipmentFn,
+  pickupHere as pickupHereFn,
+  removeCurses as removeCursesFn,
+  resolvePickupItem as resolvePickupItemFn,
+  sellShopItem as sellShopItemFn,
+  showPickupPrompt as showPickupPromptFn,
+  unequipSlot as unequipSlotFn,
+  useChargedItem as useChargedItemFn,
+  useInventoryItem as useInventoryItemFn,
+  useRuneOfReturn as useRuneOfReturnFn
+} from "./features/inventory-manager.js";
+import {
+  adjustCreationStat as adjustCreationStatDraft,
+  captureCreationDraft as captureCreationDraftState,
+  getCreationPointsRemaining as getCreationDraftPointsRemaining,
+  getCreationStats as getCreationDraftStats,
+  resetCreationDraft as resetCreationState,
+  showCreationModal as showCreationScreen,
+  showTitleScreen as showTitleModal
+} from "./features/creation.js";
+import {
+  getAllSavedRunMeta as loadAllSavedRunMeta,
+  getSavedRunMeta as loadSavedRunMeta,
+  formatSaveStamp as formatSavedRunStamp,
+  loadGame as loadGameState,
+  saveGame as saveGameState,
+  syncSaveChrome
+} from "./features/persistence.js";
 import { performSearchCommand, useStairsCommand } from "./features/exploration.js";
-import { applyCharge, attack as attackActors, canCharge as canMonsterCharge, canMonsterMoveTo as canMonsterMove, checkLevelUp as checkPlayerLevelUp, damageActor as damageActorTarget, findRetreatStep as findMonsterRetreatStep, getMonsterIntent as getMonsterIntentModel, handleDeath as handlePlayerDeath, killMonster as killMonsterActor, makeNoise as makeDungeonNoise, processMonsters as processMonsterTurns, updateMonsterIntents as updateAllMonsterIntents, visibleEnemies as getVisibleEnemies } from "./features/combat.js";
-import { endTurn as endGameTurn, performWait as performWaitTurn, resolveTurn as resolveGameTurn, restUntilSafe as restUntilSafeTurn, sleepUntilRestored as sleepUntilRestoredTurn } from "./features/turns.js";
+import {
+  applyCharge,
+  attack as attackActors,
+  canCharge as canMonsterCharge,
+  canMonsterMoveTo as canMonsterMove,
+  checkLevelUp as checkPlayerLevelUp,
+  damageActor as damageActorTarget,
+  findRetreatStep as findMonsterRetreatStep,
+  getMonsterIntent as getMonsterIntentModel,
+  handleDeath as handlePlayerDeath,
+  killMonster as killMonsterActor,
+  makeNoise as makeDungeonNoise,
+  processMonsters as processMonsterTurns,
+  updateMonsterIntents as updateAllMonsterIntents,
+  visibleEnemies as getVisibleEnemies
+} from "./features/combat.js";
+import {
+  endTurn as endGameTurn,
+  performWait as performWaitTurn,
+  resolveTurn as resolveGameTurn,
+  restUntilSafe as restUntilSafeTurn,
+  sleepUntilRestored as sleepUntilRestoredTurn
+} from "./features/turns.js";
 import { getAdvisorModel as buildAdvisorModel, renderActionBar as renderAdvisorActionBar, renderPanels as renderAdvisorPanels } from "./features/advisor.js";
 import { getDepthTheme, getDynamicMonsterCap, getEncounterSummary, populateDungeonEncounters } from "./features/encounters.js";
-import { getObjectiveDefendersRemaining, getObjectiveRoomClear, getObjectiveRewardPreview, getObjectiveStatusText, getOptionalStatusText, grantObjectiveRumor, handleObjectiveInteraction, handleObjectivePickup, resolveFloorObjective, setupFloorDirectives, syncFloorState } from "./features/objectives.js";
-import { advanceDangerTurn, getDangerSummary, getPressureStatus, increaseDanger as raiseDanger, initializeDangerState, markGreedAction as markFloorGreedAction, noteFloorIntro, syncDangerState } from "./features/director.js";
-import { chooseReward, clearRewardChoice, ensureBuildState, getBuildArmorBonus, getBuildAttackBonus, getBuildDamageBonus, getBuildEvadeBonus, getBuildMaxHpBonus, getBuildMaxManaBonus, getBuildSearchBonus, getKnownRumors, getOvercastLoss, getSpellCost, grantBoon as applyBoonReward, grantRumorToken as addRumorToken, hasPendingProgressionChoice, onPlayerMove, onPlayerWait, prepareNextRewardChoice, queueObjectiveReward, queuePerkChoice } from "./features/builds.js";
-import { buyTownRumor, ensureTownMetaState, formatTownCycle, getAvailableTownUnlocks, getRumorPrice, getSagePrice, getShopBuyPrice, getShopPool, getShopSellPrice, getTemplePrice, getTownCycleState as getTownCycleMeta, getTownIntel, getTownMetaSummary as buildTownMetaSummary, getTownReactionBundle, purchaseTownUnlock, refreshTownStocks } from "./features/town-meta.js";
-import { buildDeathRecapMarkup, ensureChronicleState, noteDeathContext, recordChronicleEvent, renderChronicleMarkup } from "./features/chronicle.js";
+import {
+  getObjectiveDefendersRemaining,
+  getObjectiveRoomClear,
+  getObjectiveRewardPreview,
+  getObjectiveStatusText,
+  getOptionalStatusText,
+  grantObjectiveRumor,
+  handleObjectiveInteraction,
+  setupFloorDirectives,
+  syncFloorState
+} from "./features/objectives.js";
+import {
+  getDangerSummary,
+  getPressureStatus,
+  increaseDanger as raiseDanger,
+  initializeDangerState,
+  markGreedAction as markFloorGreedAction,
+  noteFloorIntro,
+  syncDangerState
+} from "./features/director.js";
+import {
+  chooseReward,
+  ensureBuildState,
+  getBuildArmorBonus,
+  getBuildDamageBonus,
+  getBuildEvadeBonus,
+  getBuildMaxHpBonus,
+  getBuildMaxManaBonus,
+  getBuildSearchBonus,
+  getSpellCost,
+  grantBoon as applyBoonReward,
+  grantRumorToken as addRumorToken,
+  hasPendingProgressionChoice,
+  onPlayerMove,
+  prepareNextRewardChoice,
+  queueObjectiveReward,
+  queuePerkChoice
+} from "./features/builds.js";
+import {
+  ensureTownMetaState,
+  formatTownCycle,
+  getAvailableTownUnlocks,
+  getRumorPrice,
+  getSagePrice,
+  getShopBuyPrice,
+  getShopSellPrice,
+  getTemplePrice,
+  getTownCycleState as getTownCycleMeta,
+  getTownIntel,
+  getTownMetaSummary as buildTownMetaSummary,
+  getTownReactionBundle,
+  refreshTownStocks
+} from "./features/town-meta.js";
+import { ensureChronicleState, noteDeathContext, recordChronicleEvent } from "./features/chronicle.js";
 import {
   advanceClassMastery,
   applyClassMasteryBonuses,
@@ -95,7 +319,20 @@ import {
   setActiveContract,
   unlockContract
 } from "./features/meta-progression.js";
-import { buildTelemetrySummary, exportTelemetryTrace, getTelemetryReviewSnapshot, initializeTelemetry, recordRunSummary, recordTelemetry, recordTownServiceOpen, resetTelemetry, startTelemetryRun, trackFirstPlayerMove, trackObjectiveProgress, trackOptionalProgress } from "./features/telemetry.js";
+import {
+  buildTelemetrySummary,
+  exportTelemetryTrace,
+  getTelemetryReviewSnapshot,
+  initializeTelemetry,
+  recordRunSummary,
+  recordTelemetry,
+  recordTownServiceOpen,
+  resetTelemetry,
+  startTelemetryRun,
+  trackFirstPlayerMove,
+  trackObjectiveProgress,
+  trackOptionalProgress
+} from "./features/telemetry.js";
 import { markOnboardingFlag } from "./features/onboarding.js";
 import { buildHudFeedModel, renderHudFeed } from "./features/hud-feed.js";
 import {
@@ -104,11 +341,9 @@ import {
   buildInventoryPresentationModel,
   getInventoryCategoryDefs,
   getInventoryRowGlyph,
-  getItemEffectKey,
   getSpellCategoryDefs,
   getSpellCategoryKey,
   getSpellCategoryLabel,
-  getSpellEffectKey,
   isInventoryRowNoise
 } from "./features/inventory-ui.js";
 import { getOnboardingVariantMeta, getRouteExperimentTuning, getValidationSummary as buildValidationSummary, initializeValidationState } from "./features/validation.js";
@@ -121,6 +356,7 @@ import { renderPackHubMarkup } from "./features/screens/pack-hub.js";
 import { renderMagicHubMarkup, renderMagicResultPanelMarkup } from "./features/screens/magic-hub.js";
 import { dispatchAction } from "./features/action-dispatch.js";
 import { dispatchKeydown } from "./features/input-dispatch.js";
+import { renderBoard as renderBoardComposed, renderMiniMap as renderMiniMapComposed } from "./ui/board-renderer.js";
 
 const BOARD_OVERLAY_HEIGHT_PX = {
   mobile: 156,
@@ -11726,275 +11962,11 @@ export class Game {
   }
 
   renderMiniMap() {
-    if (!this.mapCtx || !this.mapCanvas) {
-      return;
-    }
-    const ctx = this.mapCtx;
-    ctx.clearRect(0, 0, this.mapCanvas.width, this.mapCanvas.height);
-    ctx.fillStyle = "#050505";
-    ctx.fillRect(0, 0, this.mapCanvas.width, this.mapCanvas.height);
-
-    if (!this.currentLevel || !this.player) {
-      if (this.mapPanelLabel) {
-        this.mapPanelLabel.textContent = "Overworld Map";
-      }
-      if (this.mapPanelState) {
-        this.mapPanelState.textContent = "No active run";
-      }
-      if (this.mapCaption) {
-        this.mapCaption.textContent = "Create a character to begin.";
-      }
-      return;
-    }
-
-    const scaleX = this.mapCanvas.width / this.currentLevel.width;
-    const scaleY = this.mapCanvas.height / this.currentLevel.height;
-    const time = nowTime();
-    const pulse = 0.42 + ((Math.sin(time / 180) + 1) * 0.2);
-    const markPoint = (point, fillStyle, borderStyle = "", size = 4) => {
-      if (!point) {
-        return;
-      }
-      const px = Math.floor(point.x * scaleX);
-      const py = Math.floor(point.y * scaleY);
-      ctx.save();
-      ctx.globalAlpha = pulse;
-      ctx.fillStyle = fillStyle;
-      ctx.fillRect(px - 1, py - 1, Math.max(size, Math.ceil(scaleX) + 2), Math.max(size, Math.ceil(scaleY) + 2));
-      if (borderStyle) {
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = borderStyle;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(px - 2, py - 2, Math.max(size + 2, Math.ceil(scaleX) + 4), Math.max(size + 2, Math.ceil(scaleY) + 4));
-      }
-      ctx.restore();
-    };
-
-    for (let y = 0; y < this.currentLevel.height; y += 1) {
-      for (let x = 0; x < this.currentLevel.width; x += 1) {
-        if (!isExplored(this.currentLevel, x, y) && this.currentDepth !== 0) {
-          continue;
-        }
-        const tile = getTile(this.currentLevel, x, y);
-        ctx.fillStyle = miniMapColor(tile, isVisible(this.currentLevel, x, y));
-        ctx.fillRect(Math.floor(x * scaleX), Math.floor(y * scaleY), Math.ceil(scaleX), Math.ceil(scaleY));
-      }
-    }
-
-    this.currentLevel.items.forEach((item) => {
-      if (this.currentDepth !== 0 && !isExplored(this.currentLevel, item.x, item.y)) {
-        return;
-      }
-      ctx.fillStyle = item.kind === "gold" ? "#ebcf60" : "#9bc4df";
-      ctx.fillRect(Math.floor(item.x * scaleX), Math.floor(item.y * scaleY), Math.max(2, Math.ceil(scaleX)), Math.max(2, Math.ceil(scaleY)));
-    });
-
-    if (this.currentDepth === 0 && this.currentLevel.buildings) {
-      this.currentLevel.buildings.forEach((building) => {
-        const doorX = building.x + Math.floor(building.w / 2);
-        const doorY = building.y + building.h - 1;
-        markPoint({ x: doorX, y: doorY }, "#d6b06a", "#f3ddb3", 4);
-      });
-    }
-
-    this.currentLevel.actors.forEach((actor) => {
-      if (this.currentDepth !== 0 && !isVisible(this.currentLevel, actor.x, actor.y)) {
-        return;
-      }
-      ctx.fillStyle = "#c94a4a";
-      ctx.fillRect(Math.floor(actor.x * scaleX), Math.floor(actor.y * scaleY), Math.max(2, Math.ceil(scaleX)), Math.max(2, Math.ceil(scaleY)));
-    });
-
-    ctx.fillStyle = "#7bd0ff";
-    ctx.fillRect(Math.floor(this.player.x * scaleX), Math.floor(this.player.y * scaleY), Math.max(3, Math.ceil(scaleX)), Math.max(3, Math.ceil(scaleY)));
-
-    const unresolvedObjective = this.currentLevel.floorObjective && !this.currentLevel.floorResolved
-      ? this.currentLevel.floorObjective.marker
-      : this.currentLevel.milestone && this.currentLevel.milestone.status !== "cleared"
-        ? this.currentLevel.milestone.marker
-        : null;
-    const unopenedOptional = this.currentLevel.floorOptional && !this.currentLevel.floorOptional.opened ? this.currentLevel.floorOptional.marker : null;
-    const highlightedRoomIndex = this.currentLevel.floorObjective && !this.currentLevel.floorResolved
-      ? this.currentLevel.floorObjective.roomIndex
-      : this.currentLevel.milestone && this.currentLevel.milestone.status !== "cleared"
-        ? this.currentLevel.milestone.roomIndex
-        : null;
-    if (highlightedRoomIndex !== null && highlightedRoomIndex !== undefined && this.currentLevel.rooms?.[highlightedRoomIndex]) {
-      const room = this.currentLevel.rooms[highlightedRoomIndex];
-      ctx.save();
-      ctx.strokeStyle = "rgba(255, 153, 125, 0.9)";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(
-        Math.floor(room.x * scaleX),
-        Math.floor(room.y * scaleY),
-        Math.max(4, Math.floor(room.w * scaleX)),
-        Math.max(4, Math.floor(room.h * scaleY))
-      );
-      ctx.restore();
-    }
-    this.getGuidedRoutePoints(this.currentLevel).forEach((point, index, points) => {
-      if (!isExplored(this.currentLevel, point.x, point.y)) {
-        return;
-      }
-      const px = Math.floor(point.x * scaleX);
-      const py = Math.floor(point.y * scaleY);
-      ctx.fillStyle = index === points.length - 1 ? "rgba(255, 213, 122, 0.92)" : "rgba(255, 213, 122, 0.54)";
-      ctx.fillRect(px, py, Math.max(2, Math.ceil(scaleX)), Math.max(2, Math.ceil(scaleY)));
-    });
-    markPoint(this.currentLevel.stairsUp, "#93d7ff", "#dff7ff", 5);
-    markPoint(this.currentLevel.stairsDown, this.currentDepth === 0 && (this.player.deepestDepth || 0) === 0 ? "#ffd36b" : "#caa44a", "#ffe7ab", 5);
-    markPoint(unresolvedObjective, "#ff8c6d", "#ffd3bf", 6);
-    markPoint(unopenedOptional, "#c991ff", "#ead7ff", 5);
-    markPoint(this.currentLevel.signatureReveal?.point, "#f0d27d", "#fff0c3", 5);
-
-    if (this.mapPanelLabel) {
-      this.mapPanelLabel.textContent = this.currentDepth === 0 ? "Overworld Map" : "Floor Survey";
-    }
-    if (this.mapPanelState) {
-      this.mapPanelState.textContent = this.currentDepth === 0
-        ? this.getTownCycleLabel()
-        : `Depth ${this.currentDepth}`;
-    }
-    if (this.mapCaption) {
-      const modeLabel = this.currentDepth === 0 ? this.getTownCycleLabel() : "Dungeon survey";
-      const pressure = this.getPressureUiState();
-      this.mapCaption.innerHTML = `
-        <div class="map-caption-row">
-          <span class="map-chip">${escapeHtml(this.getCurrentAreaTitle())}</span>
-          <span class="map-chip subtle">Explored ${getExploredPercent(this.currentLevel)}%</span>
-          <span class="map-chip subtle">${escapeHtml(this.currentDepth > 0 ? pressure.label : modeLabel)}</span>
-        </div>
-      `;
-    }
+    return renderMiniMapComposed(this);
   }
 
   renderBoard() {
-    const ctx = this.ctx;
-    const time = nowTime();
-    const effectProfile = this.getEffectProfile();
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-    if (!this.currentLevel || !this.player) {
-      drawCenteredText(ctx, "Create a character to begin", this.canvas.width / 2, this.canvas.height / 2, "#f2deb1");
-      return;
-    }
-
-    const view = this.getViewport();
-    let offsetX = 0;
-    let offsetY = 0;
-    if (this.boardImpulse && this.boardImpulse.until > time) {
-      const life = clamp((time - this.boardImpulse.created) / Math.max(1, this.boardImpulse.until - this.boardImpulse.created), 0, 1);
-      const falloff = Math.pow(1 - life, 2);
-      offsetX = this.boardImpulse.dx * 4 * falloff;
-      offsetY = this.boardImpulse.dy * 4 * falloff;
-    }
-
-    ctx.save();
-    if (offsetX || offsetY) {
-      ctx.translate(offsetX, offsetY);
-    }
-
-    for (let sy = 0; sy < VIEW_SIZE; sy += 1) {
-      for (let sx = 0; sx < VIEW_SIZE; sx += 1) {
-        const x = view.x + sx;
-        const y = view.y + sy;
-        const tile = getTile(this.currentLevel, x, y);
-        const visible = isVisible(this.currentLevel, x, y);
-        const explored = isExplored(this.currentLevel, x, y);
-        if (!tile || !explored) {
-          ctx.fillStyle = "#040404";
-          ctx.fillRect(sx * TILE_SIZE, sy * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-          continue;
-        }
-        drawTile(ctx, this.currentLevel, tile, x, y, sx, sy, visible);
-      }
-    }
-    drawTownBuildings(ctx, this.currentLevel, view);
-    drawBoardAtmosphere(ctx, this.currentLevel, view, time, {
-      depth: this.currentDepth,
-      firstTownRun: this.currentDepth === 0 && (this.player.deepestDepth || 0) === 0,
-      ...effectProfile
-    });
-    this.getGuidedRoutePoints(this.currentLevel).forEach((point, index, points) => {
-      if (!isExplored(this.currentLevel, point.x, point.y) || !isVisible(this.currentLevel, point.x, point.y)) {
-        return;
-      }
-      const sx = point.x - view.x;
-      const sy = point.y - view.y;
-      if (sx < 0 || sy < 0 || sx >= VIEW_SIZE || sy >= VIEW_SIZE) {
-        return;
-      }
-      const tileX = sx * TILE_SIZE;
-      const tileY = sy * TILE_SIZE;
-      const isEndpoint = index === points.length - 1;
-      ctx.save();
-      ctx.strokeStyle = isEndpoint ? "rgba(255, 214, 125, 0.9)" : "rgba(255, 214, 125, 0.55)";
-      ctx.lineWidth = isEndpoint ? 2 : 1.5;
-      ctx.strokeRect(tileX + 7, tileY + 7, TILE_SIZE - 14, TILE_SIZE - 14);
-      ctx.fillStyle = isEndpoint ? "rgba(255, 214, 125, 0.3)" : "rgba(255, 214, 125, 0.16)";
-      ctx.fillRect(tileX + 8, tileY + 8, TILE_SIZE - 16, TILE_SIZE - 16);
-      ctx.restore();
-    });
-    drawBoardProps(ctx, this.currentLevel, view, time, effectProfile);
-
-    this.currentLevel.items.forEach((item) => {
-      if (!isVisible(this.currentLevel, item.x, item.y)) {
-        return;
-      }
-      const sx = item.x - view.x;
-      const sy = item.y - view.y;
-      if (sx < 0 || sy < 0 || sx >= VIEW_SIZE || sy >= VIEW_SIZE) {
-        return;
-      }
-      drawItem(ctx, item, sx, sy, time, effectProfile);
-    });
-
-    const targetActor = this.targetMode ? actorAt(this.currentLevel, this.targetMode.cursor.x, this.targetMode.cursor.y) : null;
-    const sortedVisibleEnemies = this.getSortedVisibleEnemies();
-    const focusedThreat = targetActor || this.getFocusedThreat(sortedVisibleEnemies);
-    const targetPreview = this.targetMode ? this.getActiveSpellTargetPreview() : null;
-    this.currentLevel.actors.forEach((actor) => {
-      if (!isVisible(this.currentLevel, actor.x, actor.y)) {
-        return;
-      }
-      const sx = actor.x - view.x;
-      const sy = actor.y - view.y;
-      if (sx < 0 || sy < 0 || sx >= VIEW_SIZE || sy >= VIEW_SIZE) {
-        return;
-      }
-      drawMonster(ctx, actor, sx, sy, time, effectProfile);
-      drawMonsterHealthBar(ctx, actor, sx, sy, {
-        focused: actor === focusedThreat
-      });
-      drawMonsterIntent(ctx, actor, sx, sy, time, {
-        ...effectProfile,
-        player: this.player,
-        view
-      });
-    });
-
-    this.visualEffects
-      .filter((effect) => effect.type !== "screenPulse")
-      .forEach((effect) => drawEffect(ctx, effect, view, time, effectProfile));
-    drawPlayer(ctx, this.player, this.player.x - view.x, this.player.y - view.y, time, effectProfile);
-    if (this.targetMode) {
-      drawTargetCursor(ctx, this.targetMode.cursor, view, this.player, time, {
-        ...effectProfile,
-        targetPreview,
-        targetMode: this.targetMode
-      });
-    }
-    ctx.restore();
-
-    this.visualEffects
-      .filter((effect) => effect.type === "screenPulse")
-      .forEach((effect) => drawEffect(ctx, effect, view, time, effectProfile));
-    const hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 1;
-    const burdenRatio = getCarryWeight(this.player) / Math.max(1, getCarryCapacity(this.player));
-    drawBoardVignette(ctx, hpRatio, time, effectProfile);
-    drawBoardBurdenVignette(ctx, burdenRatio, time, effectProfile);
+    return renderBoardComposed(this);
   }
 
   playProjectile(from, to, color, options = {}) {
