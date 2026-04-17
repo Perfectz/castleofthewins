@@ -40,6 +40,7 @@ const orderedFiles = [
   "features/spell-manager.js",
   "features/inventory-manager.js",
   "features/action-dispatch.js",
+  "features/input-dispatch.js",
   "features/screens/character-sheet.js",
   "features/screens/bank-modal.js",
   "features/screens/settings-modal.js",
