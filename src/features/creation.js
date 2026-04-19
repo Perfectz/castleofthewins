@@ -366,11 +366,25 @@ export function showTitleScreen(game) {
 
   if (titleLoopImage) {
     const prefersReducedMotion = Boolean(game.reducedMotionQuery?.matches);
-    titleLoopImage.src = prefersReducedMotion ? TITLE_SCREEN_ASSETS.still : TITLE_SCREEN_ASSETS.loop;
+    // Load the still first (~3MB) so the title card has something to show
+    // immediately. If the user prefers reduced motion, that's it. Otherwise
+    // upgrade to the animated loop (~8MB) on an idle callback so the larger
+    // asset doesn't compete with fonts and initial render.
+    titleLoopImage.src = TITLE_SCREEN_ASSETS.still;
     titleLoopImage.onerror = () => {
       titleLoopImage.onerror = null;
       titleLoopImage.src = TITLE_SCREEN_ASSETS.still;
     };
+    if (!prefersReducedMotion) {
+      const loadLoop = () => {
+        titleLoopImage.src = TITLE_SCREEN_ASSETS.loop;
+      };
+      if (typeof window.requestIdleCallback === "function") {
+        window.requestIdleCallback(loadLoop, { timeout: 1500 });
+      } else {
+        window.setTimeout(loadLoop, 600);
+      }
+    }
   }
 
   if (savedMeta && saveSummary) {
